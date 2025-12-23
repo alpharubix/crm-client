@@ -44,6 +44,11 @@ export default function AddLeadDialog({ open, onClose, onSuccess }: Props) {
     setSubmitting(true)
 
     try {
+      if (formData.phone_number.length !== 10) {
+        toast.error('Phone number must be 10 digits')
+        return
+      }
+
       const res = await fetch('http://localhost:8080/leads/', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },

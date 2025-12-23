@@ -51,7 +51,7 @@ export default function LeadsPage() {
       if (res.ok) {
         const data = await res.json()
         console.log("data", data);
-        setLeads(data)
+        setLeads(data.data)
       }
     } catch (error) {
       console.error('Failed to fetch leads', error)
