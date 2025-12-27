@@ -270,7 +270,7 @@ export default function LeadsPage() {
                 <TableRow
                   key={lead.id}
                   className="cursor-pointer hover:bg-accent hover:text-accent-foreground"
-                  onClick={() => navigate(`/leads/${lead.id}`)}
+                  onClick={() => navigate(`/update-contacts`)}
                 >
                   {/* <TableCell className="font-medium">{lead.id}</TableCell> */}
                   <TableCell className="font-medium">

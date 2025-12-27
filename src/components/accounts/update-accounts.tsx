@@ -3,7 +3,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { PlusCircle } from "lucide-react";
 
-const StaticAccountView = () => {
+const UpdateAccounts = () => {
 
   const Field = ({ label, value }: { label: string; value: string }) => (
     <div className="grid grid-cols-2 py-2.5 px-4 border-b last:border-0 border-border items-center">
@@ -120,4 +120,4 @@ const StaticAccountView = () => {
   );
 };
 
-export default StaticAccountView;
+export default UpdateAccounts;

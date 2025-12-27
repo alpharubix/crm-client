@@ -11,6 +11,8 @@ import {
   TableRow,
 } from '@/components/ui/table'
 
+import { useNavigate } from 'react-router-dom'
+
 import type { Deal } from '@/types'
 import { formatExactDate } from '@/utils/date-formatter'
 
@@ -28,6 +30,8 @@ const DealsData: Deal[] = [
 ]
 
 const DealsPage = () => {
+  const navigate = useNavigate()
+
   return (
     <div className="p-4">
       <div className="flex items-center justify-between mb-6">
@@ -73,6 +77,7 @@ const DealsPage = () => {
                 <TableRow
                   key={deal.id}
                   className="cursor-pointer hover:bg-accent hover:text-accent-foreground"
+                  onClick={() => navigate(`/update-deals`)}
                 >
                   {/* <TableCell className="font-medium">{deal.id}</TableCell> */}
                   <TableCell className="font-medium">

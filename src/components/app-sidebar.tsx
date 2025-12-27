@@ -48,13 +48,13 @@ const data = {
           title: 'Deals',
           url: '/deals',
         },
-        {
-          title: 'Tasks',
-          url: '#',
-        }, {
-          title: 'Attachments',
-          url: '#',
-        }
+        // {
+        //   title: 'Tasks',
+        //   url: '#',
+        // }, {
+        //   title: 'Attachments',
+        //   url: '#',
+        // }
       ],
     },
     {

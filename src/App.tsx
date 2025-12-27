@@ -8,7 +8,9 @@ import NotFoundPage from './pages/not-found-page'
 import ContactPage from './pages/contact-page'
 import DealsPage from './pages/deals-page'
 import DeskPage from './pages/desk-page'
-import StaticAccountView from './components/accounts/update-accounts'
+import UpdateContacts from './components/contacts/update-contacts'
+import UpdateAccounts from './components/accounts/update-accounts'
+import UpdateDeals from './components/deals/update-deals'
 
 export default function App() {
   return (
@@ -24,13 +26,15 @@ export default function App() {
 
           {/* Accounts */}
           <Route path="/accounts" element={<AccountPage />} />
-          <Route path="/update-accounts" element={<StaticAccountView />} />
+          <Route path="/update-accounts" element={<UpdateAccounts />} />
 
           {/* Contacts */}
           <Route path="/contacts" element={<ContactPage />} />
+          <Route path="/update-contacts" element={<UpdateContacts />} />
 
           {/* Deals */}
           <Route path="/deals" element={<DealsPage />} />
+          <Route path="/update-deals" element={<UpdateDeals />} />
 
           {/* 404 Page */}
           <Route path="*" element={<NotFoundPage />} />
