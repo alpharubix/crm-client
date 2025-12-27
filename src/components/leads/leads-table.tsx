@@ -8,7 +8,7 @@ import {
   TableRow,
   TableCaption,
 } from '@/components/ui/table'
-import { formatDateExact } from '@/utils/dateFormatter'
+import { formatExactDate } from '@/utils/date-formatter'
 import type { Lead } from '@/types'
 
 type Props = {
@@ -19,7 +19,7 @@ type Props = {
 export default function LeadsTable({ leads, loading }: Props) {
 
   console.log("LeadsTable", leads);
-  
+
   const navigate = useNavigate()
 
   return (
@@ -28,7 +28,7 @@ export default function LeadsTable({ leads, loading }: Props) {
         <TableCaption>A list of recent leads.</TableCaption>
         <TableHeader>
           <TableRow>
-            <TableHead>ID</TableHead>
+            {/* <TableHead>ID</TableHead> */}
             <TableHead>Name</TableHead>
             <TableHead>Contact</TableHead>
             <TableHead>Tax</TableHead>
@@ -51,7 +51,7 @@ export default function LeadsTable({ leads, loading }: Props) {
                 className="cursor-pointer hover:bg-accent"
                 onClick={() => navigate(`/leads/${lead.id}`)}
               >
-                <TableCell>{lead.id}</TableCell>
+                {/* <TableCell>{lead.id}</TableCell> */}
                 <TableCell>{lead.full_name}</TableCell>
                 <TableCell>
                   {lead.email}
@@ -62,7 +62,7 @@ export default function LeadsTable({ leads, loading }: Props) {
                   <br />
                   GST: {lead.gstin || '-'}
                 </TableCell>
-                <TableCell>{formatDateExact(lead.created_at)}</TableCell>
+                <TableCell>{formatExactDate(lead.created_at)}</TableCell>
                 <TableCell>{lead.business_status || 'New'}</TableCell>
               </TableRow>
             ))

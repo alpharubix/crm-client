@@ -1,5 +1,3 @@
-'use client'
-
 import { NavMain } from '@/components/nav-main'
 import { NavUser } from '@/components/nav-user'
 import { TeamSwitcher } from '@/components/team-switcher'
@@ -34,10 +32,10 @@ const data = {
       url: '#',
       icon: BookOpen,
       items: [
-        {
-          title: 'Leads',
-          url: '/leads',
-        },
+        // {
+        //   title: 'Leads',
+        //   url: '/leads',
+        // },
         {
           title: 'Accounts',
           url: '/accounts',
@@ -50,6 +48,13 @@ const data = {
           title: 'Deals',
           url: '/deals',
         },
+        {
+          title: 'Tasks',
+          url: '#',
+        }, {
+          title: 'Attachments',
+          url: '#',
+        }
       ],
     },
     {

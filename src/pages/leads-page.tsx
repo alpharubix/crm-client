@@ -1,10 +1,10 @@
 import { useState } from 'react'
 import { type DateRange } from 'react-day-picker'
-import LeadsHeader from './LeadsHeader'
-import AddLeadDialog from './AddLeadDialog'
-import LeadsFilters from './LeadsFilters'
-import LeadsTable from './LeadsTable'
-import { useLeads } from './useLeads'
+import LeadsHeader from '../components/leads/leads-header'
+import AddLeadDialog from '../components/leads/add-lead-dialog'
+import LeadsFilters from '../components/leads/leads-filters'
+import LeadsTable from '../components/leads/leads-table'
+import { useLeads } from '../hooks/use-leads'
 
 export default function LeadsPage() {
   const { leads, loading, fetchLeads } = useLeads()

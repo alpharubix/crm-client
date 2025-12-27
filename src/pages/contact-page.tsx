@@ -24,10 +24,10 @@ import {
 } from '@/components/ui/dialog'
 
 import type { Lead } from '@/types'
-import { Label } from '@radix-ui/react-label'
-import { Input } from '../ui/input'
+import { Label } from '@/components/ui/label'
+import { Input } from '@/components/ui/input'
 import { toast } from 'sonner'
-import { formatDateExact } from '@/utils/dateFormatter'
+import { formatExactDate } from '@/utils/date-formatter'
 
 export default function LeadsPage() {
   const navigate = useNavigate()
@@ -251,10 +251,10 @@ export default function LeadsPage() {
           <TableCaption>A list of recent leads.</TableCaption>
           <TableHeader>
             <TableRow>
-              <TableHead className="w-[50px]">ID</TableHead>
+              {/* <TableHead className="w-[50px]">ID</TableHead> */}
               <TableHead>Customer Name</TableHead>
               <TableHead>Contact Info</TableHead>
-              <TableHead>Tax Details</TableHead>
+              {/* <TableHead>Tax Details</TableHead> */}
               <TableHead>Date</TableHead>
             </TableRow>
           </TableHeader>
@@ -272,7 +272,7 @@ export default function LeadsPage() {
                   className="cursor-pointer hover:bg-accent hover:text-accent-foreground"
                   onClick={() => navigate(`/leads/${lead.id}`)}
                 >
-                  <TableCell className="font-medium">{lead.id}</TableCell>
+                  {/* <TableCell className="font-medium">{lead.id}</TableCell> */}
                   <TableCell className="font-medium">
                     <div>{lead.full_name}</div>
                     <div className="text-xs text-muted-foreground">
@@ -285,16 +285,16 @@ export default function LeadsPage() {
                       {lead.phone_number}
                     </div>
                   </TableCell>
-                  <TableCell>
+                  {/* <TableCell>
                     <div className="text-xs">PAN: {lead.pan || '-'}</div>
                     <div className="text-xs">GST: {lead.gstin || '-'}</div>
-                  </TableCell>
+                  </TableCell> */}
                   <TableCell>
                     <div className="text-xs">
-                      Created on : {formatDateExact(lead.created_at) || 'New'}
+                      Created on : {formatExactDate(lead.created_at) || 'New'}
                     </div>
                     <div className="text-xs">
-                      Updated on : {formatDateExact(lead.updated_at) || 'New'}
+                      Updated on : {formatExactDate(lead.updated_at) || 'New'}
                     </div>
                   </TableCell>
                 </TableRow>

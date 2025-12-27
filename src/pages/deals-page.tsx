@@ -12,7 +12,7 @@ import {
 } from '@/components/ui/table'
 
 import type { Deal } from '@/types'
-import { formatDateExact } from '@/utils/dateFormatter'
+import { formatExactDate } from '@/utils/date-formatter'
 
 const DealsData: Deal[] = [
   {
@@ -52,7 +52,7 @@ const DealsPage = () => {
           <TableCaption>A list of recent deals.</TableCaption>
           <TableHeader>
             <TableRow>
-              <TableHead className="w-[50px]">ID</TableHead>
+              {/* <TableHead className="w-[50px]">ID</TableHead> */}
               <TableHead>Deals Details</TableHead>
               <TableHead>Stage</TableHead>
               <TableHead>Closing Date</TableHead>
@@ -74,7 +74,7 @@ const DealsPage = () => {
                   key={deal.id}
                   className="cursor-pointer hover:bg-accent hover:text-accent-foreground"
                 >
-                  <TableCell className="font-medium">{deal.id}</TableCell>
+                  {/* <TableCell className="font-medium">{deal.id}</TableCell> */}
                   <TableCell className="font-medium">
                     <div className="text-lg">{deal.lender}</div>
                     <div className="text-sm text-muted-foreground">
@@ -88,7 +88,7 @@ const DealsPage = () => {
                   </TableCell>
                   <TableCell>
                     <div className="text-md">
-                      {formatDateExact(deal.closing_date)}
+                      {formatExactDate(deal.closing_date)}
                     </div>
                   </TableCell>
                   <TableCell>
@@ -98,7 +98,7 @@ const DealsPage = () => {
                   </TableCell>
                   <TableCell>
                     <div className="text-md">
-                      {formatDateExact(deal.last_activity_time)}
+                      {formatExactDate(deal.last_activity_time)}
                     </div>
                   </TableCell>
                   <TableCell>
