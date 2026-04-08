@@ -80,6 +80,7 @@ function TaskCard({
     <div
       className={` border rounded-md p-3 transition-shadow
       ${isDragging ? 'shadow-lg  opacity-90 rotate-1' : 'hover:shadow-sm cursor-grab'}`}
+      onClick={onClick}
     >
       <p className='text-sm font-medium leading-snug mb-2'>{task.title}</p>
       <div className='flex items-center gap-1.5 flex-wrap'>
@@ -102,7 +103,7 @@ function TaskCard({
             onClick={onClick}
             className='text-zinc-300 hover:text-zinc-500 transition-colors'
           >
-            <Pencil size={11} />
+            <Pencil size={14} className='cursor-pointer' />
           </button>
         )}
       </div>

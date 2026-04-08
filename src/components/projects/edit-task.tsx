@@ -655,13 +655,14 @@ export default function EditTaskModal({
         </div>
 
         <DialogFooter className='gap-2 mt-4'>
-          <Button variant='outline' size='sm' onClick={onClose}>
+          <Button variant='outline' size='sm' onClick={onClose} className='cursor-pointer'>
             Cancel
           </Button>
           <Button
             size='sm'
             onClick={handleSubmit}
             disabled={mutation.isPending}
+            className='cursor-pointer'
           >
             {mutation.isPending ? 'Saving...' : 'Save'}
           </Button>

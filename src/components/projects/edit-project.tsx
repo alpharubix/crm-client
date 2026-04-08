@@ -350,13 +350,13 @@ export default function EditProjectModal({
         {/* TABS */}
         <div className='flex items-center gap-4 border-b mt-2'>
           <button
-            className={`text-xs font-semibold pb-2 px-1 ${activeTab === 'details' ? 'text-blue-600 border-b-2 border-blue-600' : 'text-zinc-500'}`}
+            className={`text-xs font-semibold pb-2 px-1 cursor-pointer ${activeTab === 'details' ? 'text-blue-600 border-b-2 border-blue-600' : 'text-zinc-500'}`}
             onClick={() => setActiveTab('details')}
           >
             Project Details
           </button>
           <button
-            className={`text-xs font-semibold pb-2 px-1 ${activeTab === 'history' ? 'text-blue-600 border-b-2 border-blue-600' : 'text-zinc-500'}`}
+            className={`text-xs font-semibold pb-2 px-1 cursor-pointer ${activeTab === 'history' ? 'text-blue-600 border-b-2 border-blue-600' : 'text-zinc-500'}`}
             onClick={() => setActiveTab('history')}
           >
             Activity History
@@ -388,8 +388,8 @@ export default function EditProjectModal({
               <div>
                 <Label className='text-xs font-medium'>Description</Label>
                 <Textarea
-                  className='mt-1 text-sm resize-none'
-                  rows={2}
+                  className='mt-1 text-sm resize-y'
+                  rows={5}
                   value={form.description}
                   onChange={(e) => set('description', e.target.value)}
                   disabled={!isOwner && !isApprover}

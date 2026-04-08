@@ -73,10 +73,10 @@ const TYPE_STYLES: Record<string, string> = {
 }
 
 const PRIORITY_STYLES: Record<string, string> = {
-  Low: 'text-emerald-600',
-  Medium: 'text-amber-600',
-  High: 'text-orange-600',
-  Critical: 'text-red-600',
+  low: 'text-emerald-600',
+  medium: 'text-amber-600',
+  high: 'text-orange-600',
+  critical: 'text-red-600',
 }
 // ── Constants ──────────────────────────────────────────────────────────────
 
@@ -192,7 +192,7 @@ function DraggableProjectCard({
                 }}
                 className='text-zinc-400 hover:text-zinc-800 transition-colors shrink-0 p-0.5 rounded hover:bg-zinc-100'
               >
-                <Pencil className='w-3.5 h-3.5' />
+                <Pencil className='w-4.5 cursor-pointer' />
               </button>
             )}
           </div>
@@ -223,10 +223,26 @@ function DraggableProjectCard({
                 {project.start_date || '-'} → {project.end_date || '-'}
               </span>
             </div>
+            <div className='flex items-center justify-between'>
+              <span className='text-zinc-500 font-medium'>Project Type</span>
+              <span className='text-[10px] uppercase tracking-wide font-bold px-1.5 py-0.5 rounded bg-zinc-100 text-zinc-600'>
+                {project.project_type}
+              </span>
+            </div>
+            <div className='flex items-center justify-between'>
+              <span className='text-zinc-500 font-medium'>Priority</span>
+              <span
+                className={`text-[10px] uppercase tracking-wide font-bold px-1.5 py-0.5 rounded border bg-gray-50 border-gray-200 ${
+                  PRIORITY_STYLES[project.priority] || PRIORITY_STYLES.Low
+                }`}
+              >
+                {project.priority}
+              </span>
+            </div>
           </div>
 
           {/* Footer Badges */}
-          <div className='flex items-center justify-between pt-2.5 border-t border-zinc-100'>
+          {/* <div className='flex items-center justify-between pt-2.5 border-t border-zinc-100'>
             <div className='flex items-center gap-1.5'>
               <span className='text-[10px] uppercase tracking-wide font-bold px-1.5 py-0.5 rounded bg-zinc-100 text-zinc-600'>
                 {project.project_type || '-'}
@@ -240,7 +256,7 @@ function DraggableProjectCard({
                 OVERDUE
               </span>
             )}
-          </div>
+          </div> */}
 
           {/* Action Buttons */}
           {isApprover &&
