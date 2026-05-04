@@ -24,6 +24,10 @@ interface LocalFilters {
   lender_login_from: string
   lender_login_to: string
   deal_owner_id: string
+  targeted_disbursement_from: string
+  targeted_disbursement_to: string
+  disbursement_from: string
+  disbursement_to: string
 }
 
 const defaultFilters: LocalFilters = {
@@ -36,6 +40,10 @@ const defaultFilters: LocalFilters = {
   lender_login_from: '',
   lender_login_to: '',
   deal_owner_id: 'all',
+  targeted_disbursement_from: '',
+  targeted_disbursement_to: '',
+  disbursement_from: '',
+  disbursement_to: '',
 }
 
 function getDefaultDates() {
@@ -58,6 +66,7 @@ export default function TicketsKanban() {
   const [appliedFilters, setAppliedFilters] =
     useState<KanbanFilters>(defaultDates)
   const [hasApplied, setHasApplied] = useState(true)
+  const [totalTickets, setTotalTickets] = useState(0)
 
   function setFilter(key: keyof LocalFilters, value: string) {
     setLocalFilters((prev) => ({ ...prev, [key]: value }))
@@ -93,6 +102,14 @@ export default function TicketsKanban() {
       f.lender_login_from = localFilters.lender_login_from
     if (localFilters.lender_login_to)
       f.lender_login_to = localFilters.lender_login_to
+    if (localFilters.targeted_disbursement_from)
+      f.targeted_disbursement_from = localFilters.targeted_disbursement_from
+    if (localFilters.targeted_disbursement_to)
+      f.targeted_disbursement_to = localFilters.targeted_disbursement_to
+    if (localFilters.disbursement_from)
+      f.disbursement_from = localFilters.disbursement_from
+    if (localFilters.disbursement_to)
+      f.disbursement_to = localFilters.disbursement_to
     setAppliedFilters(f)
     setHasApplied(true)
   }
@@ -119,8 +136,16 @@ export default function TicketsKanban() {
       <div className='flex flex-col flex-1 min-h-0'>
         <div className='flex items-center justify-between mb-4 shrink-0'>
           <h1 className='text-xl font-bold tracking-tight'>Tickets Kanban</h1>
+          <div className='flex items-center gap-2 bg-zinc-100 px-3 py-1.5 rounded-full border'>
+            <span className='text-[11px] font-semibold uppercase text-zinc-500'>
+              Total Tickets:
+            </span>
+            <span className='text-sm font-bold text-indigo-600'>
+              {/* If you have the data from the hook: */}
+              {/*{data?.page_info?.total || 0}*/}
+            </span>
+          </div>
         </div>
-
         {/* Filter Section */}
         <div className='bg-white border rounded-xl shadow-sm p-4 mb-6 shrink-0 space-y-4'>
           {/* Row 1: Search & Selects */}
@@ -263,6 +288,57 @@ export default function TicketsKanban() {
               </div>
             </div>
 
+            <div className='flex items-center gap-1 border-l pl-6'>
+              <div className='space-y-1.5'>
+                <Label className='text-[11px] font-medium text-zinc-500'>
+                  Disbursement Date
+                </Label>
+                <div className='flex gap-1'>
+                  <Input
+                    type='date'
+                    className='h-8 text-xs w-[130px] border-indigo-100 focus:border-indigo-300'
+                    value={localFilters.disbursement_from}
+                    onChange={(e) =>
+                      setFilter('disbursement_from', e.target.value)
+                    }
+                  />
+                  <Input
+                    type='date'
+                    className='h-8 text-xs w-[130px] border-indigo-100 focus:border-indigo-300'
+                    value={localFilters.disbursement_to}
+                    onChange={(e) =>
+                      setFilter('disbursement_to', e.target.value)
+                    }
+                  />
+                </div>
+              </div>
+            </div>
+            <div className='flex items-center gap-1 border-l pl-4'>
+              <div className='space-y-1.5'>
+                <Label className='text-[11px] font-medium text-zinc-500'>
+                  Target Disbursement
+                </Label>
+                <div className='flex gap-1'>
+                  <Input
+                    type='date'
+                    className='h-8 text-xs w-[130px] border-indigo-100 focus:border-indigo-300'
+                    value={localFilters.targeted_disbursement_from}
+                    onChange={(e) =>
+                      setFilter('targeted_disbursement_from', e.target.value)
+                    }
+                  />
+                  <Input
+                    type='date'
+                    className='h-8 text-xs w-[130px] border-indigo-100 focus:border-indigo-300'
+                    value={localFilters.targeted_disbursement_to}
+                    onChange={(e) =>
+                      setFilter('targeted_disbursement_to', e.target.value)
+                    }
+                  />
+                </div>
+              </div>
+            </div>
+
             <div className='flex items-center gap-2 pb-0.5'>
               <Button
                 variant='ghost'
@@ -285,7 +361,11 @@ export default function TicketsKanban() {
 
         {/* Kanban Content */}
         <div className='flex-1 overflow-hidden'>
-          <TicketsKanbanView filters={appliedFilters} enabled={hasApplied} />
+          <TicketsKanbanView
+            filters={appliedFilters}
+            enabled={hasApplied}
+            onTotalFetched={setTotalTickets}
+          />
         </div>
       </div>
     </div>

@@ -25,6 +25,10 @@ export interface KanbanFilters {
   lender_login_from?: string
   lender_login_to?: string
   deal_owner_id?: string
+  targeted_disbursement_from: string
+  targeted_disbursement_to: string
+  disbursement_from: string
+  disbursement_to: string
 }
 
 export interface TicketData {
@@ -174,18 +178,20 @@ function DroppableTicketColumn({
 export default function TicketsKanbanView({
   filters,
   enabled,
+  onTotalFetched,
 }: {
   filters: KanbanFilters
   enabled: boolean
+  onTotalFetched?: (total: number) => void
 }) {
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
   )
-
+  const [totalTickets, setTotalTickets] = useState(0)
   const [ticketsList, setTicketsList] = useState<TicketData[]>([])
   const [activeTicket, setActiveTicket] = useState<TicketData | null>(null)
 
-  const { data: grouped = {}, isLoading } = useQuery({
+  const { data, isLoading } = useQuery({
     queryKey: ['tickets-kanban', filters],
     queryFn: async () => {
       const params = new URLSearchParams({ kanban: 'true' })
@@ -194,17 +200,21 @@ export default function TicketsKanbanView({
       })
       const res = await fetch(
         `${ENV.VITE_BACKEND_BASE_URL}/tickets?${params}`,
-        {
-          credentials: 'include',
-        },
+        { credentials: 'include' },
       )
       if (!res.ok) throw new Error('Failed')
-      const json = await res.json()
-      return (json.data ?? {}) as Record<string, any[]>
+      return await res.json() // RETURN FULL JSON
     },
     enabled,
     retry: false,
   })
+  const grouped = data?.data ?? {}
+  console.log({ grouped })
+  // useEffect(() => {
+  //   if (data?.page_info?.total !== undefined) {
+  //     onTotalFetched?.(data.page_info.total)
+  //   }
+  // }, [data?.page_info?.total, onTotalFetched])
 
   useEffect(() => {
     const flat: TicketData[] = Object.entries(grouped).flatMap(
@@ -259,6 +269,16 @@ export default function TicketsKanbanView({
     onDragStart={onDragStart}
     onDragEnd={onDragEnd}
     > */}
+      <span className='text-sm font-bold text-indigo-600'>
+        {/* If you have the data from the hook: */}
+        Total - {data?.page_info?.total || 0}
+      </span>
+      {data?.page_info?.total > 100 && (
+        <span className='text-[11px] text-amber-600 font-medium italic'>
+          * Limit reached (100). Filter by date or owner to see specific
+          tickets.
+        </span>
+      )}
       <div className='flex gap-5 pb-6 overflow-x-auto items-start h-[calc(92vh-140px)] min-h-0 px-1'>
         {COLUMNS.map((col) => (
           <DroppableTicketColumn
