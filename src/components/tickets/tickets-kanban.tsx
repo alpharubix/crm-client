@@ -11,6 +11,8 @@ import {
 } from '../ui/select'
 import TicketsKanbanView, { type KanbanFilters } from './tickets-kanban-view'
 import { Label } from '../ui/label'
+import { useQuery } from '@tanstack/react-query'
+import { ENV } from '@/conf'
 
 interface LocalFilters {
   search: string
@@ -19,6 +21,9 @@ interface LocalFilters {
   assignee_id: string
   created_from: string
   created_to: string
+  lender_login_from: string
+  lender_login_to: string
+  deal_owner_id: string
 }
 
 const defaultFilters: LocalFilters = {
@@ -28,6 +33,9 @@ const defaultFilters: LocalFilters = {
   assignee_id: 'all',
   created_from: '',
   created_to: '',
+  lender_login_from: '',
+  lender_login_to: '',
+  deal_owner_id: 'all',
 }
 
 function getDefaultDates() {
@@ -55,6 +63,18 @@ export default function TicketsKanban() {
     setLocalFilters((prev) => ({ ...prev, [key]: value }))
   }
 
+  const { data: ownerResponse, isSuccess } = useQuery({
+    queryKey: ['deal-owners'],
+    queryFn: async () => {
+      const res = await fetch(`${ENV.VITE_BACKEND_BASE_URL}/user/filter`, {
+        credentials: 'include',
+      })
+      return res.json()
+    },
+  })
+
+  const owners = ownerResponse?.data ?? []
+
   function applyFilters() {
     const f: KanbanFilters = {}
     if (localFilters.search) f.account_name = localFilters.search
@@ -64,22 +84,26 @@ export default function TicketsKanban() {
       f.ticket_status = localFilters.ticket_status
     if (localFilters.created_from) f.created_from = localFilters.created_from
     if (localFilters.created_to) f.created_to = localFilters.created_to
+
+    if (localFilters.deal_owner_id !== 'all') {
+      f.deal_owner_id = localFilters.deal_owner_id
+    }
+    // Lender Login dates
+    if (localFilters.lender_login_from)
+      f.lender_login_from = localFilters.lender_login_from
+    if (localFilters.lender_login_to)
+      f.lender_login_to = localFilters.lender_login_to
     setAppliedFilters(f)
     setHasApplied(true)
   }
-  const hasActiveFilters = true // dates are always set
 
   function clearFilters() {
-    const cleared: LocalFilters = {
-      search: '',
-      type_of_loan: 'all',
-      ticket_status: 'all',
-      assignee_id: 'all',
-      created_from: '',
-      created_to: '',
-    }
-    setLocalFilters(cleared)
-    setAppliedFilters({})
+    setLocalFilters({
+      ...defaultFilters,
+      created_from: defaultDates.created_from,
+      created_to: defaultDates.created_to,
+    })
+    setAppliedFilters(defaultDates)
   }
 
   // const hasActiveFilters =
@@ -91,105 +115,175 @@ export default function TicketsKanban() {
   //   localFilters.created_to !== defaultDates.created_to
 
   return (
-    <div className='w-full h-full p-4 flex flex-col max-w-[1240px] mx-auto'>
+    <div className='w-full h-full p-4 flex flex-col max-w-[1400px] mx-auto'>
       <div className='flex flex-col flex-1 min-h-0'>
-        <div className='flex items-center justify-between mb-6 shrink-0'>
-          <h1 className='text-lg font-semibold'>Tickets Kanban</h1>
+        <div className='flex items-center justify-between mb-4 shrink-0'>
+          <h1 className='text-xl font-bold tracking-tight'>Tickets Kanban</h1>
         </div>
 
-        <div className='flex flex-wrap items-center gap-3 mb-4 p-3 border rounded-md shadow-sm shrink-0'>
-          <Input
-            placeholder='Account name...'
-            className='h-8 text-xs w-[180px]'
-            value={localFilters.search}
-            onChange={(e) => setFilter('search', e.target.value)}
-            onKeyDown={(e) => e.key === 'Enter' && applyFilters()}
-          />
+        {/* Filter Section */}
+        <div className='bg-white border rounded-xl shadow-sm p-4 mb-6 shrink-0 space-y-4'>
+          {/* Row 1: Search & Selects */}
+          <div className='flex flex-wrap items-end gap-4'>
+            <div className='space-y-1.5'>
+              <Label className='text-[11px] uppercase tracking-wider text-muted-foreground'>
+                Search
+              </Label>
+              <Input
+                placeholder='Account name...'
+                className='h-9 text-sm w-[220px]'
+                value={localFilters.search}
+                onChange={(e) => setFilter('search', e.target.value)}
+                onKeyDown={(e) => e.key === 'Enter' && applyFilters()}
+              />
+            </div>
 
-          <Select
-            value={localFilters.type_of_loan}
-            onValueChange={(v) => setFilter('type_of_loan', v)}
-          >
-            <SelectTrigger className='h-8 text-xs w-40'>
-              <SelectValue placeholder='Type of Loan' />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value='all'>--Type of Loan--</SelectItem>
-              <SelectItem value='SCF'>SCF</SelectItem>
-              <SelectItem value='SCF Renewal'>SCF Renewal</SelectItem>
-              <SelectItem value='SCF Enhancement'>SCF Enhancement</SelectItem>
-              <SelectItem value='SCF (Renewal and Enhancement)'>
-                SCF (Renewal and Enhancement)
-              </SelectItem>
-              <SelectItem value='Open SCF'>Open SCF</SelectItem>
-              <SelectItem value='BT-SCF'>BT-SCF</SelectItem>
-              <SelectItem value='Unsecured OD'>Unsecured OD</SelectItem>
-              <SelectItem value='Unsecured Term Loan'>
-                Unsecured Term Loan
-              </SelectItem>
-              <SelectItem value='Secured Loan'>Secured Loan</SelectItem>
-              <SelectItem value='Vehicle Loan'>Vehicle Loan</SelectItem>
-            </SelectContent>
-          </Select>
+            <div className='space-y-1.5'>
+              <Label className='text-[11px] uppercase tracking-wider text-muted-foreground'>
+                Loan Type
+              </Label>
+              <Select
+                value={localFilters.type_of_loan}
+                onValueChange={(v) => setFilter('type_of_loan', v)}
+              >
+                <SelectTrigger className='h-9 text-sm w-44'>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value='all'>All Types</SelectItem>
+                  <SelectItem value='SCF'>SCF</SelectItem>
+                  <SelectItem value='SCF Renewal'>SCF Renewal</SelectItem>
+                  {/* ... other items ... */}
+                </SelectContent>
+              </Select>
+            </div>
 
-          <Select
-            value={localFilters.ticket_status}
-            onValueChange={(v) => setFilter('ticket_status', v)}
-          >
-            <SelectTrigger className='h-8 text-xs w-[140px]'>
-              <SelectValue placeholder='Ticket Status' />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value='all'>--Ticket Status--</SelectItem>
-              <SelectItem value='Yet to Lender Login'>
-                Yet to Lender Login
-              </SelectItem>
-              <SelectItem value='Lender Review'>Lender Review</SelectItem>
-              <SelectItem value='In Credit'>In Credit</SelectItem>
-              <SelectItem value='Approved'>Approved</SelectItem>
-              <SelectItem value='Disbursed'>Disbursed</SelectItem>
-              <SelectItem value='Rejected'>Rejected</SelectItem>
-              <SelectItem value='Not Interested'>Not Interested</SelectItem>
-            </SelectContent>
-          </Select>
-          <Label htmlFor='from_date'>From -</Label>
-          <Input
-            id='from_date'
-            type='date'
-            className='h-8 text-xs w-[140px]'
-            value={localFilters.created_from}
-            onChange={(e) => setFilter('created_from', e.target.value)}
-          />
-          <Label htmlFor='to_date'>To -</Label>
-          <Input
-            id='to_date'
-            type='date'
-            className='h-8 text-xs w-[140px]'
-            value={localFilters.created_to}
-            onChange={(e) => setFilter('created_to', e.target.value)}
-          />
-          <div className='flex items-center gap-2 ml-auto'>
-            <Button
-              size='sm'
-              onClick={applyFilters}
-              className='h-8 text-xs px-3 bg-blue-600 hover:bg-blue-700 text-white'
+            <div className='space-y-1.5'>
+              <Label className='text-[11px] uppercase tracking-wider text-muted-foreground'>
+                Status
+              </Label>
+              <Select
+                value={localFilters.ticket_status}
+                onValueChange={(v) => setFilter('ticket_status', v)}
+              >
+                <SelectTrigger className='h-9 text-sm w-44'>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value='all'>All Statuses</SelectItem>
+                  <SelectItem value='Yet to Lender Login'>
+                    Yet to Lender Login
+                  </SelectItem>
+                  <SelectItem value='Lender Review'>Lender Review</SelectItem>
+                  <SelectItem value='In Credit'>In Credit</SelectItem>
+                  <SelectItem value='Approved'>Approved</SelectItem>
+                  <SelectItem value='Disbursed'>Disbursed</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+          <div className='space-y-1.5'>
+            <Label className='text-[11px] uppercase tracking-wider text-muted-foreground'>
+              Deal Owner
+            </Label>
+            <Select
+              value={localFilters.deal_owner_id}
+              onValueChange={(v) => setFilter('deal_owner_id', v)}
             >
-              <Search size={14} className='mr-1.5' /> Apply
-            </Button>
+              <SelectTrigger className='h-9 text-sm w-44'>
+                <SelectValue placeholder='All Owners' />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value='all'>All Owners</SelectItem>
+                {owners.map((owner: any) => (
+                  <SelectItem key={owner.id} value={owner.id.toString()}>
+                    {owner.full_name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          {/* Row 2: Date Filters */}
+          <div className='flex flex-wrap items-end justify-between gap-4 pt-2 border-t border-dashed'>
+            <div className='flex flex-wrap gap-6'>
+              {/* Created At Group */}
+              <div className='flex items-center gap-2'>
+                <div className='space-y-1.5'>
+                  <Label className='text-[11px] font-medium text-zinc-500'>
+                    Created From
+                  </Label>
+                  <Input
+                    type='date'
+                    className='h-9 text-sm w-[150px]'
+                    value={localFilters.created_from}
+                    onChange={(e) => setFilter('created_from', e.target.value)}
+                  />
+                </div>
+                <div className='space-y-1.5'>
+                  <Label className='text-[11px] font-medium text-zinc-500'>
+                    Created To
+                  </Label>
+                  <Input
+                    type='date'
+                    className='h-9 text-sm w-[150px]'
+                    value={localFilters.created_to}
+                    onChange={(e) => setFilter('created_to', e.target.value)}
+                  />
+                </div>
+              </div>
 
-            {hasActiveFilters && (
+              {/* Lender Login Group */}
+              <div className='flex items-center gap-2 border-l pl-6'>
+                <div className='space-y-1.5'>
+                  <Label className='text-[11px] font-medium text-zinc-500'>
+                    Lender Login From
+                  </Label>
+                  <Input
+                    type='date'
+                    className='h-9 text-sm w-[150px]'
+                    value={localFilters.lender_login_from}
+                    onChange={(e) =>
+                      setFilter('lender_login_from', e.target.value)
+                    }
+                  />
+                </div>
+                <div className='space-y-1.5'>
+                  <Label className='text-[11px] font-medium text-zinc-500'>
+                    Lender Login To
+                  </Label>
+                  <Input
+                    type='date'
+                    className='h-9 text-sm w-[150px]'
+                    value={localFilters.lender_login_to}
+                    onChange={(e) =>
+                      setFilter('lender_login_to', e.target.value)
+                    }
+                  />
+                </div>
+              </div>
+            </div>
+
+            <div className='flex items-center gap-2 pb-0.5'>
               <Button
                 variant='ghost'
                 size='sm'
                 onClick={clearFilters}
-                className='h-8 text-xs text-zinc-500 hover:text-zinc-800 px-2'
+                className='h-9 text-sm text-zinc-500 hover:text-red-600 transition-colors'
               >
-                <FilterX size={14} className='mr-1' /> Clear
+                <FilterX size={16} className='mr-2' /> Reset
               </Button>
-            )}
+              <Button
+                size='sm'
+                onClick={applyFilters}
+                className='h-9 text-sm px-5 bg-indigo-600 hover:bg-indigo-700 text-white shadow-sm'
+              >
+                <Search size={16} className='mr-2' /> Apply Filters
+              </Button>
+            </div>
           </div>
         </div>
 
+        {/* Kanban Content */}
         <div className='flex-1 overflow-hidden'>
           <TicketsKanbanView filters={appliedFilters} enabled={hasApplied} />
         </div>

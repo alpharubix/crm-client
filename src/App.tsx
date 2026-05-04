@@ -7,15 +7,17 @@ import SidebarComponent from './components/sidebar-component'
 import { GlobalProgressBar } from './components/global-progress-bar'
 import { Spinner } from './components/ui/spinner'
 import DealsKanban from './components/deals/deals-kanban'
+import HiringKanban from './components/hiring/hiring-kanban'
+import CandidateKanban from './components/hiring/candidate-kanban'
 
 // Lazy loaded pages and heavy route components
 const AccountPage = lazy(() => import('./pages/accounts-page'))
 const ContactPage = lazy(() => import('./pages/contact-page'))
 const UpdateAccounts = lazy(
-  () => import('./components/accounts/update-accounts')
+  () => import('./components/accounts/update-accounts'),
 )
 const UpdateContacts = lazy(
-  () => import('./components/contacts/update-contacts')
+  () => import('./components/contacts/update-contacts'),
 )
 const NotFoundPage = lazy(() => import('./pages/not-found-page'))
 const CreateContact = lazy(() => import('./components/contacts/create-contact'))
@@ -78,7 +80,8 @@ export default function App() {
                 path='/deals/:dealId/tickets/create'
                 element={<CreateTicket />}
               />
-
+              <Route path='/hiring' element={<HiringKanban />} />
+              <Route path='/candidate' element={<CandidateKanban />} />
               <Route element={<ProtectedLogRoute />}>
                 <Route path='/audit-logs' element={<AuditLogs />} />
               </Route>

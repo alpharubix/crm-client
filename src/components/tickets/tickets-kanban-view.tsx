@@ -22,6 +22,9 @@ export interface KanbanFilters {
   type_of_loan?: string
   created_from?: string
   created_to?: string
+  lender_login_from?: string
+  lender_login_to?: string
+  deal_owner_id?: string
 }
 
 export interface TicketData {
@@ -256,7 +259,7 @@ export default function TicketsKanbanView({
     onDragStart={onDragStart}
     onDragEnd={onDragEnd}
     > */}
-      <div className='flex gap-4 pb-4 overflow-x-auto items-start h-full min-h-0'>
+      <div className='flex gap-5 pb-6 overflow-x-auto items-start h-[calc(92vh-140px)] min-h-0 px-1'>
         {COLUMNS.map((col) => (
           <DroppableTicketColumn
             key={col}

@@ -14,6 +14,7 @@ import {
   FolderOpenDot,
   GalleryVerticalEnd,
   Logs,
+  Megaphone,
 } from 'lucide-react'
 
 const data = {
@@ -58,7 +59,7 @@ const data = {
         {
           title: 'Tickets Kanban',
           url: '/kanban-tickets',
-        }
+        },
         // {
         //   title: 'Deals',
         //   url: '/deals',
@@ -102,6 +103,25 @@ const data = {
         {
           title: 'All Projects',
           url: '/projects',
+        },
+        // {
+        //   title: 'All Tasks',
+        //   url: '/tasks',
+        // },
+      ],
+    },
+    {
+      title: 'Hiring',
+      url: '#',
+      icon: Megaphone,
+      items: [
+        {
+          title: 'Job Requirement',
+          url: '/hiring',
+        },
+        {
+          title: 'Candidate',
+          url: '/candidate',
         },
         // {
         //   title: 'All Tasks',
