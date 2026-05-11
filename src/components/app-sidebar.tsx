@@ -60,6 +60,10 @@ const data = {
           title: 'Tickets Kanban',
           url: '/kanban-tickets',
         },
+        {
+          title: 'Revenue',
+          url: '/revenue',
+        },
         // {
         //   title: 'Deals',
         //   url: '/deals',
