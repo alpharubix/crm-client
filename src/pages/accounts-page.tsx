@@ -34,6 +34,7 @@ import { formatExactDate } from '@/utils/date-formatter'
 import UploadCsv from '@/components/accounts/csv-upload'
 
 import users from '@/utils/users.json'
+import { useAuth } from '@/context/auth-context'
 
 export default function AccountsPage() {
   const navigate = useNavigate()
@@ -109,7 +110,7 @@ export default function AccountsPage() {
 
       const res = await fetch(
         `${ENV.VITE_BACKEND_BASE_URL}/accounts?${params.toString()}`,
-        { credentials: 'include' }
+        { credentials: 'include' },
       )
 
       if (!res.ok) throw new Error('Failed to fetch')
@@ -187,7 +188,7 @@ export default function AccountsPage() {
         queryFn: async () => {
           const res = await fetch(
             `${ENV.VITE_BACKEND_BASE_URL}/accounts?account_id=${id}`,
-            { credentials: 'include' }
+            { credentials: 'include' },
           )
           if (!res.ok) throw new Error('Failed to fetch account')
           return res.json()
@@ -199,6 +200,11 @@ export default function AccountsPage() {
       navigate(`/accounts/${id}`)
     }
   }
+  const { user } = useAuth()
+
+  const isAllowToCreate =
+    user?.role?.toLowerCase().includes('admin') ||
+    user?.role?.toLowerCase().includes('super_admin')
 
   return (
     <div className='p-4 space-y-4'>
@@ -219,7 +225,15 @@ export default function AccountsPage() {
           </div>
         )}
 
+        {/* <div className='flex gap-2 items-center'>
+          <UploadCsv isLoading={isLoading} refetch={refetch} />
+        </div> */}
         <div className='flex gap-2 items-center'>
+          {isAllowToCreate && (
+            <Button onClick={() => navigate('/accounts/create')}>
+              + Create Account
+            </Button>
+          )}
           <UploadCsv isLoading={isLoading} refetch={refetch} />
         </div>
       </div>
@@ -491,7 +505,7 @@ export default function AccountsPage() {
                             {acc.call_back_date_time
                               ? formatExactDate(
                                   acc.call_back_date_time,
-                                  'dd MMM yyyy, hh:mm a'
+                                  'dd MMM yyyy, hh:mm a',
                                 )
                               : '—'}
                           </TableCell>

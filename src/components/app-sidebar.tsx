@@ -154,7 +154,18 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
             if (item.title === 'Logs' && user?.role !== 'super_admin') {
               return false
             }
-            if (item.title === 'Export' && user?.role !== 'super_admin') {
+            if (
+              item.title === 'Export' &&
+              user?.role !== 'super_admin' &&
+              user?.role !== 'admin'
+            ) {
+              return false
+            }
+            if (
+              item.title === 'Hiring' &&
+              user?.role !== 'super_admin' &&
+              user?.role !== 'admin'
+            ) {
               return false
             }
             return true
