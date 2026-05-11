@@ -7,6 +7,19 @@
   </head>
   <body>
     <div id="root"></div>
+    <script>
+      ;(function () {
+        const _info = console.info.bind(console)
+        console.info = function (...args) {
+          if (
+            typeof args[0] === 'string' &&
+            args[0].includes('Download the React DevTools')
+          )
+            return
+          _info(...args)
+        }
+      })()
+    </script>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>

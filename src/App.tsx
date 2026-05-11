@@ -37,6 +37,7 @@ const UpdateTicketsKanban = lazy(
 const UpdateDealsKanban = lazy(
   () => import('./components/deals/update-kanban-deals'),
 )
+const CreateAccount = lazy(() => import('./components/accounts/create-account'))
 
 export default function App() {
   return (
@@ -65,6 +66,7 @@ export default function App() {
             >
               <Route path='/accounts' element={<AccountPage />} />
               <Route path='/accounts/:id' element={<UpdateAccounts />} />
+              <Route path='/accounts/create' element={<CreateAccount />} />
               <Route path='/contacts' element={<ContactPage />} />
               <Route path='/contacts/:id' element={<UpdateContacts />} />
               <Route path='/contacts-create' element={<CreateContact />} />
