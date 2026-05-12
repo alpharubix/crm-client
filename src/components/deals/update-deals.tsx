@@ -56,7 +56,7 @@ function mapDealToForm(apiData: any): UpdateDealFormValues {
     partnerCode: apiData.partner_code || '',
     disbursedAmount:
       apiData.disbursed_amount !== null &&
-      apiData.disbursed_amount !== undefined
+        apiData.disbursed_amount !== undefined
         ? String(apiData.disbursed_amount)
         : '',
     sanctionAmount:
@@ -81,7 +81,7 @@ function mapDealToForm(apiData: any): UpdateDealFormValues {
         : '',
     insuranceAmount:
       apiData.insurance_amount !== null &&
-      apiData.insurance_amount !== undefined
+        apiData.insurance_amount !== undefined
         ? String(apiData.insurance_amount)
         : '',
     pfPercentage:
@@ -90,7 +90,7 @@ function mapDealToForm(apiData: any): UpdateDealFormValues {
         : '',
     rateOfInterest:
       apiData.rate_of_interest !== null &&
-      apiData.rate_of_interest !== undefined
+        apiData.rate_of_interest !== undefined
         ? String(apiData.rate_of_interest)
         : '',
     interestType: apiData.interest_type || '',
@@ -263,8 +263,8 @@ export default function UpdateDeals() {
   const filteredLenders =
     lenderSearch.length > 1
       ? LENDER_NAMES.filter((l: string) =>
-          l.toLowerCase().includes(lenderSearch.toLowerCase()),
-        ).slice(0, 50) // cap at 50 results
+        l.toLowerCase().includes(lenderSearch.toLowerCase()),
+      ).slice(0, 50) // cap at 50 results
       : []
 
   useBeforeUnload(
@@ -299,6 +299,9 @@ export default function UpdateDeals() {
   const dealData: Deal = dealResponse?.data?.[0] || dealResponse?.data
 
   const notes = (dealData as any)?.notes || []
+
+  const revenues = (dealData as any)?.revenue || []
+  console.log(revenues, 'revenues')
 
   const sortedNotes = [...notes].sort((a: any, b: any) => {
     return (
@@ -513,9 +516,9 @@ export default function UpdateDeals() {
                 <span>
                   {formValues.dealCallBackDatetime
                     ? formatExactDate(
-                        formValues.dealCallBackDatetime,
-                        'dd MMM yyyy, hh:mm a',
-                      )
+                      formValues.dealCallBackDatetime,
+                      'dd MMM yyyy, hh:mm a',
+                    )
                     : '—'}
                 </span>
               )}
@@ -589,9 +592,9 @@ export default function UpdateDeals() {
               <span>
                 {formValues.createdAt
                   ? formatExactDate(
-                      formValues.createdAt,
-                      'dd MMM yyyy, hh:mm a',
-                    )
+                    formValues.createdAt,
+                    'dd MMM yyyy, hh:mm a',
+                  )
                   : '—'}
               </span>
             </FieldRow>
@@ -840,6 +843,7 @@ export default function UpdateDeals() {
             </FieldRow>
           </div>
         </CardContent>
+
         {/* ================= Linked Tickets ================= */}
         <SectionHeader title='Linked Tickets' />
         <CardContent className='p-4 space-y-3 border-b'>
@@ -861,7 +865,7 @@ export default function UpdateDeals() {
           </div>
 
           {!(dealData as any)?.tickets ||
-          (dealData as any).tickets.length === 0 ? (
+            (dealData as any).tickets.length === 0 ? (
             <p className='text-sm text-muted-foreground'>
               No tickets associated with this deal.
             </p>
@@ -878,11 +882,10 @@ export default function UpdateDeals() {
                       #{ticket.id}
                     </span>
                     <span
-                      className={`text-[10px] px-2 py-0.5 rounded-full uppercase font-bold ${
-                        ticket.ticket_status === 'Approved'
-                          ? 'bg-emerald-100 text-emerald-700'
-                          : 'bg-zinc-200 text-zinc-700'
-                      }`}
+                      className={`text-[10px] px-2 py-0.5 rounded-full uppercase font-bold ${ticket.ticket_status === 'Approved'
+                        ? 'bg-emerald-100 text-emerald-700'
+                        : 'bg-zinc-200 text-zinc-700'
+                        }`}
                     >
                       {ticket.ticket_status || 'N/A'}
                     </span>
@@ -899,6 +902,49 @@ export default function UpdateDeals() {
             </div>
           )}
         </CardContent>
+
+        <SectionHeader title='Revenue' />
+        <CardContent className='p-4 space-y-3 border-b'>
+          <div className='flex items-center justify-between mb-2'>
+            <p className='text-sm text-muted-foreground'>
+              Total Revenue:{' '}
+              <span className='font-semibold'>{revenues.length || 0}</span>
+            </p>
+          </div>
+
+          {revenues.length === 0 ? (
+            <p className='text-sm text-muted-foreground'>
+              No revenues associated with this deal.
+            </p>
+          ) : (
+            <div className='grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3'>
+              {revenues.map((revenue: any) => (
+                <div
+                  key={revenue.id}
+                  onClick={() => navigate(`/revenue/${revenue.id}`)}
+                  className='bg-muted/30 p-3 rounded-lg border hover:border-primary hover:bg-muted/50 transition-all cursor-pointer group'
+                >
+
+                  <div className='flex justify-between items-start mb-2'>
+                    <span className='text-[13px] py-0.5 rounded-full uppercase font-bold '>
+                      {revenue.account_name || 'N/A'}
+                    </span>
+                  </div>
+                  <div className='flex flex-col mt-2 gap-1 text-[11px] text-muted-foreground uppercase'>
+                    <span>
+                      Owner: {(users as Record<string, string>)[
+                        revenue.owner_id
+                      ] || '—'}
+                    </span>
+                    <span>Lender Name: {revenue.lender_name || '—'}</span>
+                    <span>Type of revenue: {revenue.type_of_revenue || '—'}</span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </CardContent>
+
         {/* ================= Notes ================= */}
         <SectionHeader title='Notes' />
 
