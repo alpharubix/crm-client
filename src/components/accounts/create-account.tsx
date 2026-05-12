@@ -389,19 +389,25 @@ export default function CreateAccount() {
                 isEdit={true}
                 options={[
                   'Himalaya',
-                  'CavinKare',
-                  'Alpharubix',
-                  'Condor Footwear',
-                  'DVG Dist Petroleum',
-                  'Havells',
-                  'Liberty',
-                  'Marico',
+                  'Cavinkare',
                   'Reference',
-                  'Swastik',
-                  'Unicharm',
                   'Vibhava Marketing',
+                  'Havells',
+                  'Alpharubix',
+                  'Unicharm',
+                  'Marico',
+                  'Dvg Dist Petroleum',
+                  'Liberty',
+                  'Swastik',
+                  'Sme Chamber',
+                  'Condor Footwear',
+                  'All India Hardware Association (Based In Mumbai Charni Road)',
+                  'All India Chemists And Druggists Association Of India',
+                  'Federation Of Hotel And Restaurant Association Of India (Based In New Delhi)',
+                  'Retail Association Of India',
                   'R1X Website',
-                  '5pointcredit',
+                  '5Pointcredit',
+                  'Other',
                 ]}
                 onChange={(v) => setValue('source', v)}
               />
@@ -606,16 +612,13 @@ export default function CreateAccount() {
                 isEdit={true}
                 options={[
                   'Pharma',
-                  'AHP',
-                  'CPD',
                   'FMCG',
-                  'OTX',
-                  'Footwear',
-                  'OTC',
-                  'RAAGA',
-                  'Hardware',
                   'Electronics',
-                  'DVG Dist Petroleum',
+                  'Food and Beverages',
+                  'Fashion',
+                  'Footwear',
+                  'Hardware',
+                  'Others',
                 ]}
                 onChange={(v) => setValue('industry', v)}
               />
@@ -852,8 +855,23 @@ export default function CreateAccount() {
             <FieldRow label='Phone'>
               <Input {...register('coApplicantPhone')} className='h-8' />
             </FieldRow>
-            <FieldRow label='Relationship'>
-              <Input {...register('coApplicantRelationship')} className='h-8' />
+            <FieldRow label='Relationship with Applicant'>
+              <SelectField
+                value={data.coApplicantRelationship}
+                isEdit={true}
+                options={[
+                  'Father',
+                  'Mother',
+                  'Son',
+                  'Daughter',
+                  'Brother',
+                  'Sister',
+                  'Spouse',
+                  'Partner',
+                  'Shareholder',
+                ]}
+                onChange={(v) => setValue('coApplicantRelationship', v)}
+              />
             </FieldRow>
             <FieldRow label='Email'>
               <Input {...register('coApplicantEmail')} className='h-8' />
@@ -868,6 +886,8 @@ export default function CreateAccount() {
                 isEdit={true}
               />
             </FieldRow>
+          </div>
+          <div>
             <FieldRow label='City'>
               <CitySelector
                 value={data.coApplicantCity}
@@ -875,8 +895,6 @@ export default function CreateAccount() {
                 isEdit={true}
               />
             </FieldRow>
-          </div>
-          <div>
             <FieldRow label='Country'>
               <Input
                 {...register('coApplicantCountry')}

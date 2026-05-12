@@ -19,6 +19,7 @@ export const updateAccountSchema = z.object({
   // ================= Customer Basic Details =================
   firstName: z.string().min(1, 'Account name is required'),
   lastName: z.string().optional(),
+  accountName: z.string().min(1, 'Account name is required'),
 
   phone: z.string().regex(/^\+?[0-9\s-]{10,15}$/, 'Invalid phone number'),
 

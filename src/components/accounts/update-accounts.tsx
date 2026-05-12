@@ -47,6 +47,14 @@ import { PincodeSelector } from '../shared/pincode-selector'
 import CITIES from '@/utils/cities.json'
 import STATES from '@/utils/states.json'
 import PINCODES from '@/utils/pincodes.json'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '../ui/select'
+import { useAuth } from '@/context/auth-context'
 
 // Language options for multi-select
 const LANGUAGE_OPTIONS = [
@@ -161,6 +169,7 @@ function mapAccountToForm(apiData: any): UpdateAccountFormValues {
       ? new Date(apiData.assignment_date)
       : undefined,
     source: apiData.source ?? '',
+    accountName: apiData.account_name ?? '',
     accountOwnerId: apiData.account_owner_id ?? 0,
     sourceType: apiData.source_type ?? '',
     sourceOther: apiData.source_other ?? '',
@@ -274,6 +283,7 @@ function mapFormToApi(
   if (dirtyFields.assignmentDate)
     payload.assignment_date = formData.assignmentDate
   if (dirtyFields.source) payload.source = formData.source
+  if (dirtyFields.accountName) payload.account_name = formData.accountName
   if (dirtyFields.sourceType) payload.source_type = formData.sourceType
   if (dirtyFields.sourceOther) payload.source_other = formData.sourceOther
   if (dirtyFields.accountOwnerId)
@@ -467,6 +477,9 @@ export default function UpdateAccounts() {
   const [businessCityOpen, setBusinessCityOpen] = useState(false)
   const [businessPincodeSearch, setBusinessPincodeSearch] = useState('')
   const [businessPincodeOpen, setBusinessPincodeOpen] = useState(false)
+  const { user } = useAuth()
+
+  const isAllow = user?.role === 'super_admin' || user?.role === 'admin'
 
   const form = useForm<UpdateAccountFormValues>({
     resolver: zodResolver(updateAccountSchema),
@@ -582,6 +595,18 @@ export default function UpdateAccounts() {
     updateMutation.mutate(values)
   }
 
+  const { data: usersData } = useQuery({
+    queryKey: ['users'],
+    queryFn: async () => {
+      const res = await fetch(`${ENV.VITE_BACKEND_BASE_URL}/user/filter`, {
+        credentials: 'include',
+      })
+      if (!res.ok) throw new Error('Failed to fetch users')
+      return res.json()
+    },
+  })
+  const users = usersData?.data || []
+
   const handleAddNote = async (note: { description: string }) => {
     try {
       const res = await fetch(`${ENV.VITE_BACKEND_BASE_URL}/notes`, {
@@ -627,28 +652,50 @@ export default function UpdateAccounts() {
     <div className='space-y-6 bg-background min-h-screen'>
       {/* HEADER */}
       <div className='flex justify-between items-center border p-4 rounded-xl bg-card'>
-        <div>
-          <h1 className='text-lg font-semibold'>
-            Account Name: {accountData?.account_name}
-          </h1>
-          <h1 className='text-base font-medium'>
-            Account Owner:{' '}
-            <span className='text-base font-bold'>{ownerName}</span>
-          </h1>
+        <div className='space-y-2'>
+          <FieldRow label='Account Name' error={errors.accountName?.message}>
+            {isEdit && isAllow ? (
+              <Input {...register('accountName')} className='h-8' />
+            ) : (
+              <span className='text-lg font-semibold'>
+                {display(accountData?.account_name)}
+              </span>
+            )}
+          </FieldRow>
+
+          <FieldRow label='Account Owner'>
+            {isEdit && isAllow ? (
+              <Select
+                value={data.accountOwnerId || ''}
+                onValueChange={(val) =>
+                  setValue('accountOwnerId', val, { shouldDirty: true })
+                }
+              >
+                <SelectTrigger className='h-8'>
+                  <SelectValue placeholder='Select Account Owner' />
+                </SelectTrigger>
+                <SelectContent>
+                  {users?.map((user: any) => (
+                    <SelectItem key={user.id} value={user.id}>
+                      {user.full_name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            ) : (
+              <span className='text-base font-bold'>{ownerName}</span>
+            )}
+          </FieldRow>
         </div>
+
         {!isEdit ? (
-          <Button
-            size='sm'
-            className='cursor-pointer'
-            onClick={() => setIsEdit(true)}
-          >
+          <Button size='sm' onClick={() => setIsEdit(true)}>
             Update
           </Button>
         ) : (
           <div className='flex gap-2'>
             <Button
               size='sm'
-              className='cursor-pointer'
               disabled={!isDirty || updateMutation.isPending}
               onClick={handleSubmit(onSave)}
             >
@@ -660,7 +707,6 @@ export default function UpdateAccounts() {
             </Button>
             <Button
               size='sm'
-              className='cursor-pointer'
               variant='outline'
               onClick={() => {
                 reset()
