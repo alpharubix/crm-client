@@ -90,7 +90,7 @@ export default function App() {
               <Route path='/revenue-create' element={<CreateRevenue />} />
               <Route path='/revenue/:id' element={<UpdateRevenue />} />
               <Route path='/hiring' element={<HiringKanban />} />
-              <Route path='/candidate' element={<CandidateKanban />} />
+              <Route path='/jr/:jrId' element={<CandidateKanban />} />
               <Route element={<ProtectedLogRoute />}>
                 <Route path='/audit-logs' element={<AuditLogs />} />
               </Route>

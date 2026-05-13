@@ -123,10 +123,10 @@ const data = {
           title: 'Job Requirement',
           url: '/hiring',
         },
-        {
-          title: 'Candidate',
-          url: '/candidate',
-        },
+        // {
+        //   title: 'Candidate',
+        //   url: '/candidate',
+        // },
         // {
         //   title: 'All Tasks',
         //   url: '/tasks',

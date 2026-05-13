@@ -1,7 +1,8 @@
 import { useState } from 'react'
+import { useParams, useNavigate } from 'react-router-dom' // Added useParams and useNavigate
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
-import { Plus, X, RotateCcw, MapPin } from 'lucide-react'
+import { Plus, X, RotateCcw, MapPin, ArrowLeft } from 'lucide-react'
 import { ENV } from '@/conf'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
@@ -37,26 +38,27 @@ interface Candidate {
   educational_qualification_pg?: string
   year_of_passing_pg?: string
   skills?: string
-  language_proficiency?: string[] | string // Backend might return string or array depending on your Model
+  language_proficiency?: string[] | string
+  job_requirement_id?: string
 }
 
 // ── Standalone Candidate Modal ──────────────────────────────────
 function CandidateModal({
   onClose,
   initialData,
+  jrId, // Added jrId prop to link the candidate
 }: {
   onClose: () => void
   initialData?: Candidate
+  jrId: string // Type definition
 }) {
   const queryClient = useQueryClient()
   const isEdit = !!initialData
 
-  // Clean initial data for form state
   const [form, setForm] = useState<Record<string, any>>(
     initialData ? { ...initialData } : { candidate_status: 'New Application' },
   )
 
-  // Handle languages (UI-only state, then merged on submit)
   const [languages, setLanguages] = useState<string[]>(
     Array.isArray(initialData?.language_proficiency)
       ? initialData.language_proficiency
@@ -79,7 +81,8 @@ function CandidateModal({
         credentials: 'include',
         body: JSON.stringify({
           ...form,
-          // Ensure we don't send technical ID strings in POST body
+          // If editing, keep the existing requirement ID; if new, use the current jrId from the URL
+          job_requirement_id: isEdit ? initialData.job_requirement_id : jrId,
           id: isEdit ? initialData.id : undefined,
           language_proficiency: languages,
         }),
@@ -93,7 +96,7 @@ function CandidateModal({
     },
     onSuccess: () => {
       toast.success(isEdit ? 'Candidate Updated' : 'Candidate Created')
-      queryClient.invalidateQueries({ queryKey: ['all-candidates'] })
+      queryClient.invalidateQueries({ queryKey: ['candidates', jrId] })
       onClose()
     },
     onError: (error: any) => {
@@ -267,7 +270,10 @@ function CandidateModal({
 }
 
 export default function CandidateKanban() {
+  const { jrId } = useParams()
+  const navigate = useNavigate()
   const queryClient = useQueryClient()
+
   const [selectedCandidate, setSelectedCandidate] = useState<Candidate | null>(
     null,
   )
@@ -277,12 +283,13 @@ export default function CandidateKanban() {
     candidate_name: '',
   })
 
-  // Fetching data using your Backend Pagination/Filter logic
+  // Fetching candidates specifically for this JR
   const { data, isLoading } = useQuery({
-    queryKey: ['all-candidates', filters],
+    queryKey: ['candidates', jrId, filters],
     queryFn: async () => {
       const p = new URLSearchParams()
-      p.set('page', '1') // Hardcoded to 1 for Kanban view
+      p.set('page', '1')
+      p.set('job_requirement_id', jrId || '')
       if (filters.candidate_status)
         p.set('candidate_status', filters.candidate_status)
       if (filters.candidate_name)
@@ -294,11 +301,24 @@ export default function CandidateKanban() {
       if (!res.ok) throw new Error('Failed to fetch candidates')
       return res.json()
     },
+    enabled: !!jrId,
   })
 
+  const { data: jrData } = useQuery({
+    queryKey: ['job-requirement', jrId],
+    queryFn: async () => {
+      const res = await fetch(
+        `${ENV.VITE_BACKEND_BASE_URL}/job-requirements?jr_id=${jrId}`,
+        { credentials: 'include' },
+      )
+      return res.json()
+    },
+    enabled: !!jrId,
+  })
+
+  const jrInfo = jrData?.data?.[0]
   const candidates = data?.data ?? []
 
-  // Re-grouping data for Kanban columns
   const grouped = CANDIDATE_KANBAN_COLUMNS.reduce(
     (acc, s) => ({
       ...acc,
@@ -313,6 +333,7 @@ export default function CandidateKanban() {
     <div className='w-full h-full p-6 flex flex-col max-w-[1600px] mx-auto'>
       {(showCreate || selectedCandidate) && (
         <CandidateModal
+          jrId={jrId!} // Passed jrId here
           onClose={() => {
             setShowCreate(false)
             setSelectedCandidate(null)
@@ -321,17 +342,29 @@ export default function CandidateKanban() {
         />
       )}
 
-      <div className='flex items-center justify-between mb-6'>
-        <div>
-          <h1 className='text-2xl font-black text-zinc-900'>
-            Recruitment Pipeline
-          </h1>
-          <p className='text-sm text-zinc-500'>
-            Manage and track candidate progress
-          </p>
+      {/* Header with Navigation and Context */}
+      <div className='flex items-center justify-between mb-8 pb-6 border-b'>
+        <div className='flex items-center gap-4'>
+          <Button
+            variant='outline'
+            size='icon'
+            className='rounded-full'
+            onClick={() => navigate('/hiring')} // Navigate back to main hiring board
+          >
+            <ArrowLeft size={20} />
+          </Button>
+          <div>
+            <h1 className='text-2xl font-black text-zinc-900'>
+              {jrInfo?.hiring_position || 'Pipeline'}
+            </h1>
+            <p className='text-sm text-zinc-500'>
+              {jrInfo?.department ? `${jrInfo.department} • ` : ''}
+              {jrInfo?.hiring_location_city || 'Recruitment Pipeline'}
+            </p>
+          </div>
         </div>
         <Button
-          className='bg-teal-600 hover:bg-teal-700'
+          className='bg-teal-600 hover:bg-teal-700 shadow-lg'
           onClick={() => setShowCreate(true)}
         >
           <Plus size={16} className='mr-2' /> New Candidate
@@ -339,10 +372,10 @@ export default function CandidateKanban() {
       </div>
 
       {/* Filters */}
-      <div className='flex gap-3 mb-6 p-3 border rounded-xl bg-white shadow-sm items-center'>
+      <div className='flex gap-3 mb-6 p-4 border rounded-2xl bg-white shadow-sm items-center'>
         <Input
-          placeholder='Search by name...'
-          className='w-64 h-8 text-xs'
+          placeholder='Search candidates...'
+          className='w-72 h-9 text-xs rounded-xl'
           value={filters.candidate_name}
           onChange={(e) =>
             setFilters((f) => ({ ...f, candidate_name: e.target.value }))
@@ -357,8 +390,8 @@ export default function CandidateKanban() {
             }))
           }
         >
-          <SelectTrigger className='w-48 h-8 text-xs'>
-            <SelectValue placeholder='Filter by Status' />
+          <SelectTrigger className='w-48 h-9 text-xs rounded-xl'>
+            <SelectValue placeholder='Status' />
           </SelectTrigger>
           <SelectContent>
             <SelectItem value='all'>All Statuses</SelectItem>
@@ -374,7 +407,7 @@ export default function CandidateKanban() {
           <Button
             variant='ghost'
             size='sm'
-            className='h-8 text-xs text-zinc-500'
+            className='h-9 text-xs text-zinc-500 hover:text-teal-600'
             onClick={() =>
               setFilters({ candidate_status: '', candidate_name: '' })
             }
@@ -393,7 +426,7 @@ export default function CandidateKanban() {
           >
             <div className='text-[11px] font-black uppercase text-zinc-400 border-b pb-2 px-1 flex justify-between items-center'>
               <span>{s}</span>
-              <span className='bg-zinc-200 text-zinc-700 px-2 py-0.5 rounded-full'>
+              <span className='bg-zinc-200 text-zinc-700 px-2 py-0.5 rounded-full font-mono'>
                 {grouped[s]?.length || 0}
               </span>
             </div>
@@ -401,7 +434,7 @@ export default function CandidateKanban() {
             <div className='flex flex-col gap-3 overflow-y-auto pr-1'>
               {isLoading ? (
                 <div className='text-center py-10 text-zinc-400 text-xs'>
-                  Loading...
+                  Loading candidates...
                 </div>
               ) : (
                 grouped[s]?.map((c: Candidate) => (
@@ -416,7 +449,7 @@ export default function CandidateKanban() {
                       </p>
                       <div className='flex items-center text-[10px] text-zinc-500 mt-3'>
                         <MapPin size={10} className='mr-1' />
-                        {c.location_city || 'Remote / Not Set'}
+                        {c.location_city || 'Location N/A'}
                       </div>
                       <div className='mt-3 pt-3 border-t flex justify-between items-center'>
                         <span className='text-[10px] font-medium px-2 py-0.5 bg-zinc-100 rounded text-zinc-600'>
