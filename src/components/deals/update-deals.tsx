@@ -910,6 +910,22 @@ export default function UpdateDeals() {
               Total Revenue:{' '}
               <span className='font-semibold'>{revenues.length || 0}</span>
             </p>
+            <Button
+              variant='outline'
+              size='sm'
+              onClick={() =>
+                navigate(`/revenue-create`, {
+                  state: {
+                    dealId: id,
+                    accountName: dealData.account_name,
+                    lenderName: dealData.lender_name,
+                  },
+                })
+              }
+            >
+              <Plus className='h-4 w-4 mr-2' />
+              Add Revenue
+            </Button>
           </div>
 
           {revenues.length === 0 ? (

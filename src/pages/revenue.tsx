@@ -133,7 +133,11 @@ export default function RevenuePage() {
           return res.json()
         },
       })
-      navigate(`/revenue/${id}`)
+      navigate(`/revenue/${id}`, {
+        state: {
+          lenderName: revenues.lender_name || '',
+        },
+      })
     } catch (error) {
       navigate(`/revenue/${id}`)
     }
