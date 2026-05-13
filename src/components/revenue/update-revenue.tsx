@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useForm, Controller } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
-import { useNavigate, useParams } from 'react-router-dom'
+import { useLocation, useNavigate, useParams } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
 import { ENV } from '@/conf'
@@ -15,17 +15,39 @@ import SectionHeader from '@/components/shared/section-header'
 import FieldRow from '@/components/shared/field-row'
 import DateField from '@/components/shared/date-field'
 import { format } from 'date-fns'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '../ui/select'
 
 import {
   revenueSchema,
   type RevenueFormValues,
 } from '@/validators/revenue.schema'
+import LENDER_NAMES from '@/utils/lenders.json'
+
 
 export default function UpdateRevenue() {
   const { id } = useParams()
   const navigate = useNavigate()
   const queryClient = useQueryClient()
-  
+
+  const location = useLocation()
+  const prefillData = location.state || {}
+
+  const [lenderSearch, setLenderSearch] = useState(prefillData.lenderName || '')
+  const [lenderOpen, setLenderOpen] = useState(false)
+
+  const filteredLenders =
+    lenderSearch.length > 1
+      ? LENDER_NAMES.filter((l: string) =>
+        l.toLowerCase().includes(lenderSearch.toLowerCase()),
+      ).slice(0, 50)
+      : []
+
   const [isEdit, setIsEdit] = useState(false)
 
   const { data: revenueData, isLoading: isLoadingRevenue } = useQuery({
@@ -66,6 +88,7 @@ export default function UpdateRevenue() {
   useEffect(() => {
     if (revenueData?.data?.[0]) {
       const rev = revenueData.data[0]
+
       reset({
         dealId: rev.deal_id || 0,
         accountName: rev.account_name || '',
@@ -73,9 +96,17 @@ export default function UpdateRevenue() {
         referenceNumber: rev.reference_number || '',
         incomeBookingDate: rev.income_booking_date || '',
         typeOfRevenue: rev.type_of_revenue || '',
-        amount: rev.amount !== null && rev.amount !== undefined ? rev.amount : '',
-        gstAmount: rev.gst_amount !== null && rev.gst_amount !== undefined ? rev.gst_amount : '',
+        amount:
+          rev.amount !== null && rev.amount !== undefined
+            ? rev.amount
+            : '',
+        gstAmount:
+          rev.gst_amount !== null && rev.gst_amount !== undefined
+            ? rev.gst_amount
+            : '',
       })
+
+      setLenderSearch(rev.lender_name || '')
     }
   }, [revenueData, reset])
 
@@ -172,25 +203,48 @@ export default function UpdateRevenue() {
         <SectionHeader title='Revenue Details' />
         <CardContent className='p-0 grid grid-cols-1 md:grid-cols-2 border-b'>
           <div className='md:border-r'>
-            <FieldRow label='Account Name' error={errors.accountName?.message}>
-              {isEdit ? (
-                <Input
-                  {...register('accountName')}
-                  placeholder='Account Name'
-                  className='h-8'
-                />
-              ) : (
-                <span>{formValues.accountName || '—'}</span>
-              )}
-            </FieldRow>
 
             <FieldRow label='Lender Name' error={errors.lenderName?.message}>
               {isEdit ? (
-                <Input
-                  {...register('lenderName')}
-                  placeholder='Lender Name'
-                  className='h-8'
-                />
+                <div className='relative'>
+                  <Input
+                    value={lenderSearch}
+                    onChange={(e) => {
+                      setLenderSearch(e.target.value)
+
+                      setValue('lenderName', e.target.value, {
+                        shouldDirty: true,
+                        shouldValidate: true,
+                      })
+
+                      setLenderOpen(true)
+                    }}
+                    onFocus={() => setLenderOpen(true)}
+                    onBlur={() => setTimeout(() => setLenderOpen(false), 200)}
+                    placeholder='Search Lender...'
+                  />
+                  {lenderOpen && filteredLenders.length > 0 && (
+                    <div className='absolute z-10 w-full mt-1 bg-background border rounded-md shadow-lg max-h-60 overflow-auto'>
+                      {filteredLenders.map((name: string) => (
+                        <div
+                          key={name}
+                          className='p-2 hover:bg-muted cursor-pointer text-sm'
+                          onMouseDown={() => {
+                            setValue('lenderName', name, {
+                              shouldDirty: true,
+                              shouldValidate: true,
+                            })
+
+                            setLenderSearch(name)
+                            setLenderOpen(false)
+                          }}
+                        >
+                          {name}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
               ) : (
                 <span>{formValues.lenderName || '—'}</span>
               )}
@@ -241,11 +295,23 @@ export default function UpdateRevenue() {
               error={errors.typeOfRevenue?.message}
             >
               {isEdit ? (
-                <Input
-                  {...register('typeOfRevenue')}
-                  placeholder='Type of Revenue'
-                  className='h-8'
-                />
+                <Select
+                  value={formValues.typeOfRevenue}
+                  onValueChange={(val) =>
+                    setValue('typeOfRevenue', val, {
+                      shouldDirty: true,
+                      shouldValidate: true,
+                    })
+                  }
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select Type of Revenue" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="Processing Fees">Processing Fees</SelectItem>
+                    <SelectItem value="Interest Fees">Interest Fees</SelectItem>
+                  </SelectContent>
+                </Select>
               ) : (
                 <span>{formValues.typeOfRevenue || '—'}</span>
               )}

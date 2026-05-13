@@ -914,7 +914,13 @@ export default function UpdateDeals() {
               variant='outline'
               size='sm'
               onClick={() =>
-                navigate(`/revenue-create`)
+                navigate(`/revenue-create`, {
+                  state: {
+                    dealId: id,
+                    accountName: dealData.account_name,
+                    lenderName: dealData.lender_name,
+                  },
+                })
               }
             >
               <Plus className='h-4 w-4 mr-2' />

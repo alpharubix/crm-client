@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useLocation } from 'react-router-dom'
 import { useQuery, useMutation } from '@tanstack/react-query'
 import { toast } from 'sonner'
 import { ENV } from '@/conf'
@@ -22,15 +22,27 @@ import {
 } from '@/validators/revenue.schema'
 import DateField from '../shared/date-field'
 import { format } from 'date-fns'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '../ui/select'
 
 export default function CreateRevenue() {
   const navigate = useNavigate()
 
+  const location = useLocation()
+  
+  const prefillData = location.state || {}
+
   const form = useForm<RevenueFormValues>({
     resolver: zodResolver(revenueSchema),
     defaultValues: {
-      accountName: '',
-      lenderName: '',
+      dealId: prefillData.dealId || '',
+      accountName: prefillData.accountName || '',
+      lenderName: prefillData.lenderName || '',
       referenceNumber: '',
       incomeBookingDate: '',
       typeOfRevenue: '',
@@ -51,7 +63,7 @@ export default function CreateRevenue() {
   console.log(formValues.incomeBookingDate);
 
 
-  const [lenderSearch, setLenderSearch] = useState('')
+  const [lenderSearch, setLenderSearch] = useState(prefillData.lenderName || '')
   const [lenderOpen, setLenderOpen] = useState(false)
 
   const filteredLenders =
@@ -61,11 +73,11 @@ export default function CreateRevenue() {
       ).slice(0, 50)
       : []
 
-  const [searchTerm, setSearchTerm] = useState('')
+  const [searchTerm, setSearchTerm] = useState(prefillData.accountName || '')
   const [debouncedSearch, setDebouncedSearch] = useState('')
   const [isOpen, setIsOpen] = useState(false)
 
-  const [accountSearch, setAccountSearch] = useState('')
+  const [accountSearch, setAccountSearch] = useState(prefillData.accountName || '')
   const [debouncedAccountSearch, setDebouncedAccountSearch] = useState('')
   const [isAccountOpen, setIsAccountOpen] = useState(false)
 
@@ -181,7 +193,7 @@ export default function CreateRevenue() {
         <SectionHeader title='Revenue Details' />
         <CardContent className='p-0 grid grid-cols-1 md:grid-cols-2 border-b'>
           <div className='md:border-r'>
-            <FieldRow label='Deal Lookup' error={errors.dealId?.message}>
+            <FieldRow label='Deal Name' error={errors.dealId?.message}>
               <div className='relative'>
                 <Input
                   placeholder='Search Deal Name...'
@@ -275,7 +287,7 @@ export default function CreateRevenue() {
               </div>
             </FieldRow>
 
-            <FieldRow label='Lender Name *' error={errors.lenderName?.message}>
+            <FieldRow label='Lender Name' error={errors.lenderName?.message}>
               <div className='relative'>
                 <Input
                   value={lenderSearch}
@@ -354,11 +366,18 @@ export default function CreateRevenue() {
               label='Type of Revenue'
               error={errors.typeOfRevenue?.message}
             >
-              <Input
-                {...register('typeOfRevenue')}
-                placeholder='Type of Revenue'
-                className='h-8'
-              />
+              <Select
+                value={formValues.typeOfRevenue}
+                onValueChange={(val) => setValue('typeOfRevenue', val)}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select Type of Revenue" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="Processing Fees">Processing Fees</SelectItem>
+                  <SelectItem value="Interest Fees">Interest Fees</SelectItem>
+                </SelectContent>
+              </Select>
             </FieldRow>
 
             <FieldRow label='Amount' error={errors.amount?.message}>
