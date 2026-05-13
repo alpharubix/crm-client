@@ -13,11 +13,15 @@ import { Spinner } from '@/components/ui/spinner'
 
 import SectionHeader from '@/components/shared/section-header'
 import FieldRow from '@/components/shared/field-row'
+import LENDER_NAMES from '@/utils/lenders.json'
+
 
 import {
   revenueSchema,
   type RevenueFormValues,
 } from '@/validators/revenue.schema'
+import DateField from '../shared/date-field'
+import { format } from 'date-fns'
 
 export default function CreateRevenue() {
   const navigate = useNavigate()
@@ -44,6 +48,18 @@ export default function CreateRevenue() {
   } = form
 
   const formValues = watch()
+  console.log(formValues.incomeBookingDate);
+
+
+  const [lenderSearch, setLenderSearch] = useState('')
+  const [lenderOpen, setLenderOpen] = useState(false)
+
+  const filteredLenders =
+    lenderSearch.length > 1
+      ? LENDER_NAMES.filter((l: string) =>
+        l.toLowerCase().includes(lenderSearch.toLowerCase()),
+      ).slice(0, 50)
+      : []
 
   const [searchTerm, setSearchTerm] = useState('')
   const [debouncedSearch, setDebouncedSearch] = useState('')
@@ -259,12 +275,36 @@ export default function CreateRevenue() {
               </div>
             </FieldRow>
 
-            <FieldRow label='Lender Name' error={errors.lenderName?.message}>
-              <Input
-                {...register('lenderName')}
-                placeholder='Lender Name'
-                className='h-8'
-              />
+            <FieldRow label='Lender Name *' error={errors.lenderName?.message}>
+              <div className='relative'>
+                <Input
+                  value={lenderSearch}
+                  onChange={(e) => {
+                    setLenderSearch(e.target.value)
+                    setLenderOpen(true)
+                  }}
+                  onFocus={() => setLenderOpen(true)}
+                  onBlur={() => setTimeout(() => setLenderOpen(false), 200)}
+                  placeholder='Search Lender...'
+                />
+                {lenderOpen && filteredLenders.length > 0 && (
+                  <div className='absolute z-10 w-full mt-1 bg-background border rounded-md shadow-lg max-h-60 overflow-auto'>
+                    {filteredLenders.map((name: string) => (
+                      <div
+                        key={name}
+                        className='p-2 hover:bg-muted cursor-pointer text-sm'
+                        onMouseDown={() => {
+                          setValue('lenderName', name, { shouldValidate: true })
+                          setLenderSearch(name)
+                          setLenderOpen(false)
+                        }}
+                      >
+                        {name}
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
             </FieldRow>
 
             <FieldRow
@@ -284,10 +324,29 @@ export default function CreateRevenue() {
               label='Income Booking Date'
               error={errors.incomeBookingDate?.message}
             >
-              <Input
-                {...register('incomeBookingDate')}
-                type='date'
-                className='h-8'
+              <DateField
+                isEdit={true}
+                showTime={false}
+                value={
+                  formValues.incomeBookingDate
+                    ? new Date(formValues.incomeBookingDate)
+                    : undefined
+                }
+                onChange={(date) => {
+                  if (date) {
+                    setValue(
+                      'incomeBookingDate',
+                      format(date, 'yyyy-MM-dd'),
+                      { shouldValidate: true, shouldDirty: true }
+                    )
+                  } else {
+                    setValue(
+                      'incomeBookingDate',
+                      '',
+                      { shouldValidate: true, shouldDirty: true }
+                    )
+                  }
+                }}
               />
             </FieldRow>
 

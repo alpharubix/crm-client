@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { useForm } from 'react-hook-form'
+import { useForm, Controller } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useNavigate, useParams } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
@@ -13,6 +13,8 @@ import { Spinner } from '@/components/ui/spinner'
 
 import SectionHeader from '@/components/shared/section-header'
 import FieldRow from '@/components/shared/field-row'
+import DateField from '@/components/shared/date-field'
+import { format } from 'date-fns'
 
 import {
   revenueSchema,
@@ -212,18 +214,26 @@ export default function UpdateRevenue() {
 
           <div>
             <FieldRow
-              label='Income Booking Date (YYYY-MM-DD)'
+              label='Income Booking Date'
               error={errors.incomeBookingDate?.message}
             >
-              {isEdit ? (
-                <Input
-                  {...register('incomeBookingDate')}
-                  type='date'
-                  className='h-8'
-                />
-              ) : (
-                <span>{formValues.incomeBookingDate || '—'}</span>
-              )}
+              <Controller
+                control={form.control}
+                name='incomeBookingDate'
+                render={({ field }) => (
+                  <DateField
+                    value={field.value ? new Date(field.value) : undefined}
+                    isEdit={isEdit}
+                    onChange={(date) => {
+                      if (date) {
+                        field.onChange(format(date, 'yyyy-MM-dd'))
+                      } else {
+                        field.onChange('')
+                      }
+                    }}
+                  />
+                )}
+              />
             </FieldRow>
 
             <FieldRow
