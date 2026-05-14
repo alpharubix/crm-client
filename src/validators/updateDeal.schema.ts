@@ -13,7 +13,8 @@ export const updateDealSchema = z.object({
   ticketLogin: z.string().optional(),
   dealStage: z.string().optional(),
   dealStatus: z.string().optional(),
-
+  caseStage: z.string().optional(), // Add this
+  caseStatus: z.string().optional(), // Add this
   disbursedAmount: z.union([z.string(), z.number()]).optional(),
   sanctionAmount: z.union([z.string(), z.number()]).optional(),
   approvedAmount: z.union([z.string(), z.number()]).optional(),
@@ -45,7 +46,7 @@ export const updateDealSchema = z.object({
 
   paymentReceipt: z.string().optional(),
   partnerCode: z.string().optional(),
-  potential: z.string().optional(),
+  potential: z.union([z.string(), z.number()]).optional(),
   product: z.string().optional(),
 
   createdBy: z.string().optional(),

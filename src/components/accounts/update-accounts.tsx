@@ -280,8 +280,8 @@ function mapFormToApi(
   const payload: any = {}
 
   // Simple fields
-  if (dirtyFields.assignmentDate)
-    payload.assignment_date = formData.assignmentDate
+  // if (dirtyFields.assignmentDate)
+  //   payload.assignment_date = formData.assignmentDate
   if (dirtyFields.source) payload.source = formData.source
   if (dirtyFields.accountName) payload.account_name = formData.accountName
   if (dirtyFields.sourceType) payload.source_type = formData.sourceType
@@ -725,11 +725,13 @@ export default function UpdateAccounts() {
         <CardContent className='p-0 grid grid-cols-1 md:grid-cols-2'>
           <div className='md:border-r'>
             <FieldRow label='Assignment Date'>
-              <span>
-                {formatExactDate(
-                  data.assignmentDate?.toISOString() || '',
-                  'dd MMM yyyy, hh:mm a',
-                ) || '—'}
+              <span className='text-sm font-medium text-muted-foreground'>
+                {data.assignmentDate
+                  ? formatExactDate(
+                      data.assignmentDate.toISOString(),
+                      'dd MMM yyyy, hh:mm a',
+                    )
+                  : 'Not assigned yet'}
               </span>
             </FieldRow>
 

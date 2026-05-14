@@ -149,6 +149,7 @@ export default function CreateAccount() {
       applicantCountry: 'India',
       coApplicantCountry: 'India',
       accountOwnerId: '',
+      accountStage: 'Initial Pitch',
     },
   })
 
@@ -180,7 +181,7 @@ export default function CreateAccount() {
       last_name: formData.lastName,
       email: formData.email,
       phone: formData.phone,
-      account_name: `${formData.firstName} ${formData.lastName}`.trim(),
+      account_name: formData.accountName,
       source: formData.source,
       source_type: formData.sourceType,
       source_other: formData.sourceOther,
@@ -196,9 +197,7 @@ export default function CreateAccount() {
 
       // Business Details
       business_details: {
-        vintage_years: formData.businessVintage
-          ? parseInt(formData.businessVintage)
-          : null,
+        vintage_years: Number(formData.businessVintage) || null,
         registration_type: formData.businessRegistrationType,
         suppliers: formData.suppliers,
         description: formData.description,
@@ -215,9 +214,7 @@ export default function CreateAccount() {
         state: formData.businessState,
         country: formData.businessCountry || 'India',
         pincode: formData.businessPincode,
-        years_residing: formData.businessYearsResiding
-          ? parseInt(formData.businessYearsResiding)
-          : null,
+        years_residing: Number(formData.businessYearsResiding) || null,
         gps_location: formData.businessGpsLocation,
         ownership_type: formData.businessOwnership,
       },
@@ -229,9 +226,7 @@ export default function CreateAccount() {
         state: formData.applicantState,
         country: formData.applicantCountry || 'India',
         pincode: formData.applicantPincode,
-        years_residing: formData.applicantYearsResiding
-          ? parseInt(formData.applicantYearsResiding)
-          : null,
+        years_residing: Number(formData.applicantYearsResiding) || null,
         gps_location: formData.applicantGpsLocation,
         ownership_type: formData.applicantOwnership,
       },
@@ -247,9 +242,7 @@ export default function CreateAccount() {
         state: formData.coApplicantState,
         country: formData.coApplicantCountry || 'India',
         pincode: formData.coApplicantPincode,
-        years_residing: formData.coApplicantYearsResiding
-          ? parseInt(formData.coApplicantYearsResiding)
-          : null,
+        years_residing: Number(formData.coApplicantYearsResiding) || null,
         gps_location: formData.coApplicantGpsLocation,
         ownership_type: formData.coApplicantOwnership,
       },
@@ -343,9 +336,9 @@ export default function CreateAccount() {
           </Button>
           <Button
             size='sm'
-            disabled={isSubmitting || createMutation.isPending}
-            onClick={handleSubmit(onSubmit)}
             type='submit'
+            form='create-account-form'
+            disabled={isSubmitting || createMutation.isPending}
           >
             {createMutation.isPending ? (
               <Spinner className='mr-2 h-4 w-4' />
@@ -355,640 +348,661 @@ export default function CreateAccount() {
           </Button>
         </div>
       </div>
-
-      <Card className='overflow-hidden space-y-1'>
-        {/* ================= Account Status ================= */}
-        <SectionHeader title='Account Status' />
-        <CardContent className='p-0 grid grid-cols-1 md:grid-cols-2'>
-          <div className='md:border-r'>
-            <FieldRow
-              label='Account Owner *'
-              error={errors.accountOwnerId?.message}
-            >
-              <Select
-                value={data.accountOwnerId || ''}
-                onValueChange={(val) =>
-                  setValue('accountOwnerId', val, { shouldDirty: true })
-                }
+      <form id='create-account-form' onSubmit={handleSubmit(onSubmit)}>
+        <Card className='overflow-hidden space-y-1'>
+          {/* ================= Account Status ================= */}
+          <SectionHeader title='Account Status' />
+          <CardContent className='p-0 grid grid-cols-1 md:grid-cols-2'>
+            <div className='md:border-r'>
+              <FieldRow
+                label='Account Name *'
+                error={errors.accountName?.message}
               >
-                <SelectTrigger className='h-8'>
-                  <SelectValue placeholder='Select Account Owner' />
-                </SelectTrigger>
-                <SelectContent>
-                  {users.map((user: any) => (
-                    <SelectItem key={user.id} value={user.id}>
-                      {user.full_name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </FieldRow>
-            <FieldRow label='Source' error={errors.source?.message}>
-              <SelectField
-                value={data.source}
-                isEdit={true}
-                options={[
-                  'Himalaya',
-                  'Cavinkare',
-                  'Reference',
-                  'Vibhava Marketing',
-                  'Havells',
-                  'Alpharubix',
-                  'Unicharm',
-                  'Marico',
-                  'Dvg Dist Petroleum',
-                  'Liberty',
-                  'Swastik',
-                  'Sme Chamber',
-                  'Condor Footwear',
-                  'All India Hardware Association (Based In Mumbai Charni Road)',
-                  'All India Chemists And Druggists Association Of India',
-                  'Federation Of Hotel And Restaurant Association Of India (Based In New Delhi)',
-                  'Retail Association Of India',
-                  'R1X Website',
-                  '5Pointcredit',
-                  'Other',
-                ]}
-                onChange={(v) => setValue('source', v)}
-              />
-            </FieldRow>
-
-            <FieldRow label='Source Type' error={errors.sourceType?.message}>
-              <SelectField
-                value={data.sourceType}
-                isEdit={true}
-                options={['Direct', 'Referral', 'Partner', 'Website', 'Other']}
-                onChange={(v) => setValue('sourceType', v)}
-              />
-            </FieldRow>
-
-            {data.sourceType === 'Other' && (
-              <FieldRow label='Source (Others)'>
-                <Input {...register('sourceOther')} className='h-8' />
+                <Input
+                  {...register('accountName')}
+                  placeholder="e.g. Acme Corp or John's Enterprise"
+                  className='h-8'
+                />
               </FieldRow>
-            )}
-
-            <FieldRow
-              label='Distributor Code'
-              error={errors.distributorCode?.message}
-            >
-              <Input {...register('distributorCode')} className='h-8' />
-            </FieldRow>
-
-            <FieldRow label='WABA Interested'>
-              <SelectField
-                value={data.wabaInterested ? 'Yes' : 'No'}
-                isEdit={true}
-                options={['Yes', 'No']}
-                onChange={(v) => setValue('wabaInterested', v === 'Yes')}
-              />
-            </FieldRow>
-          </div>
-
-          <div>
-            <FieldRow label='Call Back Date/ Time'>
-              <DateField
-                value={data.callBackDate}
-                isEdit={true}
-                showTime={true}
-                disablePast={true}
-                onChange={(d) => setValue('callBackDate', d)}
-              />
-            </FieldRow>
-
-            <FieldRow
-              label='Account Status'
-              error={errors.accountStatus?.message}
-            >
-              <SelectField
-                value={data.accountStatus}
-                isEdit={true}
-                options={[
-                  'Yet to be dialed',
-                  'Wrong Number',
-                  'Contact Established',
-                  'Contact Not Established',
-                  'Awareness',
-                  'Attention',
-                  'Assessment',
-                  'Lender Review',
-                  'Not Interested',
-                  'Location Unserviceable',
-                ]}
-                onChange={(v) => setValue('accountStatus', v)}
-              />
-            </FieldRow>
-
-            <FieldRow
-              label='Account Stage *'
-              error={errors.accountStage?.message}
-            >
-              <SelectField
-                value={data.accountStage}
-                isEdit={true}
-                options={[
-                  'Initial Pitch',
-                  'Product Offering',
-                  'Doc List Shared to Cust',
-                  'Partial Docs Rec',
-                  'Yet To Review',
-                  'Under Internal Review',
-                  'In Review with Lender',
-                  'Interested',
-                  'Commercial NI',
-                  'Location not doable',
-                  'No Requirement',
-                ]}
-                onChange={(v) => setValue('accountStage', v)}
-              />
-            </FieldRow>
-
-            <FieldRow
-              label='Business Status'
-              error={errors.businessStatus?.message}
-            >
-              <SelectField
-                value={data.businessStatus}
-                isEdit={true}
-                options={['Active', 'Inactive', 'Not Sure']}
-                onChange={(v) => setValue('businessStatus', v)}
-              />
-            </FieldRow>
-          </div>
-        </CardContent>
-
-        {/* ================= Customer Basic Details ================= */}
-        <SectionHeader title='Customer Basic Details' />
-        <CardContent className='p-0 grid grid-cols-1 md:grid-cols-2'>
-          <div className='md:border-r'>
-            <FieldRow label='First Name *' error={errors.firstName?.message}>
-              <Input {...register('firstName')} className='h-8' />
-            </FieldRow>
-            <FieldRow label='Phone No *' error={errors.phone?.message}>
-              <Input {...register('phone')} className='h-8' />
-            </FieldRow>
-            <FieldRow label='Email *' error={errors.email?.message}>
-              <Input {...register('email')} className='h-8' />
-            </FieldRow>
-          </div>
-          <div>
-            <FieldRow label='Last Name' error={errors.lastName?.message}>
-              <Input {...register('lastName')} className='h-8' />
-            </FieldRow>
-            <FieldRow label="Mother's Name">
-              <Input {...register('mothersName')} className='h-8' />
-            </FieldRow>
-            <FieldRow label='Preferred Language Support'>
-              <MultiSelectField
-                value={data.preferredLanguages}
-                options={LANGUAGE_OPTIONS}
-                onChange={(v) => setValue('preferredLanguages', v)}
-                placeholder='Select languages...'
-              />
-            </FieldRow>
-          </div>
-        </CardContent>
-
-        {/* ================= Customer Business Details ================= */}
-        <SectionHeader title='Customer Business Details' />
-        <CardContent className='p-0 grid grid-cols-1 md:grid-cols-2'>
-          <div className='md:border-r'>
-            <FieldRow label='Business Vintage (No of Years)'>
-              <Input
-                {...register('businessVintage')}
-                className='h-8'
-                type='number'
-              />
-            </FieldRow>
-            <FieldRow label='Business Registration Type'>
-              <SelectField
-                value={data.businessRegistrationType}
-                isEdit={true}
-                options={[
-                  '-None-',
-                  'Proprietorship',
-                  'Partnership',
-                  'Private Limited',
-                ]}
-                onChange={(v) => setValue('businessRegistrationType', v)}
-              />
-            </FieldRow>
-            <FieldRow label='Suppliers'>
-              <Input {...register('suppliers')} className='h-8' />
-            </FieldRow>
-            <FieldRow label='Description'>
-              <textarea
-                {...register('description')}
-                className='w-full h-20 px-2 border rounded-md text-sm'
-              />
-            </FieldRow>
-            <FieldRow label='GSTN'>
-              <Input {...register('gstn')} className='h-8' />
-            </FieldRow>
-          </div>
-          <div>
-            <FieldRow label='Type of Business'>
-              <SelectField
-                value={data.typeOfBusiness}
-                isEdit={true}
-                options={[
-                  'Manufacturer',
-                  'Distributor',
-                  'Franchise/FOFO',
-                  'Wholesale Trader',
-                  'Retailer',
-                  'Super Stockist',
-                  'Sub Distributor',
-                  'Inst Customers',
-                  'Govt Institutions',
-                  'Co Operative Society',
-                ]}
-                onChange={(v) => setValue('typeOfBusiness', v)}
-              />
-            </FieldRow>
-            <FieldRow label='Industry'>
-              <SelectField
-                value={data.industry}
-                isEdit={true}
-                options={[
-                  'Pharma',
-                  'FMCG',
-                  'Electronics',
-                  'Food and Beverages',
-                  'Fashion',
-                  'Footwear',
-                  'Hardware',
-                  'Others',
-                ]}
-                onChange={(v) => setValue('industry', v)}
-              />
-            </FieldRow>
-            <FieldRow label='PAN'>
-              <Input {...register('pan')} className='h-8' />
-            </FieldRow>
-          </div>
-        </CardContent>
-
-        {/* ================= Address Information of Business Premise ================= */}
-        <SectionHeader title='Address Information of Business Premise' />
-        <CardContent className='p-0 grid grid-cols-1 md:grid-cols-2'>
-          <div className='md:border-r'>
-            <FieldRow label='Street'>
-              <Input {...register('businessStreet')} className='h-8' />
-            </FieldRow>
-            <FieldRow label='State'>
-              <div className='relative'>
-                <Input
-                  value={businessStateSearch}
-                  onChange={(e) => {
-                    setBusinessStateSearch(e.target.value)
-                    setBusinessStateOpen(true)
-                    setValue('businessState', e.target.value)
-                  }}
-                  onFocus={() => setBusinessStateOpen(true)}
-                  onBlur={() =>
-                    setTimeout(() => setBusinessStateOpen(false), 200)
+              <FieldRow
+                label='Account Owner *'
+                error={errors.accountOwnerId?.message}
+              >
+                <Select
+                  value={data.accountOwnerId || ''}
+                  onValueChange={(val) =>
+                    setValue('accountOwnerId', val, { shouldDirty: true })
                   }
-                  placeholder='Search State...'
+                >
+                  <SelectTrigger className='h-8'>
+                    <SelectValue placeholder='Select Account Owner' />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {users.map((user: any) => (
+                      <SelectItem key={user.id} value={user.id}>
+                        {user.full_name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </FieldRow>
+              <FieldRow label='Source' error={errors.source?.message}>
+                <SelectField
+                  value={data.source}
+                  isEdit={true}
+                  options={[
+                    'Himalaya',
+                    'Cavinkare',
+                    'Reference',
+                    'Vibhava Marketing',
+                    'Havells',
+                    'Alpharubix',
+                    'Unicharm',
+                    'Marico',
+                    'Dvg Dist Petroleum',
+                    'Liberty',
+                    'Swastik',
+                    'Sme Chamber',
+                    'Condor Footwear',
+                    'All India Hardware Association (Based In Mumbai Charni Road)',
+                    'All India Chemists And Druggists Association Of India',
+                    'Federation Of Hotel And Restaurant Association Of India (Based In New Delhi)',
+                    'Retail Association Of India',
+                    'R1X Website',
+                    '5Pointcredit',
+                    'Other',
+                  ]}
+                  onChange={(v) => setValue('source', v)}
+                />
+              </FieldRow>
+
+              <FieldRow label='Source Type' error={errors.sourceType?.message}>
+                <SelectField
+                  value={data.sourceType}
+                  isEdit={true}
+                  options={[
+                    'Direct',
+                    'Referral',
+                    'Partner',
+                    'Website',
+                    'Other',
+                  ]}
+                  onChange={(v) => setValue('sourceType', v)}
+                />
+              </FieldRow>
+
+              {data.sourceType === 'Other' && (
+                <FieldRow label='Source (Others)'>
+                  <Input {...register('sourceOther')} className='h-8' />
+                </FieldRow>
+              )}
+
+              <FieldRow
+                label='Distributor Code'
+                error={errors.distributorCode?.message}
+              >
+                <Input {...register('distributorCode')} className='h-8' />
+              </FieldRow>
+
+              <FieldRow label='WABA Interested'>
+                <SelectField
+                  value={data.wabaInterested ? 'Yes' : 'No'}
+                  isEdit={true}
+                  options={['Yes', 'No']}
+                  onChange={(v) => setValue('wabaInterested', v === 'Yes')}
+                />
+              </FieldRow>
+            </div>
+
+            <div>
+              <FieldRow label='Call Back Date/ Time'>
+                <DateField
+                  value={data.callBackDate}
+                  isEdit={true}
+                  showTime={true}
+                  disablePast={true}
+                  onChange={(d) => setValue('callBackDate', d)}
+                />
+              </FieldRow>
+
+              <FieldRow
+                label='Account Status'
+                error={errors.accountStatus?.message}
+              >
+                <SelectField
+                  value={data.accountStatus}
+                  isEdit={true}
+                  options={[
+                    'Yet to be dialed',
+                    'Wrong Number',
+                    'Contact Established',
+                    'Contact Not Established',
+                    'Awareness',
+                    'Attention',
+                    'Assessment',
+                    'Lender Review',
+                    'Not Interested',
+                    'Location Unserviceable',
+                  ]}
+                  onChange={(v) => setValue('accountStatus', v)}
+                />
+              </FieldRow>
+
+              <FieldRow
+                label='Account Stage *'
+                error={errors.accountStage?.message}
+              >
+                <SelectField
+                  value={data.accountStage}
+                  isEdit={true}
+                  options={[
+                    'Initial Pitch',
+                    'Product Offering',
+                    'Doc List Shared to Cust',
+                    'Partial Docs Rec',
+                    'Yet To Review',
+                    'Under Internal Review',
+                    'In Review with Lender',
+                    'Interested',
+                    'Commercial NI',
+                    'Location not doable',
+                    'No Requirement',
+                  ]}
+                  onChange={(v) => setValue('accountStage', v)}
+                />
+              </FieldRow>
+
+              <FieldRow
+                label='Business Status'
+                error={errors.businessStatus?.message}
+              >
+                <SelectField
+                  value={data.businessStatus}
+                  isEdit={true}
+                  options={['Active', 'Inactive', 'Not Sure']}
+                  onChange={(v) => setValue('businessStatus', v)}
+                />
+              </FieldRow>
+            </div>
+          </CardContent>
+
+          {/* ================= Customer Basic Details ================= */}
+          <SectionHeader title='Customer Basic Details' />
+          <CardContent className='p-0 grid grid-cols-1 md:grid-cols-2'>
+            <div className='md:border-r'>
+              <FieldRow label='First Name *' error={errors.firstName?.message}>
+                <Input {...register('firstName')} className='h-8' />
+              </FieldRow>
+              <FieldRow label='Phone No *' error={errors.phone?.message}>
+                <Input {...register('phone')} className='h-8' />
+              </FieldRow>
+              <FieldRow label='Email *' error={errors.email?.message}>
+                <Input {...register('email')} className='h-8' />
+              </FieldRow>
+            </div>
+            <div>
+              <FieldRow label='Last Name' error={errors.lastName?.message}>
+                <Input {...register('lastName')} className='h-8' />
+              </FieldRow>
+              <FieldRow label="Mother's Name">
+                <Input {...register('mothersName')} className='h-8' />
+              </FieldRow>
+              <FieldRow label='Preferred Language Support'>
+                <MultiSelectField
+                  value={data.preferredLanguages}
+                  options={LANGUAGE_OPTIONS}
+                  onChange={(v) => setValue('preferredLanguages', v)}
+                  placeholder='Select languages...'
+                />
+              </FieldRow>
+            </div>
+          </CardContent>
+
+          {/* ================= Customer Business Details ================= */}
+          <SectionHeader title='Customer Business Details' />
+          <CardContent className='p-0 grid grid-cols-1 md:grid-cols-2'>
+            <div className='md:border-r'>
+              <FieldRow label='Business Vintage (No of Years)'>
+                <Input
+                  {...register('businessVintage')}
+                  className='h-8'
+                  type='number'
+                />
+              </FieldRow>
+              <FieldRow label='Business Registration Type'>
+                <SelectField
+                  value={data.businessRegistrationType}
+                  isEdit={true}
+                  options={[
+                    '-None-',
+                    'Proprietorship',
+                    'Partnership',
+                    'Private Limited',
+                  ]}
+                  onChange={(v) => setValue('businessRegistrationType', v)}
+                />
+              </FieldRow>
+              <FieldRow label='Suppliers'>
+                <Input {...register('suppliers')} className='h-8' />
+              </FieldRow>
+              <FieldRow label='Description'>
+                <textarea
+                  {...register('description')}
+                  className='w-full h-20 px-2 border rounded-md text-sm'
+                />
+              </FieldRow>
+              <FieldRow label='GSTN'>
+                <Input {...register('gstn')} className='h-8' />
+              </FieldRow>
+            </div>
+            <div>
+              <FieldRow label='Type of Business'>
+                <SelectField
+                  value={data.typeOfBusiness}
+                  isEdit={true}
+                  options={[
+                    'Manufacturer',
+                    'Distributor',
+                    'Franchise/FOFO',
+                    'Wholesale Trader',
+                    'Retailer',
+                    'Super Stockist',
+                    'Sub Distributor',
+                    'Inst Customers',
+                    'Govt Institutions',
+                    'Co Operative Society',
+                  ]}
+                  onChange={(v) => setValue('typeOfBusiness', v)}
+                />
+              </FieldRow>
+              <FieldRow label='Industry'>
+                <SelectField
+                  value={data.industry}
+                  isEdit={true}
+                  options={[
+                    'Pharma',
+                    'FMCG',
+                    'Electronics',
+                    'Food and Beverages',
+                    'Fashion',
+                    'Footwear',
+                    'Hardware',
+                    'Others',
+                  ]}
+                  onChange={(v) => setValue('industry', v)}
+                />
+              </FieldRow>
+              <FieldRow label='PAN'>
+                <Input {...register('pan')} className='h-8' />
+              </FieldRow>
+            </div>
+          </CardContent>
+
+          {/* ================= Address Information of Business Premise ================= */}
+          <SectionHeader title='Address Information of Business Premise' />
+          <CardContent className='p-0 grid grid-cols-1 md:grid-cols-2'>
+            <div className='md:border-r'>
+              <FieldRow label='Street'>
+                <Input {...register('businessStreet')} className='h-8' />
+              </FieldRow>
+              <FieldRow label='State'>
+                <div className='relative'>
+                  <Input
+                    value={businessStateSearch}
+                    onChange={(e) => {
+                      setBusinessStateSearch(e.target.value)
+                      setBusinessStateOpen(true)
+                      setValue('businessState', e.target.value)
+                    }}
+                    onFocus={() => setBusinessStateOpen(true)}
+                    onBlur={() =>
+                      setTimeout(() => setBusinessStateOpen(false), 200)
+                    }
+                    placeholder='Search State...'
+                    className='h-8'
+                  />
+                  {businessStateOpen && filteredBusinessStates.length > 0 && (
+                    <div className='absolute z-10 w-full mt-1 bg-background border rounded-md shadow-lg max-h-60 overflow-auto'>
+                      {filteredBusinessStates.map((state: string) => (
+                        <div
+                          key={state}
+                          className='p-2 hover:bg-muted cursor-pointer text-sm'
+                          onMouseDown={() => {
+                            setValue('businessState', state)
+                            setBusinessStateSearch(state)
+                            setBusinessStateOpen(false)
+                          }}
+                        >
+                          {state}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </FieldRow>
+              <FieldRow label='Pincode'>
+                <div className='relative'>
+                  <Input
+                    value={businessPincodeSearch}
+                    onChange={(e) => {
+                      setBusinessPincodeSearch(e.target.value)
+                      setBusinessPincodeOpen(true)
+                      setValue('businessPincode', e.target.value)
+                    }}
+                    onFocus={() => setBusinessPincodeOpen(true)}
+                    onBlur={() =>
+                      setTimeout(() => setBusinessPincodeOpen(false), 200)
+                    }
+                    placeholder='Search Pincode...'
+                    className='h-8'
+                  />
+                  {businessPincodeOpen &&
+                    filteredBusinessPincodes.length > 0 && (
+                      <div className='absolute z-10 w-full mt-1 bg-background border rounded-md shadow-lg max-h-60 overflow-auto'>
+                        {filteredBusinessPincodes.map((pincode: string) => (
+                          <div
+                            key={pincode}
+                            className='p-2 hover:bg-muted cursor-pointer text-sm'
+                            onMouseDown={() => {
+                              setValue('businessPincode', pincode)
+                              setBusinessPincodeSearch(pincode)
+                              setBusinessPincodeOpen(false)
+                            }}
+                          >
+                            {pincode}
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                </div>
+              </FieldRow>
+              <FieldRow label='Residential Location GPS'>
+                <Input {...register('businessGpsLocation')} className='h-8' />
+              </FieldRow>
+            </div>
+            <div>
+              <FieldRow label='City'>
+                <div className='relative'>
+                  <Input
+                    value={businessCitySearch}
+                    onChange={(e) => {
+                      setBusinessCitySearch(e.target.value)
+                      setBusinessCityOpen(true)
+                      setValue('businessCity', e.target.value)
+                    }}
+                    onFocus={() => setBusinessCityOpen(true)}
+                    onBlur={() =>
+                      setTimeout(() => setBusinessCityOpen(false), 200)
+                    }
+                    placeholder='Search City...'
+                    className='h-8'
+                  />
+                  {businessCityOpen && filteredBusinessCities.length > 0 && (
+                    <div className='absolute z-10 w-full mt-1 bg-background border rounded-md shadow-lg max-h-60 overflow-auto'>
+                      {filteredBusinessCities.map((city: string) => (
+                        <div
+                          key={city}
+                          className='p-2 hover:bg-muted cursor-pointer text-sm'
+                          onMouseDown={() => {
+                            setValue('businessCity', city)
+                            setBusinessCitySearch(city)
+                            setBusinessCityOpen(false)
+                          }}
+                        >
+                          {city}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </FieldRow>
+              <FieldRow label='Country'>
+                <Input
+                  {...register('businessCountry')}
+                  className='h-8'
+                  defaultValue='India'
+                />
+              </FieldRow>
+              <FieldRow label='No of Years residing in Business Premise'>
+                <Input
+                  {...register('businessYearsResiding')}
+                  className='h-8'
+                  type='number'
+                />
+              </FieldRow>
+              <FieldRow label='Business Premise Ownership'>
+                <SelectField
+                  value={data.businessOwnership}
+                  isEdit={true}
+                  options={[
+                    'Self Owned',
+                    'Rented',
+                    'Parent Owned',
+                    'Leased',
+                    'Children Owned',
+                    'Spouse Owned',
+                    'Relative Owned',
+                  ]}
+                  onChange={(v) => setValue('businessOwnership', v)}
+                />
+              </FieldRow>
+            </div>
+          </CardContent>
+
+          {/* ================= Address Information of Residence - Applicant ================= */}
+          <SectionHeader title='Address Information of Residence - Applicant' />
+          <CardContent className='p-0 grid grid-cols-1 md:grid-cols-2'>
+            <div className='md:border-r'>
+              <FieldRow label='Street'>
+                <Input {...register('applicantStreet')} className='h-8' />
+              </FieldRow>
+              <FieldRow label='State'>
+                <StateSelector
+                  value={data.applicantState}
+                  onChange={(val) => setValue('applicantState', val)}
+                  isEdit={true}
+                />
+              </FieldRow>
+              <FieldRow label='City'>
+                <CitySelector
+                  value={data.applicantCity}
+                  onChange={(val) => setValue('applicantCity', val)}
+                  isEdit={true}
+                />
+              </FieldRow>
+              <FieldRow label='Country'>
+                <Input
+                  {...register('applicantCountry')}
+                  className='h-8'
+                  defaultValue='India'
+                />
+              </FieldRow>
+            </div>
+            <div>
+              <FieldRow label='Pincode'>
+                <PincodeSelector
+                  value={data.applicantPincode}
+                  onChange={(val) => setValue('applicantPincode', val)}
+                  isEdit={true}
+                />
+              </FieldRow>
+              <FieldRow label='No of Years residing in current residence'>
+                <Input
+                  {...register('applicantYearsResiding')}
+                  className='h-8'
+                  type='number'
+                />
+              </FieldRow>
+              <FieldRow label='Residence Ownership'>
+                <SelectField
+                  value={data.applicantOwnership}
+                  isEdit={true}
+                  options={[
+                    'Self Owned',
+                    'Rented',
+                    'Parent Owned',
+                    'Leased',
+                    'Children Owned',
+                    'Spouse Owned',
+                    'Relative Owned',
+                  ]}
+                  onChange={(v) => setValue('applicantOwnership', v)}
+                />
+              </FieldRow>
+              <FieldRow label='Residential Location GPS'>
+                <Input {...register('applicantGpsLocation')} className='h-8' />
+              </FieldRow>
+            </div>
+          </CardContent>
+
+          {/* ================= Address Information of Residence - Co Applicant ================= */}
+          <SectionHeader title='Address Information of Residence - Co Applicant' />
+          <CardContent className='p-0 grid grid-cols-1 md:grid-cols-2'>
+            <div className='md:border-r'>
+              <FieldRow label='Name'>
+                <Input {...register('coApplicantName')} className='h-8' />
+              </FieldRow>
+              <FieldRow label='Phone'>
+                <Input {...register('coApplicantPhone')} className='h-8' />
+              </FieldRow>
+              <FieldRow label='Relationship with Applicant'>
+                <SelectField
+                  value={data.coApplicantRelationship}
+                  isEdit={true}
+                  options={[
+                    'Father',
+                    'Mother',
+                    'Son',
+                    'Daughter',
+                    'Brother',
+                    'Sister',
+                    'Spouse',
+                    'Partner',
+                    'Shareholder',
+                  ]}
+                  onChange={(v) => setValue('coApplicantRelationship', v)}
+                />
+              </FieldRow>
+              <FieldRow label='Email'>
+                <Input {...register('coApplicantEmail')} className='h-8' />
+              </FieldRow>
+              <FieldRow label='Street'>
+                <Input {...register('coApplicantStreet')} className='h-8' />
+              </FieldRow>
+              <FieldRow label='State'>
+                <StateSelector
+                  value={data.coApplicantState}
+                  onChange={(val) => setValue('coApplicantState', val)}
+                  isEdit={true}
+                />
+              </FieldRow>
+            </div>
+            <div>
+              <FieldRow label='City'>
+                <CitySelector
+                  value={data.coApplicantCity}
+                  onChange={(val) => setValue('coApplicantCity', val)}
+                  isEdit={true}
+                />
+              </FieldRow>
+              <FieldRow label='Country'>
+                <Input
+                  {...register('coApplicantCountry')}
+                  className='h-8'
+                  defaultValue='India'
+                />
+              </FieldRow>
+              <FieldRow label='Pincode'>
+                <PincodeSelector
+                  value={data.coApplicantPincode}
+                  onChange={(val) => setValue('coApplicantPincode', val)}
+                  isEdit={true}
+                />
+              </FieldRow>
+              <FieldRow label='No of Years residing in current residence'>
+                <Input
+                  {...register('coApplicantYearsResiding')}
+                  className='h-8'
+                  type='number'
+                />
+              </FieldRow>
+              <FieldRow label='Residence Ownership'>
+                <SelectField
+                  value={data.coApplicantOwnership}
+                  isEdit={true}
+                  options={[
+                    'Self Owned',
+                    'Rented',
+                    'Parent Owned',
+                    'Leased',
+                    'Children Owned',
+                    'Spouse Owned',
+                    'Relative Owned',
+                  ]}
+                  onChange={(v) => setValue('coApplicantOwnership', v)}
+                />
+              </FieldRow>
+              <FieldRow label='Residential Location GPS'>
+                <Input
+                  {...register('coApplicantGpsLocation')}
                   className='h-8'
                 />
-                {businessStateOpen && filteredBusinessStates.length > 0 && (
-                  <div className='absolute z-10 w-full mt-1 bg-background border rounded-md shadow-lg max-h-60 overflow-auto'>
-                    {filteredBusinessStates.map((state: string) => (
-                      <div
-                        key={state}
-                        className='p-2 hover:bg-muted cursor-pointer text-sm'
-                        onMouseDown={() => {
-                          setValue('businessState', state)
-                          setBusinessStateSearch(state)
-                          setBusinessStateOpen(false)
-                        }}
-                      >
-                        {state}
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-            </FieldRow>
-            <FieldRow label='Pincode'>
-              <div className='relative'>
-                <Input
-                  value={businessPincodeSearch}
-                  onChange={(e) => {
-                    setBusinessPincodeSearch(e.target.value)
-                    setBusinessPincodeOpen(true)
-                    setValue('businessPincode', e.target.value)
-                  }}
-                  onFocus={() => setBusinessPincodeOpen(true)}
-                  onBlur={() =>
-                    setTimeout(() => setBusinessPincodeOpen(false), 200)
-                  }
-                  placeholder='Search Pincode...'
-                  className='h-8'
-                />
-                {businessPincodeOpen && filteredBusinessPincodes.length > 0 && (
-                  <div className='absolute z-10 w-full mt-1 bg-background border rounded-md shadow-lg max-h-60 overflow-auto'>
-                    {filteredBusinessPincodes.map((pincode: string) => (
-                      <div
-                        key={pincode}
-                        className='p-2 hover:bg-muted cursor-pointer text-sm'
-                        onMouseDown={() => {
-                          setValue('businessPincode', pincode)
-                          setBusinessPincodeSearch(pincode)
-                          setBusinessPincodeOpen(false)
-                        }}
-                      >
-                        {pincode}
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-            </FieldRow>
-            <FieldRow label='Residential Location GPS'>
-              <Input {...register('businessGpsLocation')} className='h-8' />
-            </FieldRow>
-          </div>
-          <div>
-            <FieldRow label='City'>
-              <div className='relative'>
-                <Input
-                  value={businessCitySearch}
-                  onChange={(e) => {
-                    setBusinessCitySearch(e.target.value)
-                    setBusinessCityOpen(true)
-                    setValue('businessCity', e.target.value)
-                  }}
-                  onFocus={() => setBusinessCityOpen(true)}
-                  onBlur={() =>
-                    setTimeout(() => setBusinessCityOpen(false), 200)
-                  }
-                  placeholder='Search City...'
-                  className='h-8'
-                />
-                {businessCityOpen && filteredBusinessCities.length > 0 && (
-                  <div className='absolute z-10 w-full mt-1 bg-background border rounded-md shadow-lg max-h-60 overflow-auto'>
-                    {filteredBusinessCities.map((city: string) => (
-                      <div
-                        key={city}
-                        className='p-2 hover:bg-muted cursor-pointer text-sm'
-                        onMouseDown={() => {
-                          setValue('businessCity', city)
-                          setBusinessCitySearch(city)
-                          setBusinessCityOpen(false)
-                        }}
-                      >
-                        {city}
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-            </FieldRow>
-            <FieldRow label='Country'>
-              <Input
-                {...register('businessCountry')}
-                className='h-8'
-                defaultValue='India'
-              />
-            </FieldRow>
-            <FieldRow label='No of Years residing in Business Premise'>
-              <Input
-                {...register('businessYearsResiding')}
-                className='h-8'
-                type='number'
-              />
-            </FieldRow>
-            <FieldRow label='Business Premise Ownership'>
-              <SelectField
-                value={data.businessOwnership}
-                isEdit={true}
-                options={[
-                  'Self Owned',
-                  'Rented',
-                  'Parent Owned',
-                  'Leased',
-                  'Children Owned',
-                  'Spouse Owned',
-                  'Relative Owned',
-                ]}
-                onChange={(v) => setValue('businessOwnership', v)}
-              />
-            </FieldRow>
-          </div>
-        </CardContent>
+              </FieldRow>
+            </div>
+          </CardContent>
 
-        {/* ================= Address Information of Residence - Applicant ================= */}
-        <SectionHeader title='Address Information of Residence - Applicant' />
-        <CardContent className='p-0 grid grid-cols-1 md:grid-cols-2'>
-          <div className='md:border-r'>
-            <FieldRow label='Street'>
-              <Input {...register('applicantStreet')} className='h-8' />
-            </FieldRow>
-            <FieldRow label='State'>
-              <StateSelector
-                value={data.applicantState}
-                onChange={(val) => setValue('applicantState', val)}
-                isEdit={true}
-              />
-            </FieldRow>
-            <FieldRow label='City'>
-              <CitySelector
-                value={data.applicantCity}
-                onChange={(val) => setValue('applicantCity', val)}
-                isEdit={true}
-              />
-            </FieldRow>
-            <FieldRow label='Country'>
-              <Input
-                {...register('applicantCountry')}
-                className='h-8'
-                defaultValue='India'
-              />
-            </FieldRow>
-          </div>
-          <div>
-            <FieldRow label='Pincode'>
-              <PincodeSelector
-                value={data.applicantPincode}
-                onChange={(val) => setValue('applicantPincode', val)}
-                isEdit={true}
-              />
-            </FieldRow>
-            <FieldRow label='No of Years residing in current residence'>
-              <Input
-                {...register('applicantYearsResiding')}
-                className='h-8'
-                type='number'
-              />
-            </FieldRow>
-            <FieldRow label='Residence Ownership'>
-              <SelectField
-                value={data.applicantOwnership}
-                isEdit={true}
-                options={[
-                  'Self Owned',
-                  'Rented',
-                  'Parent Owned',
-                  'Leased',
-                  'Children Owned',
-                  'Spouse Owned',
-                  'Relative Owned',
-                ]}
-                onChange={(v) => setValue('applicantOwnership', v)}
-              />
-            </FieldRow>
-            <FieldRow label='Residential Location GPS'>
-              <Input {...register('applicantGpsLocation')} className='h-8' />
-            </FieldRow>
-          </div>
-        </CardContent>
-
-        {/* ================= Address Information of Residence - Co Applicant ================= */}
-        <SectionHeader title='Address Information of Residence - Co Applicant' />
-        <CardContent className='p-0 grid grid-cols-1 md:grid-cols-2'>
-          <div className='md:border-r'>
-            <FieldRow label='Name'>
-              <Input {...register('coApplicantName')} className='h-8' />
-            </FieldRow>
-            <FieldRow label='Phone'>
-              <Input {...register('coApplicantPhone')} className='h-8' />
-            </FieldRow>
-            <FieldRow label='Relationship with Applicant'>
-              <SelectField
-                value={data.coApplicantRelationship}
-                isEdit={true}
-                options={[
-                  'Father',
-                  'Mother',
-                  'Son',
-                  'Daughter',
-                  'Brother',
-                  'Sister',
-                  'Spouse',
-                  'Partner',
-                  'Shareholder',
-                ]}
-                onChange={(v) => setValue('coApplicantRelationship', v)}
-              />
-            </FieldRow>
-            <FieldRow label='Email'>
-              <Input {...register('coApplicantEmail')} className='h-8' />
-            </FieldRow>
-            <FieldRow label='Street'>
-              <Input {...register('coApplicantStreet')} className='h-8' />
-            </FieldRow>
-            <FieldRow label='State'>
-              <StateSelector
-                value={data.coApplicantState}
-                onChange={(val) => setValue('coApplicantState', val)}
-                isEdit={true}
-              />
-            </FieldRow>
-          </div>
-          <div>
-            <FieldRow label='City'>
-              <CitySelector
-                value={data.coApplicantCity}
-                onChange={(val) => setValue('coApplicantCity', val)}
-                isEdit={true}
-              />
-            </FieldRow>
-            <FieldRow label='Country'>
-              <Input
-                {...register('coApplicantCountry')}
-                className='h-8'
-                defaultValue='India'
-              />
-            </FieldRow>
-            <FieldRow label='Pincode'>
-              <PincodeSelector
-                value={data.coApplicantPincode}
-                onChange={(val) => setValue('coApplicantPincode', val)}
-                isEdit={true}
-              />
-            </FieldRow>
-            <FieldRow label='No of Years residing in current residence'>
-              <Input
-                {...register('coApplicantYearsResiding')}
-                className='h-8'
-                type='number'
-              />
-            </FieldRow>
-            <FieldRow label='Residence Ownership'>
-              <SelectField
-                value={data.coApplicantOwnership}
-                isEdit={true}
-                options={[
-                  'Self Owned',
-                  'Rented',
-                  'Parent Owned',
-                  'Leased',
-                  'Children Owned',
-                  'Spouse Owned',
-                  'Relative Owned',
-                ]}
-                onChange={(v) => setValue('coApplicantOwnership', v)}
-              />
-            </FieldRow>
-            <FieldRow label='Residential Location GPS'>
-              <Input {...register('coApplicantGpsLocation')} className='h-8' />
-            </FieldRow>
-          </div>
-        </CardContent>
-
-        {/* ================= References from Customer ================= */}
-        <SectionHeader title='References from Customer' />
-        <CardContent className='p-0 grid grid-cols-1 md:grid-cols-2'>
-          <div className='md:border-r'>
-            <FieldRow label='Name of Person 1'>
-              <Input {...register('ref1Name')} className='h-8' />
-            </FieldRow>
-            <FieldRow
-              label='Phone of Person 1'
-              error={errors.ref1Phone?.message}
-            >
-              <Input {...register('ref1Phone')} className='h-8' />
-            </FieldRow>
-            <FieldRow
-              label='Email ID Person 1'
-              error={errors.ref1Email?.message}
-            >
-              <Input {...register('ref1Email')} className='h-8' />
-            </FieldRow>
-            <FieldRow label='Person 1 Relationship with Borrower'>
-              <Input {...register('ref1Relationship')} className='h-8' />
-            </FieldRow>
-            <FieldRow label='Address of Person 1'>
-              <Input {...register('ref1Address')} className='h-8' />
-            </FieldRow>
-          </div>
-          <div>
-            <FieldRow label='Name of Person 2'>
-              <Input {...register('ref2Name')} className='h-8' />
-            </FieldRow>
-            <FieldRow
-              label='Phone of Person 2'
-              error={errors.ref2Phone?.message}
-            >
-              <Input {...register('ref2Phone')} className='h-8' />
-            </FieldRow>
-            <FieldRow
-              label='Email ID Person 2'
-              error={errors.ref2Email?.message}
-            >
-              <Input {...register('ref2Email')} className='h-8' />
-            </FieldRow>
-            <FieldRow label='Person 2 Relationship with Borrower'>
-              <Input {...register('ref2Relationship')} className='h-8' />
-            </FieldRow>
-            <FieldRow label='Address of Person 2'>
-              <Input {...register('ref2Address')} className='h-8' />
-            </FieldRow>
-          </div>
-        </CardContent>
-      </Card>
+          {/* ================= References from Customer ================= */}
+          <SectionHeader title='References from Customer' />
+          <CardContent className='p-0 grid grid-cols-1 md:grid-cols-2'>
+            <div className='md:border-r'>
+              <FieldRow label='Name of Person 1'>
+                <Input {...register('ref1Name')} className='h-8' />
+              </FieldRow>
+              <FieldRow
+                label='Phone of Person 1'
+                error={errors.ref1Phone?.message}
+              >
+                <Input {...register('ref1Phone')} className='h-8' />
+              </FieldRow>
+              <FieldRow
+                label='Email ID Person 1'
+                error={errors.ref1Email?.message}
+              >
+                <Input {...register('ref1Email')} className='h-8' />
+              </FieldRow>
+              <FieldRow label='Person 1 Relationship with Borrower'>
+                <Input {...register('ref1Relationship')} className='h-8' />
+              </FieldRow>
+              <FieldRow label='Address of Person 1'>
+                <Input {...register('ref1Address')} className='h-8' />
+              </FieldRow>
+            </div>
+            <div>
+              <FieldRow label='Name of Person 2'>
+                <Input {...register('ref2Name')} className='h-8' />
+              </FieldRow>
+              <FieldRow
+                label='Phone of Person 2'
+                error={errors.ref2Phone?.message}
+              >
+                <Input {...register('ref2Phone')} className='h-8' />
+              </FieldRow>
+              <FieldRow
+                label='Email ID Person 2'
+                error={errors.ref2Email?.message}
+              >
+                <Input {...register('ref2Email')} className='h-8' />
+              </FieldRow>
+              <FieldRow label='Person 2 Relationship with Borrower'>
+                <Input {...register('ref2Relationship')} className='h-8' />
+              </FieldRow>
+              <FieldRow label='Address of Person 2'>
+                <Input {...register('ref2Address')} className='h-8' />
+              </FieldRow>
+            </div>
+          </CardContent>
+        </Card>
+      </form>
     </div>
   )
 }

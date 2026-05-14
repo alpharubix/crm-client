@@ -135,6 +135,8 @@ function mapFormToApi(
       value: formData.ticketNumber ? String(formData.ticketNumber) : null,
       key: 'ticketNumber',
     },
+    ticket_stage: { value: formData.caseStage, key: 'caseStage' },
+    ticket_status: { value: formData.caseStatus, key: 'caseStatus' },
     deal_type: { value: formData.dealType, key: 'dealType' },
     loan_type: { value: formData.loanType, key: 'loanType' },
     type_of_login: { value: formData.typeOfLogin, key: 'typeOfLogin' },
@@ -143,9 +145,7 @@ function mapFormToApi(
       key: 'typeOfCaseLogin',
     },
     ticket_login: { value: formData.ticketLogin, key: 'ticketLogin' },
-    ticket_stage: { value: formData.caseStage, key: 'caseStage' },
     type_of_loan: { value: formData.loanType, key: 'loanType' },
-    ticket_status: { value: formData.caseStatus, key: 'caseStatus' },
     disbursed_amount: {
       value: formData.disbursedAmount,
       key: 'disbursedAmount',
@@ -164,8 +164,16 @@ function mapFormToApi(
       value: formData.insuranceAmount,
       key: 'insuranceAmount',
     },
-    pf_percentage: { value: formData.pfPercentage, key: 'pfPercentage' },
-    rate_of_interest: { value: formData.rateOfInterest, key: 'rateOfInterest' },
+    pf_percentage: {
+      value: formData.pfPercentage ? parseFloat(formData.pfPercentage) : null,
+      key: 'pfPercentage',
+    },
+    rate_of_interest: {
+      value: formData.rateOfInterest
+        ? parseFloat(formData.rateOfInterest)
+        : null,
+      key: 'rateOfInterest',
+    },
     interest_type: { value: formData.interestType, key: 'interestType' },
     deal_call_back_datetime: {
       value: formData.dealCallBackDatetime,
@@ -208,7 +216,13 @@ function mapFormToApi(
       key: 'lenderRejectionStatusExplanation',
     },
     payment_receipt: { value: formData.paymentReceipt, key: 'paymentReceipt' },
-    potential: { value: formData.potential, key: 'potential' },
+    potential: {
+      value:
+        formData.potential && formData.potential !== ''
+          ? parseFloat(String(formData.potential))
+          : null,
+      key: 'potential',
+    },
     product: { value: formData.product, key: 'product' },
   }
 
@@ -484,6 +498,8 @@ export default function UpdateDeals() {
                   {...register('potential')}
                   placeholder='Potential'
                   className='h-8'
+                  type='number'
+                  step='0.01'
                 />
               ) : (
                 <span>{formValues.potential || '—'}</span>
