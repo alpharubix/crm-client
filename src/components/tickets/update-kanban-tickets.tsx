@@ -34,6 +34,7 @@ import {
 import { formatExactDate } from '@/utils/date-formatter'
 import { formatAmount } from '@/utils/number-formatter'
 import { format } from 'date-fns'
+import { useAuth } from '@/context/auth-context'
 
 function mapDealToForm(apiData: any): UpdateDealFormValues {
   return {
@@ -229,7 +230,16 @@ export default function UpdateDeals() {
   const navigate = useNavigate()
   const [isEdit, setIsEdit] = useState(false)
   const [openAllNotes, setOpenAllNotes] = useState(false)
+  const { user } = useAuth()
+  const allowedEmails = [
+    'prathap@r1xchange.com',
+    'pranay.kumar@r1xchange.com',
+    'sutapa.roy@r1xchange.com',
+    'namrata.srivastava@r1xchange.com',
+    'subhasini.ts@r1xchange.com',
+  ]
 
+  const isEmailAuthorized = allowedEmails.includes(user?.email!)
   const {
     register,
     handleSubmit,
@@ -398,7 +408,8 @@ export default function UpdateDeals() {
           </h1>
         </div>
         <div className='flex items-center gap-2'>
-          {!isEdit ? (
+          {/* If not editing AND authorized, show Update */}
+          {!isEdit && isEmailAuthorized && (
             <Button
               size='sm'
               className='cursor-pointer'
@@ -406,7 +417,10 @@ export default function UpdateDeals() {
             >
               Update
             </Button>
-          ) : (
+          )}
+
+          {/* If editing, show Save and Cancel */}
+          {isEdit && (
             <div className='flex gap-2'>
               <Button
                 size='sm'
@@ -434,6 +448,8 @@ export default function UpdateDeals() {
               </Button>
             </div>
           )}
+
+          {/* Always show Go to Deal */}
           <Button
             variant='default'
             onClick={() => navigate(`/deals/${dealData.deal_id}`)}
