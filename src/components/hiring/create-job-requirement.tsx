@@ -22,6 +22,14 @@ import {
   EMPLOYEE_OPTIONS,
 } from '@/utils/hiring-constants'
 import { X } from 'lucide-react'
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from '../ui/dialog'
+import NoteDialog from '../shared/note-dialog'
 
 // Mock representation of the context session state matching your router interceptors.
 // In production, fetch these values from your Auth Context providers.
@@ -167,6 +175,45 @@ export default function CreateJobRequirement() {
     },
     enabled: isEdit,
   })
+  // ── NOTES STATE & HANDLER CHANGES ──────────────────────────────────
+  const sortedNotes = [...(form.notes || [])].sort((a: any, b: any) => {
+    return (
+      new Date(b.Created_Time).getTime() - new Date(a.Created_Time).getTime()
+    )
+  })
+
+  const [openAllNotes, setOpenAllNotes] = useState(false)
+  const MAX_NOTES_VISIBLE = 3
+  const showViewMore = sortedNotes.length > MAX_NOTES_VISIBLE
+  const visibleNotes = showViewMore
+    ? sortedNotes.slice(0, MAX_NOTES_VISIBLE)
+    : sortedNotes
+
+  const handleAddNote = async (note: { description: string }) => {
+    try {
+      const res = await fetch(`${ENV.VITE_BACKEND_BASE_URL}/notes`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({
+          id: String(id), // Target JR ID
+          note: note.description, // Text Content
+          module: 'Job_Requirements', // Module indicator
+        }),
+      })
+
+      if (res.ok) {
+        toast.success('Note added successfully')
+        queryClient.invalidateQueries({
+          queryKey: ['job-requirement-detail', id],
+        })
+      } else {
+        toast.error('Failed to add note')
+      }
+    } catch (err) {
+      toast.error('Network error')
+    }
+  }
 
   useEffect(() => {
     if (detailData?.data) {
@@ -381,6 +428,7 @@ export default function CreateJobRequirement() {
                 onChange={(e) => set('min_annual_ctc', e.target.value)}
                 className='h-8'
                 placeholder='Currency'
+                type='number'
               />
             </FieldRow>
             <FieldRow label='Max Annual CTC'>
@@ -389,6 +437,7 @@ export default function CreateJobRequirement() {
                 onChange={(e) => set('max_annual_ctc', e.target.value)}
                 className='h-8'
                 placeholder='Currency'
+                type='number'
               />
             </FieldRow>
             <FieldRow label='No of vacancies'>
@@ -426,7 +475,7 @@ export default function CreateJobRequirement() {
                     userId === String(getVal('approver_id')) && (
                       <Button
                         type='button'
-                        size='xs'
+                        size='sm'
                         className='h-7 bg-green-600 hover:bg-green-700 text-white text-xs'
                         onClick={() => {
                           set('status', 'approved')
@@ -504,7 +553,16 @@ export default function CreateJobRequirement() {
             <FieldRow label='Educational Qualification(UG)'>
               <MultiSelectField
                 value={ugQualifications}
-                options={['B.Tech', 'B.E', 'BCA', 'B.Sc', 'B.Com', 'BBA']}
+                options={[
+                  'B.Tech (Bachelor of Technology)',
+                  'B.E (Bachelor of Engineering)',
+                  'BCA (Bachelor of Computer Applications)',
+                  'B.Sc Computer Science / IT',
+                  'B.Com (General / Honors)',
+                  'BBM (Bachelor of Business Management)',
+                  'BBA (Bachelor of Business Administration)',
+                  'BA (Bachelor of Arts)',
+                ]}
                 onChange={setUgQualifications}
               />
             </FieldRow>
@@ -513,7 +571,16 @@ export default function CreateJobRequirement() {
             <FieldRow label='Educational Qualification(PG)'>
               <MultiSelectField
                 value={pgQualifications}
-                options={['M.Tech', 'ME', 'MCA', 'M.Sc', 'MBA', 'MA']}
+                options={[
+                  'M.Tech (Master of Technology)',
+                  'ME (Master of Engineering)',
+                  'MCA (Master of Computer Applications)',
+                  'M.Sc (Physics, Chemistry, Maths, Biology, etc.)',
+                  'M.Com (Master of Commerce)',
+                  'MBA (Master of Business Administration)',
+                  'PGDM (Post Graduate Diploma in Management)',
+                  'MA (Master of Arts)',
+                ]}
                 onChange={setPgQualifications}
               />
             </FieldRow>
@@ -583,6 +650,129 @@ export default function CreateJobRequirement() {
             </FieldRow>
           </div>
         </CardContent>
+        <SectionHeader title='Notes' />
+
+        <CardContent className='p-4 space-y-3'>
+          <div className='flex items-center justify-between'>
+            <p className='text-sm text-muted-foreground'>
+              Total Notes:{' '}
+              <span className='font-semibold'>{sortedNotes.length}</span>
+            </p>
+
+            <div className='flex gap-2 items-center'>
+              {showViewMore && (
+                <Dialog open={openAllNotes} onOpenChange={setOpenAllNotes}>
+                  <DialogTrigger asChild>
+                    <Button
+                      size='sm'
+                      className='cursor-pointer'
+                      variant='outline'
+                    >
+                      View More
+                    </Button>
+                  </DialogTrigger>
+
+                  <DialogContent className='min-w-4xl max-w-4xl'>
+                    <DialogHeader>
+                      <DialogTitle>
+                        All Tree Notes ({sortedNotes.length})
+                      </DialogTitle>
+                    </DialogHeader>
+
+                    <div className='max-h-[70vh] overflow-y-auto space-y-3 pr-2 mt-2'>
+                      {sortedNotes.map((note: any, i: number) => {
+                        const isCandidateNote = note.module === 'Candidates'
+                        return (
+                          <div
+                            key={note.parent_id || i}
+                            className={`p-3 rounded-lg border bg-muted/30 transition-all ${
+                              isCandidateNote
+                                ? 'border-l-4 border-l-teal-500'
+                                : 'border-l-4 border-l-blue-500'
+                            }`}
+                          >
+                            <p className='text-sm'>{note.Note_Content}</p>
+                            <div className='flex flex-wrap gap-3 text-[11px] text-muted-foreground uppercase mt-2 justify-between items-center w-full font-medium'>
+                              <div className='flex gap-3'>
+                                <span>
+                                  Created By: {note.Created_By?.name || '—'}
+                                </span>
+                                <span>
+                                  Created Date:{' '}
+                                  {note.Created_Time
+                                    ? new Date(
+                                        note.Created_Time,
+                                      ).toLocaleString()
+                                    : '—'}
+                                </span>
+                              </div>
+                              <span
+                                className={`text-[9px] font-bold px-1.5 py-0.2 rounded border ${
+                                  isCandidateNote
+                                    ? 'text-teal-600 bg-teal-50 border-teal-100'
+                                    : 'text-blue-600 bg-blue-50 border-blue-100'
+                                }`}
+                              >
+                                {isCandidateNote
+                                  ? `Candidate`
+                                  : 'Job Requirement'}
+                              </span>
+                            </div>
+                          </div>
+                        )
+                      })}
+                    </div>
+                  </DialogContent>
+                </Dialog>
+              )}
+            </div>
+          </div>
+        </CardContent>
+
+        {sortedNotes.length === 0 ? (
+          <p className='text-sm text-muted-foreground'>No notes available</p>
+        ) : (
+          visibleNotes.map((note: any, i: number) => {
+            const isCandidateNote = note.module === 'Candidates'
+            return (
+              <div
+                key={note.parent_id || i}
+                className={`p-3 rounded-lg border bg-muted/30 transition-all ${
+                  isCandidateNote
+                    ? 'border-l-4 border-l-teal-500'
+                    : 'border-l-4 border-l-blue-500'
+                }`}
+              >
+                <p className='text-sm'>{note.Note_Content}</p>
+                <div className='flex flex-wrap gap-3 text-[11px] text-muted-foreground uppercase mt-2 justify-between items-center w-full font-medium'>
+                  <div className='flex gap-3'>
+                    <span>Created By: {note.Created_By?.name || '—'}</span>
+                    <span>
+                      Created Date:{' '}
+                      {note.Created_Time
+                        ? new Date(note.Created_Time).toLocaleString()
+                        : '—'}
+                    </span>
+                  </div>
+                  <span
+                    className={`text-[9px] font-bold px-1.5 py-0.2 rounded border ${
+                      isCandidateNote
+                        ? 'text-teal-600 bg-teal-50 border-teal-100'
+                        : 'text-blue-600 bg-blue-50 border-blue-100'
+                    }`}
+                  >
+                    {isCandidateNote
+                      ? `Candidate`
+                      : 'Job Requirement'}
+                  </span>
+                </div>
+              </div>
+            )
+          })
+        )}
+
+        {/* Render the entry trigger dialog only if the current entry exists in the DB */}
+        {isEdit && <NoteDialog onAddNote={handleAddNote} />}
       </Card>
     </div>
   )
