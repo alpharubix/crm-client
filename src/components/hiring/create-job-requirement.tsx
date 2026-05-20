@@ -23,7 +23,15 @@ import {
 } from '@/utils/hiring-constants'
 import { X } from 'lucide-react'
 
-// Multi-Select Component (similar to the one in CreateAccount)
+// Mock representation of the context session state matching your router interceptors.
+// In production, fetch these values from your Auth Context providers.
+const useAuthSession = () => {
+  return {
+    userId: '1001', // The active context user ID string
+    role: 'manager', // e.g., "admin", "manager", "recruiter"
+  }
+}
+
 function MultiSelectField({
   value,
   options,
@@ -101,13 +109,53 @@ export default function CreateJobRequirement() {
   const { id } = useParams()
   const navigate = useNavigate()
   const queryClient = useQueryClient()
+  const { userId, role } = useAuthSession()
+  const [errors, setErrors] = useState<{
+    hiring_position?: boolean
+    department?: boolean
+  }>({})
   const [form, setForm] = useState<Record<string, any>>({})
   const [languages, setLanguages] = useState<string[]>([])
   const [ugQualifications, setUgQualifications] = useState<string[]>([])
   const [pgQualifications, setPgQualifications] = useState<string[]>([])
 
   const isEdit = !!id
+  // 1. Define your workflow status columns clearly
+  const WORKFLOW_STATUSES = ['pending_approval', 'approved', 'rejected']
 
+  const { data: jrData, isLoading: isJrDataLoading } = useQuery({
+    queryKey: ['job-requirements'],
+    queryFn: async () => {
+      const res = await fetch(`${ENV.VITE_BACKEND_BASE_URL}/job-requirements`, {
+        credentials: 'include',
+      })
+      return res.json()
+    },
+  })
+
+  // Normalize incoming records safely whether it's wrapped in an array or object root key
+  const rawList = jrData?.data
+    ? Array.isArray(jrData.data)
+      ? jrData.data
+      : [jrData.data]
+    : []
+
+  // Group your incoming requirements dynamically without worrying about runtime exceptions
+  const groupedRequirements = rawList.reduce(
+    (acc: any, jr: any) => {
+      if (!jr) return acc
+
+      // Use 'pending_approval' as a safe structural workflow fallback matching database defaults
+      const currentStatus = jr.status || 'pending_approval'
+
+      if (!acc[currentStatus]) {
+        acc[currentStatus] = []
+      }
+      acc[currentStatus].push(jr)
+      return acc
+    },
+    { pending_approval: [], approved: [], rejected: [] },
+  )
   const { data: detailData, isLoading } = useQuery({
     queryKey: ['job-requirement-detail', id],
     queryFn: async () => {
@@ -121,12 +169,22 @@ export default function CreateJobRequirement() {
   })
 
   useEffect(() => {
-    if (detailData?.data?.[0]) {
-      const d = detailData.data[0]
-      setForm({ ...d })
-      setLanguages(d.language_proficiency || [])
-      setUgQualifications(d.educational_qualification_ug || [])
-      setPgQualifications(d.educational_qualification_pg || [])
+    if (detailData?.data) {
+      // Safely access backend structures regardless of object vs single list mapping layouts
+      const d = Array.isArray(detailData.data)
+        ? detailData.data[0]
+        : detailData.data
+      if (d) {
+        setForm({
+          ...d,
+          // Extract the absolute string ID from the relationship dictionary returned by backend
+          approver_id: d.approver?.id || d.approver_id || '',
+          assignee_id: d.assignee?.id || d.assignee_id || '',
+        })
+        setLanguages(d.language_proficiency || [])
+        setUgQualifications(d.educational_qualification_ug || [])
+        setPgQualifications(d.educational_qualification_pg || [])
+      }
     }
   }, [detailData])
 
@@ -135,33 +193,56 @@ export default function CreateJobRequirement() {
 
   const getVal = (key: string) => form[key] || ''
 
+  const originalApproverId = String(form['approver_id'] || '')
+  const canModifyAssignment =
+    isEdit &&
+    (userId === originalApproverId || ['admin', 'manager'].includes(role))
+
   const mutation = useMutation({
     mutationFn: async () => {
+      if (!form.hiring_position || !form.hiring_position.trim()) {
+        throw new Error('Hiring Position is mandatory')
+      }
+      if (!form.department || !form.department.trim()) {
+        throw new Error('Department is mandatory')
+      }
       const payload = {
         ...form,
+        approver_id: form.approver_id ? String(form.approver_id) : null,
+        assignee_id: form.assignee_id ? String(form.assignee_id) : null,
+        status: isEdit ? form.status || 'pending_approval' : 'pending_approval', // Sets initial structure safely
+        no_of_vacancies: form.no_of_vacancies
+          ? parseInt(form.no_of_vacancies, 10)
+          : null,
+        age_limit: form.age_limit ? parseInt(form.age_limit, 10) : null,
         language_proficiency: languages,
         educational_qualification_ug: ugQualifications,
         educational_qualification_pg: pgQualifications,
       }
-      const url = isEdit
-        ? `${ENV.VITE_BACKEND_BASE_URL}/job-requirements/${id}`
-        : `${ENV.VITE_BACKEND_BASE_URL}/job-requirements`
 
-      const res = await fetch(url, {
-        method: isEdit ? 'PUT' : 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
-        body: JSON.stringify(payload),
-      })
+      const res = await fetch(
+        isEdit
+          ? `${ENV.VITE_BACKEND_BASE_URL}/job-requirements/${id}`
+          : `${ENV.VITE_BACKEND_BASE_URL}/job-requirements`,
+        {
+          method: isEdit ? 'PUT' : 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'include',
+          body: JSON.stringify(payload),
+        },
+      )
       if (!res.ok) throw new Error('Failed to save')
       return res.json()
     },
     onSuccess: () => {
-      toast.success(isEdit ? 'Requirement Updated' : 'Requirement Created')
+      toast.success(
+        isEdit
+          ? 'Requirement Updated'
+          : 'Requirement Created and Sent for Approval',
+      )
       queryClient.invalidateQueries({ queryKey: ['job-requirements'] })
-      navigate('/hiring')
+      navigate('/hiring') // Redirects back to your board view instantly
     },
-    onError: (e: any) => toast.error(e.message),
   })
 
   if (isEdit && isLoading) {
@@ -186,26 +267,56 @@ export default function CreateJobRequirement() {
           </Button>
           <Button
             size='sm'
-            onClick={() => mutation.mutate()}
             disabled={mutation.isPending}
+            onClick={() => {
+              const newErrors = {
+                hiring_position:
+                  !form.hiring_position || !String(form.hiring_position).trim(),
+                department: !form.department || !String(form.department).trim(),
+              }
+
+              // Set error state to trigger the red outlines on your field rows
+              if (typeof setErrors === 'function') {
+                setErrors(newErrors)
+              }
+
+              if (newErrors.hiring_position || newErrors.department) {
+                toast.error('Please fill in all mandatory fields.')
+                return // Blocks mutation execution
+              }
+
+              mutation.mutate()
+            }}
           >
-            {mutation.isPending ? <Spinner className='mr-2 h-4 w-4' /> : 'Save Requirement'}
+            {mutation.isPending ? (
+              <Spinner className='mr-2 h-4 w-4' />
+            ) : (
+              'Save Requirement'
+            )}
           </Button>
         </div>
       </div>
 
-      <Card className='overflow-hidden space-y-1'>
+      <Card className='overflow-hidden space-y-1 pb-32'>
         {/* --- HIRING REQUIREMENTS --- */}
         <SectionHeader title='Hiring Requirements' />
         <CardContent className='p-0 grid grid-cols-1 md:grid-cols-2'>
           <div className='md:border-r'>
-            <FieldRow label='Hiring Position'>
-              <SelectField
-                value={getVal('hiring_position')}
-                isEdit={true}
-                options={HIRING_POSITIONS}
-                onChange={(v) => set('hiring_position', v)}
-              />
+            <FieldRow label='Hiring Position *'>
+              <div
+                className={
+                  errors.hiring_position
+                    ? 'rounded-md border-2 border-red-500 bg-red-50/20 p-0.5'
+                    : ''
+                }
+              >
+                <SelectField
+                  value={getVal('hiring_position')}
+                  isEdit={true}
+                  options={HIRING_POSITIONS}
+                  onChange={(v) => set('hiring_position', v)}
+                />
+              </div>
             </FieldRow>
             <FieldRow label='Level'>
               <SelectField
@@ -296,28 +407,85 @@ export default function CreateJobRequirement() {
                 onChange={(v) => set('gender', v)}
               />
             </FieldRow>
-            <FieldRow label='Approver'>
-              {/* <Input
-                value={getVal('approver_id')}
-                onChange={(e) => set('approver_id', e.target.value)}
-                className='h-8'
-                placeholder='User (ID)'
-              /> */}
+            {/* 1. Show Approval Controls ONLY in Edit Mode */}
+            {isEdit && (
+              <FieldRow label='Workflow Status'>
+                <div className='flex items-center gap-3'>
+                  <span
+                    className={`px-2 py-1 rounded text-xs font-medium uppercase ${
+                      getVal('status') === 'approved'
+                        ? 'bg-green-100 text-green-800'
+                        : 'bg-yellow-100 text-yellow-800'
+                    }`}
+                  >
+                    {getVal('status') || 'pending_approval'}
+                  </span>
+
+                  {/* Show Approval actions if user is the assigned approver and it isn't approved yet */}
+                  {getVal('status') !== 'approved' &&
+                    userId === String(getVal('approver_id')) && (
+                      <Button
+                        type='button'
+                        size='xs'
+                        className='h-7 bg-green-600 hover:bg-green-700 text-white text-xs'
+                        onClick={() => {
+                          set('status', 'approved')
+                          toast.info(
+                            "Status set to Approved. Click 'Save Requirement' to apply changes.",
+                          )
+                        }}
+                      >
+                        Approve Request
+                      </Button>
+                    )}
+                </div>
+              </FieldRow>
+            )}
+            {/* 2. Recruiter Assignment Gate: Only visible once the Job Requirement has been Approved */}
+            {isEdit && getVal('status') === 'approved' && (
+              <FieldRow label='Assignee (HR Recruiter)'>
+                <Input
+                  value={getVal('assignee_id')}
+                  disabled={
+                    userId !== String(getVal('approver_id')) &&
+                    !['admin', 'manager'].includes(role)
+                  }
+                  onChange={(e) => set('assignee_id', e.target.value)}
+                  className='h-8'
+                  placeholder='Enter Recruiter User ID to allocate role'
+                />
+              </FieldRow>
+            )}
+            {/* <FieldRow label='Approver'>
               <SelectField
                 value={getVal('approver_id')}
                 isEdit={true}
-                options={['Anslem prathap']}
+                options={users
+                  .filter(
+                    (u) =>
+                      String(u.id) === '3899927000000201013' ||
+                      u.name === 'Anslem Prathap',
+                  )
+                  .map((s) => ({ label: s.name, value: String(s.id) }))}
                 onChange={(v) => set('approver_id', v)}
               />
-            </FieldRow>
-            <FieldRow label='Assignee'>
-              <Input
-                value={getVal('assignee_id')}
-                onChange={(e) => set('assignee_id', e.target.value)}
-                className='h-8'
-                placeholder='User (Hr Dept)'
-              />
-            </FieldRow>
+            </FieldRow> */}
+            {/* CRITICAL EXCEL RULES GATEWAY: Show/lock fields depending on Approver Status roles */}
+            {isEdit && (
+              <FieldRow label='Assignee (Recruiter)'>
+                <Input
+                  value={getVal('assignee_id')}
+                  disabled={!canModifyAssignment}
+                  onChange={(e) => set('assignee_id', e.target.value)}
+                  className='h-8'
+                  placeholder={
+                    canModifyAssignment
+                      ? 'Enter HR Recruiter User ID'
+                      : 'Locked — Only assigned Approver can allocate'
+                  }
+                />
+              </FieldRow>
+            )}
             <FieldRow label='Hiring Location (City)'>
               <SelectField
                 value={getVal('hiring_location_city')}
@@ -373,13 +541,21 @@ export default function CreateJobRequirement() {
             </FieldRow>
           </div>
           <div>
-            <FieldRow label='Department'>
-              <SelectField
-                value={getVal('department')}
-                isEdit={true}
-                options={DEPARTMENTS}
-                onChange={(v) => set('department', v)}
-              />
+            <FieldRow label='Department *'>
+              <div
+                className={
+                  errors.department
+                    ? 'rounded-md border-2 border-red-500 bg-red-50/20 p-0.5'
+                    : ''
+                }
+              >
+                <SelectField
+                  value={getVal('department')}
+                  isEdit={true}
+                  options={DEPARTMENTS}
+                  onChange={(v) => set('department', v)}
+                />
+              </div>
             </FieldRow>
           </div>
         </CardContent>

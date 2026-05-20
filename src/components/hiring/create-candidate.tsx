@@ -21,12 +21,26 @@ import {
   UG_QUALIFICATIONS,
   PG_QUALIFICATIONS,
 } from '@/utils/hiring-constants'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '../ui/select'
 
 export default function CreateCandidate() {
   const { id } = useParams()
   const navigate = useNavigate()
   const location = useLocation()
   const queryClient = useQueryClient()
+
+  // FIX: Track validation state exceptions for all three required parameters
+  const [errors, setErrors] = useState<{
+    candidate_name?: boolean
+    phone_no?: boolean
+    email?: boolean
+  }>({})
 
   // Try to get jrId from search params (e.g. ?jr_id=123) if creating a candidate for a specific job requirement
   const searchParams = new URLSearchParams(location.search)
@@ -49,6 +63,19 @@ export default function CreateCandidate() {
       return res.json()
     },
     enabled: isEdit,
+  })
+
+  // Fetch dynamic users registry from backend instead of hardcoding
+  const { data: ownersData } = useQuery({
+    queryKey: ['account-owners'],
+    queryFn: async () => {
+      const res = await fetch(`${ENV.VITE_BACKEND_BASE_URL}/user/filter`, {
+        credentials: 'include',
+      })
+      if (!res.ok) throw new Error('Failed to fetch owners')
+      return res.json()
+    },
+    retry: false,
   })
 
   useEffect(() => {
@@ -101,11 +128,6 @@ export default function CreateCandidate() {
 
   return (
     <div className='p-4 space-y-4'>
-      {/* Page Action Header */}
-      <div className='flex items-center justify-between mb-2'>
-
-      </div>
-
       <Card className='rounded-sm shadow-sm overflow-hidden border-border'>
         {/* Main Title Row */}
         <div className='flex justify-between items-center p-2 border-b font-bold text-sm'>
@@ -118,11 +140,34 @@ export default function CreateCandidate() {
             <Button variant='outline' size='sm' onClick={() => navigate(-1)}>
               Cancel
             </Button>
+
+            {/* FIX: Comprehensive missing field checking matrix evaluation row */}
             <Button
               size='sm'
-              onClick={() => mutation.mutate()}
               disabled={mutation.isPending}
               className='bg-blue-600 hover:bg-blue-700'
+              onClick={() => {
+                const nameError =
+                  !form.candidate_name || !String(form.candidate_name).trim()
+                const phoneError =
+                  !form.phone_no || !String(form.phone_no).trim()
+                const emailError = !form.email || !String(form.email).trim()
+
+                setErrors({
+                  candidate_name: nameError,
+                  phone_no: phoneError,
+                  email: emailError,
+                })
+
+                if (nameError || phoneError || emailError) {
+                  toast.error(
+                    'Please complete all mandatory fields highlighted in red.',
+                  )
+                  return // Stop execution flow
+                }
+
+                mutation.mutate()
+              }}
             >
               {mutation.isPending ? 'Saving...' : 'Save Candidate'}
             </Button>
@@ -135,13 +180,27 @@ export default function CreateCandidate() {
         <CardContent className='p-0 grid grid-cols-1 md:grid-cols-2'>
           {/* Left Column */}
           <div className='md:border-r'>
-            <FieldRow label={<span className=" font-semibold">Candidate Name</span>}>
-              <Input
-                value={getVal('candidate_name')}
-                onChange={(e) => set('candidate_name', e.target.value)}
-                className='h-8'
-                placeholder='Single Line'
-              />
+            <FieldRow
+              label={<span className=' font-semibold'>Candidate Name *</span>}
+            >
+              <div
+                className={
+                  errors.candidate_name
+                    ? 'rounded-md border-2 border-red-500 bg-red-50/20 p-0.5'
+                    : ''
+                }
+              >
+                <Input
+                  value={getVal('candidate_name')}
+                  onChange={(e) => {
+                    set('candidate_name', e.target.value)
+                    if (e.target.value.trim())
+                      setErrors((prev) => ({ ...prev, candidate_name: false }))
+                  }}
+                  className='h-8'
+                  placeholder='Single Line'
+                />
+              </div>
             </FieldRow>
             <FieldRow label='Location (City)'>
               <SelectField
@@ -157,12 +216,31 @@ export default function CreateCandidate() {
               </div>
             </FieldRow>
             <FieldRow label='Assignee (owner)'>
-              <Input
+              <Select
                 value={getVal('assignee_owner')}
-                onChange={(e) => set('assignee_owner', e.target.value)}
-                className='h-8'
-                placeholder='User'
-              />
+                onValueChange={(val) => set('assignee_owner', val)}
+              >
+                <SelectTrigger className='h-8 w-full text-sm mt-1'>
+                  <SelectValue placeholder='Select Assignee Owner' />
+                </SelectTrigger>
+                <SelectContent>
+                  {(Array.isArray(ownersData)
+                    ? ownersData
+                    : ownersData?.data || []
+                  ).map((user: any) => (
+                    <SelectItem
+                      key={String(user.id)}
+                      value={String(user.id)}
+                      className='text-sm'
+                    >
+                      {user.full_name ||
+                        user.name ||
+                        user.username ||
+                        'Unknown User'}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </FieldRow>
             <FieldRow label='Resume'>
               <Input
@@ -199,22 +277,47 @@ export default function CreateCandidate() {
                 className='h-8'
               />
             </FieldRow>
-            <FieldRow label={<span className="font-semibold">Phone No</span>}>
-              <Input
-                value={getVal('phone_no')}
-                onChange={(e) => set('phone_no', e.target.value)}
-                className='h-8'
-                placeholder='Phone'
-              />
+            <FieldRow label={<span className='font-semibold'>Phone No *</span>}>
+              <div
+                className={
+                  errors.phone_no
+                    ? 'rounded-md border-2 border-red-500 bg-red-50/20 p-0.5'
+                    : ''
+                }
+              >
+                <Input
+                  value={getVal('phone_no')}
+                  onChange={(e) => {
+                    set('phone_no', e.target.value)
+                    if (e.target.value.trim())
+                      setErrors((prev) => ({ ...prev, phone_no: false }))
+                  }}
+                  className='h-8'
+                  placeholder='Phone'
+                  type='number'
+                />
+              </div>
             </FieldRow>
-            <FieldRow label={<span className="font-semibold">Email</span>}>
-              <Input
-                value={getVal('email')}
-                onChange={(e) => set('email', e.target.value)}
-                className='h-8'
-                type='email'
-                placeholder='Email'
-              />
+            <FieldRow label={<span className='font-semibold'>Email *</span>}>
+              <div
+                className={
+                  errors.email
+                    ? 'rounded-md border-2 border-red-500 bg-red-50/20 p-0.5'
+                    : ''
+                }
+              >
+                <Input
+                  value={getVal('email')}
+                  onChange={(e) => {
+                    set('email', e.target.value)
+                    if (e.target.value.trim())
+                      setErrors((prev) => ({ ...prev, email: false }))
+                  }}
+                  className='h-8'
+                  type='email'
+                  placeholder='Email'
+                />
+              </div>
             </FieldRow>
           </div>
         </CardContent>
@@ -272,7 +375,9 @@ export default function CreateCandidate() {
             <FieldRow label='Work Experience'>
               <Input
                 value={getVal('work_experience_duration')}
-                onChange={(e) => set('work_experience_duration', e.target.value)}
+                onChange={(e) =>
+                  set('work_experience_duration', e.target.value)
+                }
                 className='h-8'
                 placeholder='Duration (2y 8m)'
               />
