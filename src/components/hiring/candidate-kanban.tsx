@@ -25,8 +25,11 @@ import {
 
 interface Candidate {
   id: string
+  job_requirement_id?: string
   candidate_name: string
   candidate_status?: string
+  status_date?: string // New: Tracks when status changed
+  call_back_date?: string // New: Follow-up date
   phone_no?: string
   email?: string
   location_city?: string
@@ -39,18 +42,21 @@ interface Candidate {
   year_of_passing_pg?: string
   skills?: string
   language_proficiency?: string[] | string
-  job_requirement_id?: string
+  // Candidate Rating Section from Excel Footer
+  rating?: number
+  feedback_status?: string
+  feedback_form_link?: string
 }
 
 // ── Standalone Candidate Modal ──────────────────────────────────
 function CandidateModal({
   onClose,
   initialData,
-  jrId, // Added jrId prop to link the candidate
+  jrId,
 }: {
   onClose: () => void
   initialData?: Candidate
-  jrId: string // Type definition
+  jrId: string
 }) {
   const queryClient = useQueryClient()
   const isEdit = !!initialData
@@ -71,6 +77,11 @@ function CandidateModal({
 
   const mutation = useMutation({
     mutationFn: async () => {
+      const payload = {
+        ...form,
+        job_requirement_id: jrId,
+        language_proficiency: languages,
+      }
       const url = isEdit
         ? `${ENV.VITE_BACKEND_BASE_URL}/candidates/${initialData.id}`
         : `${ENV.VITE_BACKEND_BASE_URL}/candidates`
@@ -79,19 +90,9 @@ function CandidateModal({
         method: isEdit ? 'PUT' : 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
-        body: JSON.stringify({
-          ...form,
-          // If editing, keep the existing requirement ID; if new, use the current jrId from the URL
-          job_requirement_id: isEdit ? initialData.job_requirement_id : jrId,
-          id: isEdit ? initialData.id : undefined,
-          language_proficiency: languages,
-        }),
+        body: JSON.stringify(payload),
       })
-
-      if (!res.ok) {
-        const err = await res.json()
-        throw new Error(err.detail || 'Failed to save candidate')
-      }
+      if (!res.ok) throw new Error('Failed to save')
       return res.json()
     },
     onSuccess: () => {
@@ -99,14 +100,12 @@ function CandidateModal({
       queryClient.invalidateQueries({ queryKey: ['candidates', jrId] })
       onClose()
     },
-    onError: (error: any) => {
-      toast.error(error.message)
-    },
+    onError: (error: any) => toast.error(error.message),
   })
 
   return (
     <div className='fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm'>
-      <div className='bg-white rounded-2xl shadow-xl w-full max-w-4xl max-h-[90vh] overflow-hidden flex flex-col'>
+      <div className='bg-white rounded-2xl shadow-xl w-full max-w-5xl max-h-[95vh] overflow-hidden flex flex-col'>
         <div className='flex items-center justify-between p-6 bg-teal-600 text-white'>
           <h2 className='text-xl font-bold'>
             {isEdit ? 'Edit Candidate' : 'New Candidate'}
@@ -116,134 +115,222 @@ function CandidateModal({
           </button>
         </div>
 
-        <div className='flex-1 overflow-y-auto p-8 grid grid-cols-2 gap-6 bg-zinc-50'>
-          <div className='col-span-2 space-y-1'>
-            <Label>Candidate Name</Label>
-            <Input
-              placeholder='Full Name'
-              value={form.candidate_name || ''}
-              onChange={(e) => set('candidate_name', e.target.value)}
-            />
-          </div>
-          <div className='space-y-1'>
-            <Label>Current Status</Label>
-            <Select
-              value={form.candidate_status || ''}
-              onValueChange={(v) => set('candidate_status', v)}
-            >
-              <SelectTrigger>
-                <SelectValue placeholder='Select Status' />
-              </SelectTrigger>
-              <SelectContent>
-                {CANDIDATE_STATUSES.map((s) => (
-                  <SelectItem key={s} value={s}>
-                    {s}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-          <div className='space-y-1'>
-            <Label>City / Location</Label>
-            <Input
-              value={form.location_city || ''}
-              onChange={(e) => set('location_city', e.target.value)}
-            />
-          </div>
-          <div className='space-y-1'>
-            <Label>Phone Number</Label>
-            <Input
-              value={form.phone_no || ''}
-              onChange={(e) => set('phone_no', e.target.value)}
-            />
-          </div>
-          <div className='space-y-1'>
-            <Label>Email Address</Label>
-            <Input
-              type='email'
-              value={form.email || ''}
-              onChange={(e) => set('email', e.target.value)}
-            />
-          </div>
+        <div className='flex-1 overflow-y-auto p-8 bg-zinc-50'>
+          <div className='grid grid-cols-3 gap-x-8 gap-y-6'>
+            {/* SECTION 1: CANDIDATE INFO */}
+            <div className='col-span-3 border-b pb-1 mb-1'>
+              <h3 className='text-[11px] font-black text-teal-600 uppercase tracking-wider'>
+                Candidate Info
+              </h3>
+            </div>
 
-          <div className='col-span-2 border-b pt-4 font-bold text-teal-600 uppercase text-[10px] tracking-wider'>
-            Education & Experience
-          </div>
-          <div className='space-y-1'>
-            <Label>UG Qualification</Label>
-            <Select
-              value={form.educational_qualification_ug || ''}
-              onValueChange={(v) => set('educational_qualification_ug', v)}
-            >
-              <SelectTrigger>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {UG_QUALIFICATIONS.map((q) => (
-                  <SelectItem key={q} value={q}>
-                    {q}
-                  </SelectItem>
+            <div className='space-y-1 col-span-2'>
+              <Label>Candidate Name</Label>
+              <Input
+                value={form.candidate_name || ''}
+                onChange={(e) => set('candidate_name', e.target.value)}
+              />
+            </div>
+            <div className='space-y-1'>
+              <Label>Candidate Status</Label>
+              <Select
+                value={form.candidate_status || ''}
+                onValueChange={(v) => set('candidate_status', v)}
+              >
+                <SelectTrigger className='h-9'>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {CANDIDATE_STATUSES.map((s) => (
+                    <SelectItem key={s} value={s}>
+                      {s}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className='space-y-1'>
+              <Label>Location (City)</Label>
+              <Input
+                value={form.location_city || ''}
+                onChange={(e) => set('location_city', e.target.value)}
+              />
+            </div>
+            <div className='space-y-1'>
+              <Label>Status Date</Label>
+              <Input
+                type='date'
+                value={form.status_date?.split('T')[0] || ''}
+                onChange={(e) => set('status_date', e.target.value)}
+              />
+            </div>
+            <div className='space-y-1'>
+              <Label>Call Back Date</Label>
+              <Input
+                type='date'
+                value={form.call_back_date?.split('T')[0] || ''}
+                onChange={(e) => set('call_back_date', e.target.value)}
+              />
+            </div>
+
+            <div className='space-y-1'>
+              <Label>Phone No</Label>
+              <Input
+                value={form.phone_no || ''}
+                onChange={(e) => set('phone_no', e.target.value)}
+              />
+            </div>
+            <div className='space-y-1 col-span-2'>
+              <Label>Email</Label>
+              <Input
+                value={form.email || ''}
+                onChange={(e) => set('email', e.target.value)}
+              />
+            </div>
+
+            {/* SECTION 2: EDUCATION & WORK */}
+            <div className='col-span-3 border-b pb-1 mt-4 mb-1'>
+              <h3 className='text-[11px] font-black text-teal-600 uppercase tracking-wider'>
+                Education & Experience
+              </h3>
+            </div>
+
+            <div className='space-y-1'>
+              <Label>UG Qualification</Label>
+              <Select
+                value={form.educational_qualification_ug || ''}
+                onValueChange={(v) => set('educational_qualification_ug', v)}
+              >
+                <SelectTrigger className='h-9'>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {UG_QUALIFICATIONS.map((q) => (
+                    <SelectItem key={q} value={q}>
+                      {q}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className='space-y-1'>
+              <Label>Year of Passing (UG)</Label>
+              <Input
+                placeholder='YYYY'
+                value={form.year_of_passing_ug || ''}
+                onChange={(e) => set('year_of_passing_ug', e.target.value)}
+              />
+            </div>
+            <div className='space-y-1'>
+              <Label>Work Experience</Label>
+              <Input
+                placeholder='e.g. 2y 8m'
+                value={form.work_experience || ''}
+                onChange={(e) => set('work_experience', e.target.value)}
+              />
+            </div>
+
+            <div className='space-y-1'>
+              <Label>PG Qualification</Label>
+              <Input
+                value={form.educational_qualification_pg || ''}
+                onChange={(e) =>
+                  set('educational_qualification_pg', e.target.value)
+                }
+              />
+            </div>
+            <div className='space-y-1'>
+              <Label>Year of Passing (PG)</Label>
+              <Input
+                placeholder='YYYY'
+                value={form.year_of_passing_pg || ''}
+                onChange={(e) => set('year_of_passing_pg', e.target.value)}
+              />
+            </div>
+            <div className='space-y-1'>
+              <Label>Industry</Label>
+              <Select
+                value={form.industry || ''}
+                onValueChange={(v) => set('industry', v)}
+              >
+                <SelectTrigger className='h-9'>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {CANDIDATE_INDUSTRIES.map((i) => (
+                    <SelectItem key={i} value={i}>
+                      {i}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* SECTION 3: SKILLS & RATING */}
+            <div className='col-span-3 border-b pb-1 mt-4 mb-1'>
+              <h3 className='text-[11px] font-black text-teal-600 uppercase tracking-wider'>
+                Skills & Rating
+              </h3>
+            </div>
+
+            <div className='space-y-1 col-span-2'>
+              <Label>Skills</Label>
+              <Input
+                value={form.skills || ''}
+                onChange={(e) => set('skills', e.target.value)}
+              />
+            </div>
+            <div className='space-y-1'>
+              <Label>Resume (Link)</Label>
+              <Input
+                value={form.resume || ''}
+                onChange={(e) => set('resume', e.target.value)}
+              />
+            </div>
+
+            <div className='space-y-1'>
+              <Label>Rating</Label>
+              <Input
+                type='number'
+                step='0.1'
+                min='0'
+                max='5'
+                value={form.rating || ''}
+                onChange={(e) => set('rating', e.target.value)}
+              />
+            </div>
+            <div className='space-y-1'>
+              <Label>Feedback Status</Label>
+              <Input
+                placeholder='e.g. Submitted'
+                value={form.feedback_status || ''}
+                onChange={(e) => set('feedback_status', e.target.value)}
+              />
+            </div>
+            <div className='space-y-1'>
+              <Label>Assignee (Owner)</Label>
+              <Input
+                value={form.assignee_id || ''}
+                placeholder='User ID'
+                onChange={(e) => set('assignee_id', e.target.value)}
+              />
+            </div>
+
+            <div className='col-span-3 space-y-2'>
+              <Label>Language Proficiency</Label>
+              <div className='flex flex-wrap gap-2'>
+                {LANGUAGE_OPTIONS.map((l) => (
+                  <button
+                    key={l}
+                    type='button'
+                    onClick={() => toggleLang(l)}
+                    className={`px-3 py-1 rounded-full border text-[10px] font-bold transition-all ${languages.includes(l) ? 'bg-teal-600 text-white shadow-md' : 'bg-white text-zinc-500'}`}
+                  >
+                    {l}
+                  </button>
                 ))}
-              </SelectContent>
-            </Select>
-          </div>
-          <div className='space-y-1'>
-            <Label>Passing Year (UG)</Label>
-            <Input
-              value={form.year_of_passing_ug || ''}
-              onChange={(e) => set('year_of_passing_ug', e.target.value)}
-            />
-          </div>
-          <div className='space-y-1'>
-            <Label>Total Experience (Years)</Label>
-            <Input
-              value={form.work_experience || ''}
-              onChange={(e) => set('work_experience', e.target.value)}
-            />
-          </div>
-          <div className='space-y-1'>
-            <Label>Industry</Label>
-            <Select
-              value={form.industry || ''}
-              onValueChange={(v) => set('industry', v)}
-            >
-              <SelectTrigger>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {CANDIDATE_INDUSTRIES.map((i) => (
-                  <SelectItem key={i} value={i}>
-                    {i}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-          <div className='col-span-2 space-y-1'>
-            <Label>Resume Link (URL)</Label>
-            <Input
-              placeholder='https://...'
-              value={form.resume || ''}
-              onChange={(e) => set('resume', e.target.value)}
-            />
-          </div>
-          <div className='col-span-2 space-y-1'>
-            <Label>Languages</Label>
-            <div className='flex flex-wrap gap-2'>
-              {LANGUAGE_OPTIONS.map((l) => (
-                <button
-                  key={l}
-                  type='button'
-                  onClick={() => toggleLang(l)}
-                  className={`px-3 py-1 rounded-full border text-xs transition-colors ${
-                    languages.includes(l)
-                      ? 'bg-teal-600 text-white border-teal-600'
-                      : 'bg-white text-zinc-500 hover:border-teal-300'
-                  }`}
-                >
-                  {l}
-                </button>
-              ))}
+              </div>
             </div>
           </div>
         </div>
@@ -251,13 +338,14 @@ function CandidateModal({
         <div className='p-6 border-t flex justify-end gap-3 bg-white'>
           <Button
             variant='outline'
+            className='px-10'
             onClick={onClose}
             disabled={mutation.isPending}
           >
             Cancel
           </Button>
           <Button
-            className='bg-teal-600 hover:bg-teal-700'
+            className='bg-teal-600 hover:bg-teal-700 px-12 shadow-lg'
             onClick={() => mutation.mutate()}
             disabled={mutation.isPending}
           >
