@@ -111,6 +111,13 @@ export const CANDIDATE_INDUSTRIES = [
   'Banking',
 ]
 
+
+export const EMPLOYEE_OPTIONS = [
+  'Portfolio Manager',
+  'Branch Manager',
+  'Cluster Manager',
+]
+
 // Kanban columns for JR board - group by department
 export const JR_KANBAN_COLUMNS = DEPARTMENTS
 
