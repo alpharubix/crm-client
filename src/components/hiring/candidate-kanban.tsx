@@ -21,6 +21,9 @@ import {
   UG_QUALIFICATIONS,
   CANDIDATE_INDUSTRIES,
   LANGUAGE_OPTIONS,
+  DEPARTMENTS,
+  HIRING_POSITIONS,
+  LOCATIONS,
 } from '@/utils/hiring-constants'
 
 interface Candidate {
@@ -48,327 +51,20 @@ interface Candidate {
   feedback_form_link?: string
 }
 
-// ── Standalone Candidate Modal ──────────────────────────────────
-function CandidateModal({
-  onClose,
-  initialData,
-  jrId,
-}: {
-  onClose: () => void
-  initialData?: Candidate
-  jrId: string
-}) {
-  const queryClient = useQueryClient()
-  const isEdit = !!initialData
 
-  const [form, setForm] = useState<Record<string, any>>(
-    initialData ? { ...initialData } : { candidate_status: 'New Application' },
-  )
-
-  const [languages, setLanguages] = useState<string[]>(
-    Array.isArray(initialData?.language_proficiency)
-      ? initialData.language_proficiency
-      : [],
-  )
-
-  const set = (k: string, v: any) => setForm((prev) => ({ ...prev, [k]: v }))
-  const toggleLang = (l: string) =>
-    setLanguages((p) => (p.includes(l) ? p.filter((i) => i !== l) : [...p, l]))
-
-  const mutation = useMutation({
-    mutationFn: async () => {
-      const payload = {
-        ...form,
-        job_requirement_id: jrId,
-        language_proficiency: languages,
-      }
-      const url = isEdit
-        ? `${ENV.VITE_BACKEND_BASE_URL}/candidates/${initialData.id}`
-        : `${ENV.VITE_BACKEND_BASE_URL}/candidates`
-
-      const res = await fetch(url, {
-        method: isEdit ? 'PUT' : 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
-        body: JSON.stringify(payload),
-      })
-      if (!res.ok) throw new Error('Failed to save')
-      return res.json()
-    },
-    onSuccess: () => {
-      toast.success(isEdit ? 'Candidate Updated' : 'Candidate Created')
-      queryClient.invalidateQueries({ queryKey: ['candidates', jrId] })
-      onClose()
-    },
-    onError: (error: any) => toast.error(error.message),
-  })
-
-  return (
-    <div className='fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm'>
-      <div className='bg-white rounded-2xl shadow-xl w-full max-w-5xl max-h-[95vh] overflow-hidden flex flex-col'>
-        <div className='flex items-center justify-between p-6 bg-teal-600 text-white'>
-          <h2 className='text-xl font-bold'>
-            {isEdit ? 'Edit Candidate' : 'New Candidate'}
-          </h2>
-          <button onClick={onClose} className='hover:bg-teal-700 p-1 rounded'>
-            <X size={24} />
-          </button>
-        </div>
-
-        <div className='flex-1 overflow-y-auto p-8 bg-zinc-50'>
-          <div className='grid grid-cols-3 gap-x-8 gap-y-6'>
-            {/* SECTION 1: CANDIDATE INFO */}
-            <div className='col-span-3 border-b pb-1 mb-1'>
-              <h3 className='text-[11px] font-black text-teal-600 uppercase tracking-wider'>
-                Candidate Info
-              </h3>
-            </div>
-
-            <div className='space-y-1 col-span-2'>
-              <Label>Candidate Name</Label>
-              <Input
-                value={form.candidate_name || ''}
-                onChange={(e) => set('candidate_name', e.target.value)}
-              />
-            </div>
-            <div className='space-y-1'>
-              <Label>Candidate Status</Label>
-              <Select
-                value={form.candidate_status || ''}
-                onValueChange={(v) => set('candidate_status', v)}
-              >
-                <SelectTrigger className='h-9'>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {CANDIDATE_STATUSES.map((s) => (
-                    <SelectItem key={s} value={s}>
-                      {s}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className='space-y-1'>
-              <Label>Location (City)</Label>
-              <Input
-                value={form.location_city || ''}
-                onChange={(e) => set('location_city', e.target.value)}
-              />
-            </div>
-            <div className='space-y-1'>
-              <Label>Status Date</Label>
-              <Input
-                type='date'
-                value={form.status_date?.split('T')[0] || ''}
-                onChange={(e) => set('status_date', e.target.value)}
-              />
-            </div>
-            <div className='space-y-1'>
-              <Label>Call Back Date</Label>
-              <Input
-                type='date'
-                value={form.call_back_date?.split('T')[0] || ''}
-                onChange={(e) => set('call_back_date', e.target.value)}
-              />
-            </div>
-
-            <div className='space-y-1'>
-              <Label>Phone No</Label>
-              <Input
-                value={form.phone_no || ''}
-                onChange={(e) => set('phone_no', e.target.value)}
-              />
-            </div>
-            <div className='space-y-1 col-span-2'>
-              <Label>Email</Label>
-              <Input
-                value={form.email || ''}
-                onChange={(e) => set('email', e.target.value)}
-              />
-            </div>
-
-            {/* SECTION 2: EDUCATION & WORK */}
-            <div className='col-span-3 border-b pb-1 mt-4 mb-1'>
-              <h3 className='text-[11px] font-black text-teal-600 uppercase tracking-wider'>
-                Education & Experience
-              </h3>
-            </div>
-
-            <div className='space-y-1'>
-              <Label>UG Qualification</Label>
-              <Select
-                value={form.educational_qualification_ug || ''}
-                onValueChange={(v) => set('educational_qualification_ug', v)}
-              >
-                <SelectTrigger className='h-9'>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {UG_QUALIFICATIONS.map((q) => (
-                    <SelectItem key={q} value={q}>
-                      {q}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className='space-y-1'>
-              <Label>Year of Passing (UG)</Label>
-              <Input
-                placeholder='YYYY'
-                value={form.year_of_passing_ug || ''}
-                onChange={(e) => set('year_of_passing_ug', e.target.value)}
-              />
-            </div>
-            <div className='space-y-1'>
-              <Label>Work Experience</Label>
-              <Input
-                placeholder='e.g. 2y 8m'
-                value={form.work_experience || ''}
-                onChange={(e) => set('work_experience', e.target.value)}
-              />
-            </div>
-
-            <div className='space-y-1'>
-              <Label>PG Qualification</Label>
-              <Input
-                value={form.educational_qualification_pg || ''}
-                onChange={(e) =>
-                  set('educational_qualification_pg', e.target.value)
-                }
-              />
-            </div>
-            <div className='space-y-1'>
-              <Label>Year of Passing (PG)</Label>
-              <Input
-                placeholder='YYYY'
-                value={form.year_of_passing_pg || ''}
-                onChange={(e) => set('year_of_passing_pg', e.target.value)}
-              />
-            </div>
-            <div className='space-y-1'>
-              <Label>Industry</Label>
-              <Select
-                value={form.industry || ''}
-                onValueChange={(v) => set('industry', v)}
-              >
-                <SelectTrigger className='h-9'>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {CANDIDATE_INDUSTRIES.map((i) => (
-                    <SelectItem key={i} value={i}>
-                      {i}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            {/* SECTION 3: SKILLS & RATING */}
-            <div className='col-span-3 border-b pb-1 mt-4 mb-1'>
-              <h3 className='text-[11px] font-black text-teal-600 uppercase tracking-wider'>
-                Skills & Rating
-              </h3>
-            </div>
-
-            <div className='space-y-1 col-span-2'>
-              <Label>Skills</Label>
-              <Input
-                value={form.skills || ''}
-                onChange={(e) => set('skills', e.target.value)}
-              />
-            </div>
-            <div className='space-y-1'>
-              <Label>Resume (Link)</Label>
-              <Input
-                value={form.resume || ''}
-                onChange={(e) => set('resume', e.target.value)}
-              />
-            </div>
-
-            <div className='space-y-1'>
-              <Label>Rating</Label>
-              <Input
-                type='number'
-                step='0.1'
-                min='0'
-                max='5'
-                value={form.rating || ''}
-                onChange={(e) => set('rating', e.target.value)}
-              />
-            </div>
-            <div className='space-y-1'>
-              <Label>Feedback Status</Label>
-              <Input
-                placeholder='e.g. Submitted'
-                value={form.feedback_status || ''}
-                onChange={(e) => set('feedback_status', e.target.value)}
-              />
-            </div>
-            <div className='space-y-1'>
-              <Label>Assignee (Owner)</Label>
-              <Input
-                value={form.assignee_id || ''}
-                placeholder='User ID'
-                onChange={(e) => set('assignee_id', e.target.value)}
-              />
-            </div>
-
-            <div className='col-span-3 space-y-2'>
-              <Label>Language Proficiency</Label>
-              <div className='flex flex-wrap gap-2'>
-                {LANGUAGE_OPTIONS.map((l) => (
-                  <button
-                    key={l}
-                    type='button'
-                    onClick={() => toggleLang(l)}
-                    className={`px-3 py-1 rounded-full border text-[10px] font-bold transition-all ${languages.includes(l) ? 'bg-teal-600 text-white shadow-md' : 'bg-white text-zinc-500'}`}
-                  >
-                    {l}
-                  </button>
-                ))}
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <div className='p-6 border-t flex justify-end gap-3 bg-white'>
-          <Button
-            variant='outline'
-            className='px-10'
-            onClick={onClose}
-            disabled={mutation.isPending}
-          >
-            Cancel
-          </Button>
-          <Button
-            className='bg-teal-600 hover:bg-teal-700 px-12 shadow-lg'
-            onClick={() => mutation.mutate()}
-            disabled={mutation.isPending}
-          >
-            {mutation.isPending ? 'Saving...' : 'Save Candidate'}
-          </Button>
-        </div>
-      </div>
-    </div>
-  )
-}
 
 export default function CandidateKanban() {
   const { jrId } = useParams()
   const navigate = useNavigate()
   const queryClient = useQueryClient()
 
-  const [selectedCandidate, setSelectedCandidate] = useState<Candidate | null>(
-    null,
-  )
-  const [showCreate, setShowCreate] = useState(false)
   const [filters, setFilters] = useState({
     candidate_status: '',
     candidate_name: '',
+    tentative_joining_date: '',
+    department: '',
+    hiring_position: '',
+    location_city: '',
   })
 
   // Fetching candidates specifically for this JR
@@ -382,6 +78,14 @@ export default function CandidateKanban() {
         p.set('candidate_status', filters.candidate_status)
       if (filters.candidate_name)
         p.set('candidate_name', filters.candidate_name)
+      if (filters.tentative_joining_date)
+        p.set('tentative_joining_date', filters.tentative_joining_date)
+      if (filters.department)
+        p.set('department', filters.department)
+      if (filters.hiring_position)
+        p.set('hiring_position', filters.hiring_position)
+      if (filters.location_city)
+        p.set('location_city', filters.location_city)
 
       const res = await fetch(`${ENV.VITE_BACKEND_BASE_URL}/candidates?${p}`, {
         credentials: 'include',
@@ -419,16 +123,6 @@ export default function CandidateKanban() {
 
   return (
     <div className='w-full h-full p-6 flex flex-col max-w-[1600px] mx-auto'>
-      {(showCreate || selectedCandidate) && (
-        <CandidateModal
-          jrId={jrId!} // Passed jrId here
-          onClose={() => {
-            setShowCreate(false)
-            setSelectedCandidate(null)
-          }}
-          initialData={selectedCandidate || undefined}
-        />
-      )}
 
       {/* Header with Navigation and Context */}
       <div className='flex items-center justify-between mb-8 pb-6 border-b'>
@@ -453,7 +147,7 @@ export default function CandidateKanban() {
         </div>
         <Button
           className='bg-teal-600 hover:bg-teal-700 shadow-lg'
-          onClick={() => setShowCreate(true)}
+          onClick={() => navigate(`/candidate-create?jr_id=${jrId}`)}
         >
           <Plus size={16} className='mr-2' /> New Candidate
         </Button>
@@ -491,13 +185,89 @@ export default function CandidateKanban() {
           </SelectContent>
         </Select>
 
-        {(filters.candidate_status || filters.candidate_name) && (
+        <Select
+          value={filters.department || 'all'}
+          onValueChange={(v) =>
+            setFilters((f) => ({
+              ...f,
+              department: v === 'all' ? '' : v,
+            }))
+          }
+        >
+          <SelectTrigger className='w-40 h-9 text-xs rounded-xl'>
+            <SelectValue placeholder='Department' />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value='all'>All Depts</SelectItem>
+            {DEPARTMENTS.map((d) => (
+              <SelectItem key={d} value={d}>{d}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+
+        <Select
+          value={filters.hiring_position || 'all'}
+          onValueChange={(v) =>
+            setFilters((f) => ({
+              ...f,
+              hiring_position: v === 'all' ? '' : v,
+            }))
+          }
+        >
+          <SelectTrigger className='w-40 h-9 text-xs rounded-xl'>
+            <SelectValue placeholder='Position' />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value='all'>All Positions</SelectItem>
+            {HIRING_POSITIONS.map((p) => (
+              <SelectItem key={p} value={p}>{p}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+
+        <Select
+          value={filters.location_city || 'all'}
+          onValueChange={(v) =>
+            setFilters((f) => ({
+              ...f,
+              location_city: v === 'all' ? '' : v,
+            }))
+          }
+        >
+          <SelectTrigger className='w-32 h-9 text-xs rounded-xl'>
+            <SelectValue placeholder='Location' />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value='all'>All Locs</SelectItem>
+            {LOCATIONS.map((l) => (
+              <SelectItem key={l} value={l}>{l}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+
+        <Input
+          type='date'
+          className='w-40 h-9 text-xs rounded-xl'
+          value={filters.tentative_joining_date}
+          onChange={(e) =>
+            setFilters((f) => ({ ...f, tentative_joining_date: e.target.value }))
+          }
+        />
+
+        {(filters.candidate_status || filters.candidate_name || filters.tentative_joining_date || filters.department || filters.hiring_position || filters.location_city) && (
           <Button
             variant='ghost'
             size='sm'
             className='h-9 text-xs text-zinc-500 hover:text-teal-600'
             onClick={() =>
-              setFilters({ candidate_status: '', candidate_name: '' })
+              setFilters({ 
+                candidate_status: '', 
+                candidate_name: '',
+                tentative_joining_date: '',
+                department: '',
+                hiring_position: '',
+                location_city: '',
+              })
             }
           >
             <RotateCcw size={14} className='mr-2' /> Reset
@@ -529,7 +299,7 @@ export default function CandidateKanban() {
                   <Card
                     key={c.id}
                     className='cursor-pointer hover:border-teal-500 hover:shadow-md transition-all group'
-                    onClick={() => setSelectedCandidate(c)}
+                    onClick={() => navigate(`/candidate/${c.id}/edit?jr_id=${jrId}`)}
                   >
                     <CardContent className='p-4'>
                       <p className='font-bold text-zinc-800 group-hover:text-teal-700 transition-colors'>

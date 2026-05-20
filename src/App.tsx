@@ -9,6 +9,8 @@ import { Spinner } from './components/ui/spinner'
 import DealsKanban from './components/deals/deals-kanban'
 import HiringKanban from './components/hiring/hiring-kanban'
 import CandidateKanban from './components/hiring/candidate-kanban'
+import CreateJobRequirement from './components/hiring/create-job-requirement'
+import CreateCandidate from './components/hiring/create-candidate'
 
 // Lazy loaded pages and heavy route components
 const AccountPage = lazy(() => import('./pages/accounts-page'))
@@ -90,6 +92,10 @@ export default function App() {
               <Route path='/revenue-create' element={<CreateRevenue />} />
               <Route path='/revenue/:id' element={<UpdateRevenue />} />
               <Route path='/hiring' element={<HiringKanban />} />
+              <Route path='/hiring-create' element={<CreateJobRequirement />} />
+              <Route path='/hiring/:id/edit' element={<CreateJobRequirement />} />
+              <Route path='/candidate-create' element={<CreateCandidate />} />
+              <Route path='/candidate/:id/edit' element={<CreateCandidate />} />
               <Route path='/jr/:jrId' element={<CandidateKanban />} />
               <Route element={<ProtectedLogRoute />}>
                 <Route path='/audit-logs' element={<AuditLogs />} />

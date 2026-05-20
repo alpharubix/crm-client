@@ -1,5 +1,7 @@
+import React from 'react'
+
 type Props = {
-  label: string
+  label: string | React.ReactNode
   error?: string
   children: React.ReactNode
 }

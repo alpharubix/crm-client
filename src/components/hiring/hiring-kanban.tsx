@@ -141,608 +141,15 @@ function KanbanColumn({
   )
 }
 
-// ── Create/Edit Modal ───────────────────────────────────────────
-function CreateJRModal({
-  onClose,
-  initialData,
-}: {
-  onClose: () => void
-  initialData?: JR
-}) {
-  const queryClient = useQueryClient()
-  const isEdit = !!initialData
-
-  // Fetch full details if editing to populate live Mongo Notes
-  const { data: detailData } = useQuery({
-    queryKey: ['job-requirement-detail', initialData?.id],
-    queryFn: async () => {
-      const res = await fetch(
-        `${ENV.VITE_BACKEND_BASE_URL}/job-requirements?jr_id=${initialData?.id}`,
-        { credentials: 'include' },
-      )
-      return res.json()
-    },
-    enabled: isEdit,
-  })
-
-  const fullJR = detailData?.data?.[0] || initialData
-
-  const [form, setForm] = useState<Record<string, any>>({})
-  const [languages, setLanguages] = useState<string[]>([])
-  const [ugQualifications, setUgQualifications] = useState<string[]>([])
-  const [pgQualifications, setPgQualifications] = useState<string[]>([])
-  const [newNote, setNewNote] = useState('')
-
-  useEffect(() => {
-    if (fullJR) {
-      setForm({ ...fullJR })
-      setLanguages(fullJR.language_proficiency || [])
-      setUgQualifications(fullJR.educational_qualification_ug || [])
-      setPgQualifications(fullJR.educational_qualification_pg || [])
-    } else {
-      setForm({})
-      setLanguages([])
-      setUgQualifications([])
-      setPgQualifications([])
-    }
-  }, [fullJR])
-
-  const set = (key: string, value: any) =>
-    setForm((prev) => ({ ...prev, [key]: value }))
-
-  const toggleItem = (
-    list: string[],
-    setList: (v: string[]) => void,
-    item: string,
-  ) => {
-    setList(
-      list.includes(item) ? list.filter((i) => i !== item) : [...list, item],
-    )
-  }
-
-  const mutation = useMutation({
-    mutationFn: async () => {
-      const payload = {
-        ...form,
-        language_proficiency: languages,
-        educational_qualification_ug: ugQualifications,
-        educational_qualification_pg: pgQualifications,
-      }
-      const url = isEdit
-        ? `${ENV.VITE_BACKEND_BASE_URL}/job-requirements/${initialData.id}`
-        : `${ENV.VITE_BACKEND_BASE_URL}/job-requirements`
-
-      const res = await fetch(url, {
-        method: isEdit ? 'PUT' : 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
-        body: JSON.stringify(payload),
-      })
-      if (!res.ok) throw new Error('Failed to save')
-      return res.json()
-    },
-    onSuccess: () => {
-      toast.success(isEdit ? 'Requirement Updated' : 'Requirement Created')
-      queryClient.invalidateQueries({ queryKey: ['job-requirements'] })
-      onClose()
-    },
-    onError: (e: any) => toast.error(e.message),
-  })
-
-  const noteMutation = useMutation({
-    mutationFn: async () => {
-      const res = await fetch(`${ENV.VITE_BACKEND_BASE_URL}/notes`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
-        body: JSON.stringify({
-          parent_id: String(initialData?.id),
-          module: 'JobRequirement',
-          content: newNote,
-        }),
-      })
-      if (!res.ok) throw new Error('Failed to post note')
-      return res.json()
-    },
-    onSuccess: () => {
-      setNewNote('')
-      queryClient.invalidateQueries({
-        queryKey: ['job-requirement-detail', initialData?.id],
-      })
-      toast.success('Note Added')
-    },
-    onError: (e: any) => toast.error(e.message),
-  })
-
-  const getVal = (key: string) => form[key] || ''
-
-  return (
-    <div className='fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm'>
-      <div className='bg-background rounded-2xl shadow-2xl w-full max-w-6xl max-h-[92vh] overflow-hidden flex flex-col'>
-        {/* Header */}
-        <div className='flex items-center justify-between p-6 border-b bg-blue-600 text-white'>
-          <h2 className='text-xl font-bold'>
-            {isEdit ? 'Edit Job Requirement' : 'New Job Requirement'}
-          </h2>
-          <button
-            onClick={onClose}
-            className='hover:bg-blue-500 rounded-full p-1'
-          >
-            <X size={24} />
-          </button>
-        </div>
-
-        {/* Form Body */}
-        <div className='flex-1 overflow-y-auto p-8 bg-zinc-50/50 space-y-8'>
-          <div className='grid grid-cols-3 gap-x-8 gap-y-6'>
-            {/* --- SECTION 1: HIRING REQUIREMENTS --- */}
-            <div className='col-span-3 border-b pb-2'>
-              <h3 className='text-sm font-black text-blue-600 tracking-widest uppercase'>
-                Hiring Requirements
-              </h3>
-            </div>
-
-            <div className='space-y-1'>
-              <Label>Hiring Position</Label>
-              <Select
-                value={getVal('hiring_position')}
-                onValueChange={(v) => set('hiring_position', v)}
-              >
-                <SelectTrigger className='h-9'>
-                  <SelectValue placeholder='Select Position' />
-                </SelectTrigger>
-                <SelectContent>
-                  {HIRING_POSITIONS.map((p) => (
-                    <SelectItem key={p} value={p}>
-                      {p}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className='space-y-1'>
-              <Label>Department</Label>
-              <Select
-                value={getVal('department')}
-                onValueChange={(v) => set('department', v)}
-              >
-                <SelectTrigger className='h-9'>
-                  <SelectValue placeholder='Select Department' />
-                </SelectTrigger>
-                <SelectContent>
-                  {DEPARTMENTS.map((d) => (
-                    <SelectItem key={d} value={d}>
-                      {d}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className='space-y-1'>
-              <Label>Level</Label>
-              <Select
-                value={getVal('level')}
-                onValueChange={(v) => set('level', v)}
-              >
-                <SelectTrigger className='h-9'>
-                  <SelectValue placeholder='Select Level' />
-                </SelectTrigger>
-                <SelectContent>
-                  {LEVELS.map((l) => (
-                    <SelectItem key={l} value={l}>
-                      {l}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className='space-y-1'>
-              <Label>Sub Level</Label>
-              <Select
-                value={getVal('sub_level')}
-                onValueChange={(v) => set('sub_level', v)}
-              >
-                <SelectTrigger className='h-9'>
-                  <SelectValue placeholder='Select Sub level' />
-                </SelectTrigger>
-                <SelectContent>
-                  {SUB_LEVELS.map((s) => (
-                    <SelectItem key={s} value={s}>
-                      {s}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className='space-y-1'>
-              <Label>No of Vacancies</Label>
-              <Input
-                type='number'
-                value={getVal('no_of_vacancies')}
-                className='h-9'
-                onChange={(e) => set('no_of_vacancies', e.target.value)}
-              />
-            </div>
-
-            <div className='space-y-1'>
-              <Label>Location (City)</Label>
-              <Select
-                value={getVal('hiring_location_city')}
-                onValueChange={(v) => set('hiring_location_city', v)}
-              >
-                <SelectTrigger className='h-9'>
-                  <SelectValue placeholder='Select City' />
-                </SelectTrigger>
-                <SelectContent>
-                  {LOCATIONS.map((l) => (
-                    <SelectItem key={l} value={l}>
-                      {l}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className='space-y-1'>
-              <Label>Gender</Label>
-              <Select
-                value={getVal('gender')}
-                onValueChange={(v) => set('gender', v)}
-              >
-                <SelectTrigger className='h-9'>
-                  <SelectValue placeholder='Select Gender' />
-                </SelectTrigger>
-                <SelectContent>
-                  {GENDERS.map((g) => (
-                    <SelectItem key={g} value={g}>
-                      {g}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className='space-y-1'>
-              <Label>Age Limit</Label>
-              <Input
-                type='number'
-                value={getVal('age_limit')}
-                className='h-9'
-                placeholder='Max Age'
-                onChange={(e) => set('age_limit', e.target.value)}
-              />
-            </div>
-
-            <div className='space-y-1'>
-              <Label>TAT (Days)</Label>
-              <Input
-                type='number'
-                value={getVal('tat')}
-                className='h-9'
-                onChange={(e) => set('tat', e.target.value)}
-              />
-            </div>
-
-            {/* --- SECTION 2: COMPENSATION & TIMELINE --- */}
-            <div className='col-span-3 border-b pb-2 pt-2'>
-              <h3 className='text-sm font-black text-blue-600 tracking-widest uppercase'>
-                Compensation & Timeline
-              </h3>
-            </div>
-
-            <div className='space-y-1'>
-              <Label>Min Annual CTC</Label>
-              <Input
-                value={getVal('min_annual_ctc')}
-                className='h-9'
-                placeholder='Currency Min'
-                onChange={(e) => set('min_annual_ctc', e.target.value)}
-              />
-            </div>
-
-            <div className='space-y-1'>
-              <Label>Max Annual CTC</Label>
-              <Input
-                value={getVal('max_annual_ctc')}
-                className='h-9'
-                placeholder='Currency Max'
-                onChange={(e) => set('max_annual_ctc', e.target.value)}
-              />
-            </div>
-
-            <div className='space-y-1'>
-              <Label>Position Open Date</Label>
-              <Input
-                type='date'
-                value={getVal('position_open_date')?.split('T')[0]}
-                className='h-9'
-                onChange={(e) => set('position_open_date', e.target.value)}
-              />
-            </div>
-
-            <div className='space-y-1'>
-              <Label>Joining Date</Label>
-              <Input
-                type='date'
-                value={getVal('tentative_joining_date')?.split('T')[0]}
-                className='h-9'
-                onChange={(e) => set('tentative_joining_date', e.target.value)}
-              />
-            </div>
-
-            <div className='space-y-1 col-span-2'>
-              <Label>Qualification (Single Line Overview)</Label>
-              <Input
-                value={getVal('qualification')}
-                className='h-9'
-                placeholder='e.g. Graduate with Banking Knowledge'
-                onChange={(e) => set('qualification', e.target.value)}
-              />
-            </div>
-
-            {/* --- SECTION 3: EDUCATION (Multi-select) --- */}
-            <div className='col-span-3 border-b pb-2 pt-2'>
-              <h3 className='text-sm font-black text-blue-600 tracking-widest uppercase'>
-                Education Requirements
-              </h3>
-            </div>
-
-            <div className='col-span-3 space-y-2'>
-              <Label>Educational Qualification (UG)</Label>
-              <div className='flex flex-wrap gap-2'>
-                {['B.Tech', 'B.E', 'BCA', 'B.Sc', 'B.Com', 'BBA'].map((q) => (
-                  <button
-                    key={q}
-                    type='button'
-                    onClick={() =>
-                      toggleItem(ugQualifications, setUgQualifications, q)
-                    }
-                    className={`px-3 py-1 rounded-full text-[10px] border font-bold transition-all ${ugQualifications.includes(q) ? 'bg-blue-600 text-white' : 'bg-white text-zinc-500'}`}
-                  >
-                    {q}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            <div className='col-span-3 space-y-2'>
-              <Label>Educational Qualification (PG)</Label>
-              <div className='flex flex-wrap gap-2'>
-                {['M.Tech', 'ME', 'MCA', 'M.Sc', 'MBA', 'MA'].map((q) => (
-                  <button
-                    key={q}
-                    type='button'
-                    onClick={() =>
-                      toggleItem(pgQualifications, setPgQualifications, q)
-                    }
-                    className={`px-3 py-1 rounded-full text-[10px] border font-bold transition-all ${pgQualifications.includes(q) ? 'bg-blue-600 text-white' : 'bg-white text-zinc-500'}`}
-                  >
-                    {q}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            {/* --- SECTION 4: WORK EXPERIENCE --- */}
-            <div className='col-span-3 border-b pb-2 pt-2'>
-              <h3 className='text-sm font-black text-blue-600 tracking-widest uppercase'>
-                Work Experience
-              </h3>
-            </div>
-
-            <div className='space-y-1'>
-              <Label>Experience Range</Label>
-              <Select
-                value={getVal('experience')}
-                onValueChange={(v) => set('experience', v)}
-              >
-                <SelectTrigger className='h-9'>
-                  <SelectValue placeholder='Select Picklist' />
-                </SelectTrigger>
-                <SelectContent>
-                  {EXPERIENCE_OPTIONS.map((e) => (
-                    <SelectItem key={e} value={e}>
-                      {e}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className='space-y-1'>
-              <Label>Exp. Department</Label>
-              <Select
-                value={getVal('work_experience_department')}
-                onValueChange={(v) => set('work_experience_department', v)}
-              >
-                <SelectTrigger className='h-9'>
-                  <SelectValue placeholder='Select Exp Dept' />
-                </SelectTrigger>
-                <SelectContent>
-                  {DEPARTMENTS.map((d) => (
-                    <SelectItem key={d} value={d}>
-                      {d}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className='col-span-3 space-y-1'>
-              <Label>Work Description</Label>
-              <textarea
-                className='w-full border rounded-xl p-3 text-sm min-h-[80px] bg-white outline-none'
-                value={getVal('work_description')}
-                onChange={(e) => set('work_description', e.target.value)}
-              />
-            </div>
-
-            {/* --- SECTION 5: SKILLS & LANGUAGES --- */}
-            <div className='col-span-3 border-b pb-2 pt-2'>
-              <h3 className='text-sm font-black text-blue-600 tracking-widest uppercase'>
-                Skills & Languages
-              </h3>
-            </div>
-
-            <div className='col-span-3 space-y-1'>
-              <Label>Skills Required</Label>
-              <Input
-                value={getVal('skills')}
-                className='h-9'
-                placeholder='Skills separated by comma'
-                onChange={(e) => set('skills', e.target.value)}
-              />
-            </div>
-
-            <div className='col-span-3 space-y-2'>
-              <Label>Language Proficiency</Label>
-              <div className='flex flex-wrap gap-2'>
-                {LANGUAGE_OPTIONS.map((l) => (
-                  <button
-                    key={l}
-                    type='button'
-                    onClick={() => toggleItem(languages, setLanguages, l)}
-                    className={`px-4 py-1 rounded-full text-xs font-semibold border transition-all ${languages.includes(l) ? 'bg-blue-600 text-white border-blue-600' : 'bg-white text-zinc-500'}`}
-                  >
-                    {l}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            {/* --- SECTION 6: ASSIGNMENT --- */}
-            <div className='col-span-3 border-b pb-2 pt-2'>
-              <h3 className='text-sm font-black text-blue-600 tracking-widest uppercase'>
-                Assignment & Description
-              </h3>
-            </div>
-
-            <div className='space-y-1'>
-              <Label>Approver ID</Label>
-              <Input
-                value={getVal('approver_id')}
-                placeholder='User ID'
-                onChange={(e) => set('approver_id', e.target.value)}
-                className='h-9'
-              />
-            </div>
-
-            <div className='space-y-1'>
-              <Label>Assignee ID</Label>
-              <Input
-                value={getVal('assignee_id')}
-                placeholder='HR Dept User ID'
-                onChange={(e) => set('assignee_id', e.target.value)}
-                className='h-9'
-              />
-            </div>
-
-            <div className='space-y-1'>
-              <Label>Reporting Manager</Label>
-              <Input
-                value={getVal('reporting_manager')}
-                placeholder='Manager Name/Title'
-                onChange={(e) => set('reporting_manager', e.target.value)}
-                className='h-9'
-              />
-            </div>
-
-            <div className='col-span-3 space-y-1'>
-              <Label>Job Description</Label>
-              <textarea
-                className='w-full border rounded-xl p-4 text-sm min-h-[120px] bg-white outline-none'
-                value={getVal('job_description')}
-                onChange={(e) => set('job_description', e.target.value)}
-              />
-            </div>
-          </div>
-
-          {/* --- MONGO NOTES WORKFLOW TIMELINE SECTION --- */}
-          {isEdit && (
-            <div className='border-t pt-6 space-y-4'>
-              <h3 className='text-sm font-black text-zinc-700 uppercase tracking-wider'>
-                Notes Timeline
-              </h3>
-
-              <div className='bg-zinc-100/60 p-4 rounded-xl space-y-3 max-h-48 overflow-y-auto border border-zinc-200'>
-                {fullJR?.notes && fullJR.notes.length > 0 ? (
-                  fullJR.notes.map((n: any, index: number) => (
-                    <div
-                      key={index}
-                      className='bg-white p-3 rounded-lg border shadow-sm text-xs space-y-1'
-                    >
-                      <p className='text-zinc-800 font-medium'>{n.content}</p>
-                      <div className='text-[10px] text-zinc-400 flex justify-between'>
-                        <span>By: {n.user_name || 'System User'}</span>
-                        <span>
-                          {n.created_time
-                            ? new Date(n.created_time).toLocaleString()
-                            : ''}
-                        </span>
-                      </div>
-                    </div>
-                  ))
-                ) : (
-                  <p className='text-center text-zinc-400 text-xs py-4 uppercase font-bold'>
-                    No Thread Activity Found
-                  </p>
-                )}
-              </div>
-
-              <div className='flex gap-3 items-end'>
-                <div className='flex-1 space-y-1'>
-                  <Label>Write Activity Note</Label>
-                  <Input
-                    value={newNote}
-                    onChange={(e) => setNewNote(e.target.value)}
-                    placeholder='Type transaction update note...'
-                    className='h-10 bg-white'
-                  />
-                </div>
-                <Button
-                  onClick={() => noteMutation.mutate()}
-                  disabled={noteMutation.isPending || !newNote.strip()}
-                  className='bg-zinc-800 hover:bg-zinc-900 h-10 px-6 font-bold text-xs uppercase'
-                >
-                  Post Note
-                </Button>
-              </div>
-            </div>
-          )}
-        </div>
-
-        {/* Footer */}
-        <div className='p-6 border-t bg-white flex justify-end gap-3 shrink-0'>
-          <Button variant='outline' className='px-8' onClick={onClose}>
-            Cancel
-          </Button>
-          <Button
-            className='bg-blue-600 px-10 font-bold'
-            onClick={() => mutation.mutate()}
-            disabled={mutation.isPending}
-          >
-            {mutation.isPending ? 'Saving...' : 'Save Requirement'}
-          </Button>
-        </div>
-      </div>
-    </div>
-  )
-}
-
 // ── Main Page ────────────────────────────────────────────────────
 export default function HiringKanban() {
   const navigate = useNavigate()
   const queryClient = useQueryClient()
-  const [showCreate, setShowCreate] = useState(false)
-  const [selectedJR, setSelectedJR] = useState<JR | null>(null)
   const [filters, setFilters] = useState({
     department: '',
     hiring_position: '',
     hiring_location_city: '',
+    tentative_joining_date: '',
   })
 
   const { data, isLoading } = useQuery({
@@ -773,15 +180,6 @@ export default function HiringKanban() {
 
   return (
     <div className='w-full h-full p-6 flex flex-col max-w-[1600px] mx-auto'>
-      {(showCreate || selectedJR) && (
-        <CreateJRModal
-          onClose={() => {
-            setShowCreate(false)
-            setSelectedJR(null)
-          }}
-          initialData={selectedJR || undefined}
-        />
-      )}
 
       <div className='flex items-center justify-between mb-6'>
         <h1 className='text-2xl font-black text-zinc-900 uppercase tracking-tighter'>
@@ -790,7 +188,7 @@ export default function HiringKanban() {
         <Button
           size='sm'
           className='bg-blue-600 hover:bg-blue-700'
-          onClick={() => setShowCreate(true)}
+          onClick={() => navigate('/hiring-create')}
         >
           <Plus size={16} className='mr-2' /> New Requirement
         </Button>
@@ -854,9 +252,20 @@ export default function HiringKanban() {
           </SelectContent>
         </Select>
 
+        <Input
+          type='date'
+          className='h-8 text-xs w-[160px]'
+          value={filters.tentative_joining_date}
+          onChange={(e) =>
+            setFilters((f) => ({ ...f, tentative_joining_date: e.target.value }))
+          }
+          placeholder='Tentative Joining Date'
+        />
+
         {(filters.department ||
           filters.hiring_position ||
-          filters.hiring_location_city) && (
+          filters.hiring_location_city ||
+          filters.tentative_joining_date) && (
           <Button
             variant='ghost'
             size='sm'
@@ -866,6 +275,7 @@ export default function HiringKanban() {
                 department: '',
                 hiring_position: '',
                 hiring_location_city: '',
+                tentative_joining_date: '',
               })
             }
           >
@@ -882,7 +292,7 @@ export default function HiringKanban() {
             dept={dept}
             jrs={grouped[dept] ?? []}
             onNavigate={(id) => navigate(`/jr/${id}`)}
-            onEdit={(jr) => setSelectedJR(jr)}
+            onEdit={(jr) => navigate(`/hiring/${jr.id}/edit`)}
           />
         ))}
       </div>
