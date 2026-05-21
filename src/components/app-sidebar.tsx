@@ -1,3 +1,9 @@
+import { useState } from 'react'
+import { useParams, useNavigate } from 'react-router-dom'
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import { toast } from 'sonner'
+import { ENV, HR_USER_IDS, MANAGER_USER_IDS } from '@/conf'
+
 import { NavMain } from '@/components/nav-main'
 import { NavUser } from '@/components/nav-user'
 import { TeamSwitcher } from '@/components/team-switcher'
@@ -16,6 +22,7 @@ import {
   Logs,
   Megaphone,
 } from 'lucide-react'
+import { useAuth } from '@/context/auth-context'
 
 const data = {
   user: {
@@ -36,10 +43,6 @@ const data = {
       url: '#',
       icon: BookOpen,
       items: [
-        // {
-        //   title: 'Leads',
-        //   url: '/leads',
-        // },
         {
           title: 'Accounts',
           url: '/accounts',
@@ -64,17 +67,6 @@ const data = {
           title: 'Revenue',
           url: '/revenue',
         },
-        // {
-        //   title: 'Deals',
-        //   url: '/deals',
-        // },
-        // {
-        //   title: 'Tasks',
-        //   url: '#',
-        // }, {
-        //   title: 'Attachments',
-        //   url: '#',
-        // }
       ],
     },
     {
@@ -108,10 +100,6 @@ const data = {
           title: 'All Projects',
           url: '/projects',
         },
-        // {
-        //   title: 'All Tasks',
-        //   url: '/tasks',
-        // },
       ],
     },
     {
@@ -123,23 +111,20 @@ const data = {
           title: 'Job Requirement',
           url: '/hiring',
         },
-        // {
-        //   title: 'Candidate',
-        //   url: '/candidate',
-        // },
-        // {
-        //   title: 'All Tasks',
-        //   url: '/tasks',
-        // },
       ],
     },
   ],
 }
 
-import { useAuth } from '@/context/auth-context'
-
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   const { user } = useAuth()
+
+  const currentUserId = user?.user_id ? String(user.user_id) : ''
+  const currentUserRole = user?.role || ''
+
+  // Isolate user identity signatures
+  const isSarada = currentUserId === '3899927000000221552'
+  const isManager = MANAGER_USER_IDS.includes(currentUserId)
 
   const navUser = {
     name: user?.user_name || 'User',
@@ -155,27 +140,39 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
       <SidebarContent>
         <NavMain
           items={data.navMain.filter((item) => {
-            if (item.title === 'Logs' && user?.role !== 'super_admin') {
+            // ── 1. ABSOLUTE STRIP DOWN FOR SARADA ──
+            // Sarada can ONLY see Hiring. No other tabs (Modules, Projects, etc.) are allowed.
+            if (isSarada) {
+              return item.title === 'Hiring'
+            }
+
+            // ── 2. LOGS PERMISSION GATEWAY ──
+            if (item.title === 'Logs' && currentUserRole !== 'super_admin') {
               return false
             }
+
+            // ── 3. EXPORTS PERMISSION GATEWAY ──
             if (
               item.title === 'Export' &&
-              user?.role !== 'super_admin' &&
-              user?.role !== 'admin'
+              currentUserRole !== 'super_admin' &&
+              currentUserRole !== 'admin'
             ) {
               return false
             }
-            if (
-              item.title === 'Hiring' &&
-              user?.role !== 'super_admin' &&
-              user?.role !== 'admin'
-            ) {
-              return false
+
+            // ── 4. HIRING PERMISSION GATEWAY FOR SYSTEM ACTORS ──
+            // Display Hiring module for Super Admin, Admin, and ALL Managers
+            if (item.title === 'Hiring') {
+              const hasGlobalRole =
+                currentUserRole === 'super_admin' || currentUserRole === 'admin'
+              if (!hasGlobalRole && !isManager) {
+                return false
+              }
             }
+
             return true
           })}
         />
-        {/* <NavProjects projects={data.projects} /> */}
       </SidebarContent>
       <SidebarFooter>
         <NavUser user={navUser} />

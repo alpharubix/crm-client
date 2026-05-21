@@ -20,6 +20,7 @@ import {
   LOCATIONS,
 } from '@/utils/hiring-constants'
 import { Label } from '../ui/label'
+import { useAuth } from '@/context/auth-context'
 
 interface JR {
   id: number
@@ -30,11 +31,6 @@ interface JR {
   no_of_vacancies?: number
   hiring_location_city?: string
   approver_id?: string
-}
-
-// Mock representation of active context user session
-const useAuthSession = () => {
-  return { userId: '3899927000000201013', role: 'manager' }
 }
 
 // ── JR Card Component with Inline Workflow Actions ─────────────────
@@ -49,13 +45,15 @@ function JRCard({
   onEdit: (jr: JR) => void
   onStatusChange: (id: number, nextStatus: string) => void
 }) {
-  const { userId, role } = useAuthSession()
+  // ── FIX: CONNECT LIVE AUTH CONTEXT HERE ──
+  const { user } = useAuth()
+  const currentUserRole = user?.role || ''
 
-  // Show quick decision triggers if item is pending AND logged-in user is the assigned approver or manager/admin
+  // Enforce access rules: ONLY super_admin is allowed to approve/reject requirements directly on the cards
   const showWorkflowActions =
     jr.status !== 'approved' &&
     jr.status !== 'rejected' &&
-    (userId === String(jr.approver_id) || ['admin', 'manager'].includes(role))
+    currentUserRole === 'super_admin'
 
   return (
     <Card
@@ -116,12 +114,12 @@ function JRCard({
           <div className='mt-2 pt-2 border-t flex justify-between items-center text-[10px] text-zinc-400 font-mono'>
             <span>ID: #{jr.id}</span>
             <span
-              className={`px-1.5 py-0.2 rounded text-[9px] font-bold uppercase ${
+              className={`px-1.5 py-0.2 rounded text-[9px] font-bold uppercase border ${
                 jr.status === 'approved'
-                  ? 'bg-green-50 text-green-700 border border-green-100'
+                  ? 'bg-green-50 text-green-700 border-green-100'
                   : jr.status === 'rejected'
-                    ? 'bg-red-50 text-red-700 border border-red-100'
-                    : 'bg-yellow-50 text-yellow-700'
+                    ? 'bg-red-50 text-red-700 border-red-100'
+                    : 'bg-yellow-50 text-yellow-700 border-yellow-100'
               }`}
             >
               {jr.status || 'pending'}
@@ -194,6 +192,11 @@ function KanbanColumn({
 export default function HiringKanban() {
   const navigate = useNavigate()
   const queryClient = useQueryClient()
+
+  // ── FIX: READ LIVE PERMISSIONS TO PROTECT THE MUTATION FLOWS ──
+  const { user } = useAuth()
+  const currentUserRole = user?.role || ''
+
   const [filters, setFilters] = useState({
     department: '',
     hiring_position: '',
@@ -219,9 +222,15 @@ export default function HiringKanban() {
     },
   })
 
-  // Quick Action Mutation to process immediate Accept/Reject states from the card layout component
   const statusMutation = useMutation({
     mutationFn: async ({ id, status }: { id: number; status: string }) => {
+      // API Backstop Protection
+      if (currentUserRole !== 'super_admin') {
+        throw new Error(
+          'Unauthorized: Admin role does not hold approval permissions.',
+        )
+      }
+
       const res = await fetch(
         `${ENV.VITE_BACKEND_BASE_URL}/job-requirements/${id}`,
         {
@@ -257,10 +266,8 @@ export default function HiringKanban() {
   jrsList.forEach((jr) => {
     if (!jr) return
     if (jr.status !== 'approved') {
-      // Rejects or Pendings default straight to the unallocated triage shelf column
       grouped['Pending Approval'].push(jr)
     } else {
-      // Approved files route straight to their respective targets
       const deptKey = jr.department || 'Operations'
       if (grouped[deptKey]) {
         grouped[deptKey].push(jr)
@@ -352,7 +359,7 @@ export default function HiringKanban() {
           </SelectContent>
         </Select>
 
-        <Label>Tentative Joining Date</Label>
+        <Label className='text-xs text-zinc-500'>Tentative Joining Date</Label>
         <Input
           type='date'
           className='h-8 text-xs w-[160px]'

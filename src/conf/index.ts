@@ -73,3 +73,19 @@ export const USERS_MAP: Record<string, string> = {
   '3899927000000201013': 'Anslem Prathap',
   '3899927000005965002': 'Subhasini TS',
 }
+
+// HR Team User ID Registry constants
+export const HR_USER_IDS = [
+  '3899927000000318361', // Namrata
+  '3899927000000221552', // Sarada
+]
+
+// Manager Registry mapped directly from your MANAGER_EXECUTIVES_MAP keys
+export const MANAGER_USER_IDS = [
+  '3899927000000318361', // Namrata
+  '3899927000000319812', // Ashwini R
+  '3899927000005114050', // Sutapa Roy
+  '3899927000005114004', // Manjunath
+  '3899927000000851906', // Prathap
+  '3899927000000488938', // Nagaraj
+]
