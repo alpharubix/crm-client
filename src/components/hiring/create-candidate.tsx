@@ -2,10 +2,10 @@ import { useState, useEffect } from 'react'
 import { useParams, useNavigate, useLocation } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
-import { ENV } from '@/conf'
+import { ENV, HR_USER_IDS, MANAGER_USER_IDS } from '@/conf'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { ArrowLeft } from 'lucide-react'
+import { ArrowLeft, X } from 'lucide-react'
 import SectionHeader from '@/components/shared/section-header'
 import FieldRow from '@/components/shared/field-row'
 import { Card, CardContent } from '@/components/ui/card'
@@ -36,6 +36,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from '../ui/dialog'
+import { useAuth } from '@/context/auth-context'
 
 export default function CreateCandidate() {
   const { id } = useParams()
@@ -61,6 +62,22 @@ export default function CreateCandidate() {
 
   const isEdit = !!id
 
+  // ── CORE ROLE & OPERATION ACCESS FLAGS ──
+  const { user } = useAuth()
+  const currentUserId = user?.user_id ? String(user.user_id) : ''
+  const currentUserRole = user?.role || ''
+
+  const isSuperAdmin = currentUserRole === 'super_admin'
+  const isAdmin = currentUserRole === 'admin'
+  const isHRTeam = HR_USER_IDS.includes(currentUserId)
+  const isManager = MANAGER_USER_IDS.includes(currentUserId)
+
+  // Super Admin, Admin, and HR roles hold modification rights over core data profiles
+  const canModifyCandidateDetails = isSuperAdmin || isAdmin || isHRTeam
+
+  // Managers hold operational note mapping authorization
+  const canAddCandidateNotes = isSuperAdmin || isAdmin || isHRTeam || isManager
+
   // ── NOTES STATE & HANDLER CHANGES (CANDIDATE LEVEL) ────────────────
   const sortedNotes = [...(form.notes || [])].sort((a: any, b: any) => {
     return (
@@ -85,6 +102,7 @@ export default function CreateCandidate() {
           id: String(id), // Target Candidate ID
           note: note.description, // Text Content
           module: 'Candidates', // Module indicator
+          Parent_Id: String(id), // Flat payload key fallback override matching parent tree configuration
         }),
       })
 
@@ -143,6 +161,9 @@ export default function CreateCandidate() {
         ...form,
         language_proficiency: languages,
       }
+      delete payload.created_by
+      delete payload.assignee
+      delete payload.notes // Ensure computed arrays are stripped too
       const url = isEdit
         ? `${ENV.VITE_BACKEND_BASE_URL}/candidates/${id}`
         : `${ENV.VITE_BACKEND_BASE_URL}/candidates`
@@ -187,36 +208,38 @@ export default function CreateCandidate() {
               Cancel
             </Button>
 
-            {/* FIX: Comprehensive missing field checking matrix evaluation row */}
-            <Button
-              size='sm'
-              disabled={mutation.isPending}
-              className='bg-blue-600 hover:bg-blue-700'
-              onClick={() => {
-                const nameError =
-                  !form.candidate_name || !String(form.candidate_name).trim()
-                const phoneError =
-                  !form.phone_no || !String(form.phone_no).trim()
-                const emailError = !form.email || !String(form.email).trim()
+            {/* Save Button rendering wrapper control */}
+            {canModifyCandidateDetails && (
+              <Button
+                size='sm'
+                disabled={mutation.isPending}
+                className='bg-blue-600 hover:bg-blue-700'
+                onClick={() => {
+                  const nameError =
+                    !form.candidate_name || !String(form.candidate_name).trim()
+                  const phoneError =
+                    !form.phone_no || !String(form.phone_no).trim()
+                  const emailError = !form.email || !String(form.email).trim()
 
-                setErrors({
-                  candidate_name: nameError,
-                  phone_no: phoneError,
-                  email: emailError,
-                })
+                  setErrors({
+                    candidate_name: nameError,
+                    phone_no: phoneError,
+                    email: emailError,
+                  })
 
-                if (nameError || phoneError || emailError) {
-                  toast.error(
-                    'Please complete all mandatory fields highlighted in red.',
-                  )
-                  return // Stop execution flow
-                }
+                  if (nameError || phoneError || emailError) {
+                    toast.error(
+                      'Please complete all mandatory fields highlighted in red.',
+                    )
+                    return // Stop execution flow
+                  }
 
-                mutation.mutate()
-              }}
-            >
-              {mutation.isPending ? 'Saving...' : 'Save Candidate'}
-            </Button>
+                  mutation.mutate()
+                }}
+              >
+                {mutation.isPending ? 'Saving...' : 'Save Candidate'}
+              </Button>
+            )}
           </div>
         </div>
 
@@ -238,6 +261,7 @@ export default function CreateCandidate() {
               >
                 <Input
                   value={getVal('candidate_name')}
+                  disabled={!canModifyCandidateDetails}
                   onChange={(e) => {
                     set('candidate_name', e.target.value)
                     if (e.target.value.trim())
@@ -251,7 +275,7 @@ export default function CreateCandidate() {
             <FieldRow label='Location (City)'>
               <SelectField
                 value={getVal('location_city')}
-                isEdit={true}
+                isEdit={canModifyCandidateDetails}
                 options={LOCATIONS}
                 onChange={(v) => set('location_city', v)}
               />
@@ -264,6 +288,7 @@ export default function CreateCandidate() {
             <FieldRow label='Assignee (owner)'>
               <Select
                 value={getVal('assignee_owner')}
+                disabled={!canModifyCandidateDetails}
                 onValueChange={(val) => set('assignee_owner', val)}
               >
                 <SelectTrigger className='h-8 w-full text-sm mt-1'>
@@ -291,6 +316,7 @@ export default function CreateCandidate() {
             <FieldRow label='Resume'>
               <Input
                 value={getVal('resume')}
+                disabled={!canModifyCandidateDetails}
                 onChange={(e) => set('resume', e.target.value)}
                 className='h-8'
                 placeholder='Attachment /Link'
@@ -302,7 +328,7 @@ export default function CreateCandidate() {
             <FieldRow label='Candidate Status'>
               <SelectField
                 value={getVal('candidate_status')}
-                isEdit={true}
+                isEdit={canModifyCandidateDetails}
                 options={CANDIDATE_STATUSES}
                 onChange={(v) => set('candidate_status', v)}
               />
@@ -311,6 +337,7 @@ export default function CreateCandidate() {
               <Input
                 type='date'
                 value={getVal('status_date')?.split('T')[0]}
+                disabled={!canModifyCandidateDetails}
                 onChange={(e) => set('status_date', e.target.value)}
                 className='h-8'
               />
@@ -319,6 +346,7 @@ export default function CreateCandidate() {
               <Input
                 type='date'
                 value={getVal('call_back_date')?.split('T')[0]}
+                disabled={!canModifyCandidateDetails}
                 onChange={(e) => set('call_back_date', e.target.value)}
                 className='h-8'
               />
@@ -333,6 +361,7 @@ export default function CreateCandidate() {
               >
                 <Input
                   value={getVal('phone_no')}
+                  disabled={!canModifyCandidateDetails}
                   onChange={(e) => {
                     set('phone_no', e.target.value)
                     if (e.target.value.trim())
@@ -354,6 +383,7 @@ export default function CreateCandidate() {
               >
                 <Input
                   value={getVal('email')}
+                  disabled={!canModifyCandidateDetails}
                   onChange={(e) => {
                     set('email', e.target.value)
                     if (e.target.value.trim())
@@ -376,7 +406,7 @@ export default function CreateCandidate() {
             <FieldRow label='Educational Qualification(UG)'>
               <SelectField
                 value={getVal('educational_qualification_ug')}
-                isEdit={true}
+                isEdit={canModifyCandidateDetails}
                 options={UG_QUALIFICATIONS}
                 onChange={(v) => set('educational_qualification_ug', v)}
               />
@@ -384,7 +414,7 @@ export default function CreateCandidate() {
             <FieldRow label='Educational Qualification(PG)'>
               <SelectField
                 value={getVal('educational_qualification_pg')}
-                isEdit={true}
+                isEdit={canModifyCandidateDetails}
                 options={PG_QUALIFICATIONS}
                 onChange={(v) => set('educational_qualification_pg', v)}
               />
@@ -396,6 +426,7 @@ export default function CreateCandidate() {
               <Input
                 type='number'
                 value={getVal('year_of_passing_ug')}
+                disabled={!canModifyCandidateDetails}
                 onChange={(e) => set('year_of_passing_ug', e.target.value)}
                 className='h-8'
                 placeholder='YYYY'
@@ -405,6 +436,7 @@ export default function CreateCandidate() {
               <Input
                 type='number'
                 value={getVal('year_of_passing_pg')}
+                disabled={!canModifyCandidateDetails}
                 onChange={(e) => set('year_of_passing_pg', e.target.value)}
                 className='h-8'
                 placeholder='YYYY'
@@ -421,6 +453,7 @@ export default function CreateCandidate() {
             <FieldRow label='Work Experience'>
               <Input
                 value={getVal('work_experience_duration')}
+                disabled={!canModifyCandidateDetails}
                 onChange={(e) =>
                   set('work_experience_duration', e.target.value)
                 }
@@ -434,7 +467,7 @@ export default function CreateCandidate() {
             <FieldRow label='Industry'>
               <SelectField
                 value={getVal('industry')}
-                isEdit={true}
+                isEdit={canModifyCandidateDetails}
                 options={CANDIDATE_INDUSTRIES}
                 onChange={(v) => set('industry', v)}
               />
@@ -450,6 +483,7 @@ export default function CreateCandidate() {
             <FieldRow label='Skills'>
               <Input
                 value={getVal('skills')}
+                disabled={!canModifyCandidateDetails}
                 onChange={(e) => set('skills', e.target.value)}
                 className='h-8'
                 placeholder='Single Line'
@@ -462,11 +496,12 @@ export default function CreateCandidate() {
               <MultiSelectField
                 value={languages}
                 options={LANGUAGE_OPTIONS}
-                onChange={setLanguages}
+                onChange={canModifyCandidateDetails ? setLanguages : () => {}}
               />
             </FieldRow>
           </div>
         </CardContent>
+
         {/* ================= SECTION 5: NOTES SYSTEM (CANDIDATES) ================= */}
         <SectionHeader title='Notes' />
 
@@ -552,8 +587,10 @@ export default function CreateCandidate() {
             ))
           )}
 
-          {/* Render input modal context trigger box if record exists */}
-          {isEdit && <NoteDialog onAddNote={handleAddNote} />}
+          {/* Render input modal context trigger box if record exists and user holds permission */}
+          {isEdit && canAddCandidateNotes && (
+            <NoteDialog onAddNote={handleAddNote} />
+          )}
         </CardContent>
       </Card>
     </div>

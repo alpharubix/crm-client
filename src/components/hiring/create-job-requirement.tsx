@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
-import { ENV } from '@/conf'
+import { ENV, HR_USER_IDS, MANAGER_USER_IDS } from '@/conf'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
@@ -30,15 +30,7 @@ import {
   DialogTrigger,
 } from '../ui/dialog'
 import NoteDialog from '../shared/note-dialog'
-
-// Mock representation of the context session state matching your router interceptors.
-// In production, fetch these values from your Auth Context providers.
-const useAuthSession = () => {
-  return {
-    userId: '1001', // The active context user ID string
-    role: 'manager', // e.g., "admin", "manager", "recruiter"
-  }
-}
+import { useAuth } from '@/context/auth-context'
 
 function MultiSelectField({
   value,
@@ -117,7 +109,6 @@ export default function CreateJobRequirement() {
   const { id } = useParams()
   const navigate = useNavigate()
   const queryClient = useQueryClient()
-  const { userId, role } = useAuthSession()
   const [errors, setErrors] = useState<{
     hiring_position?: boolean
     department?: boolean
@@ -127,9 +118,23 @@ export default function CreateJobRequirement() {
   const [ugQualifications, setUgQualifications] = useState<string[]>([])
   const [pgQualifications, setPgQualifications] = useState<string[]>([])
 
+  // ── AUTH & PERMISSION INITIALIZATION ──
+  const { user } = useAuth()
+  const currentUserId = user?.user_id ? String(user.user_id) : ''
+  const currentUserRole = user?.role || ''
+
+  const isSuperAdmin = currentUserRole === 'super_admin'
+  const isAdmin = currentUserRole === 'admin'
+  const isHRTeam = HR_USER_IDS.includes(currentUserId)
+  const isManager = MANAGER_USER_IDS.includes(currentUserId)
+
+  // Super Admin, Admin, HR Team, and Managers have creation clearance
+  const canCreateJR = isSuperAdmin || isAdmin || isHRTeam || isManager
+
+  // Only Super Admin holds the power to approve/reject workflow requests
+  const canApproveOrRejectJR = isSuperAdmin
+
   const isEdit = !!id
-  // 1. Define your workflow status columns clearly
-  const WORKFLOW_STATUSES = ['pending_approval', 'approved', 'rejected']
 
   const { data: jrData, isLoading: isJrDataLoading } = useQuery({
     queryKey: ['job-requirements'],
@@ -141,21 +146,16 @@ export default function CreateJobRequirement() {
     },
   })
 
-  // Normalize incoming records safely whether it's wrapped in an array or object root key
   const rawList = jrData?.data
     ? Array.isArray(jrData.data)
       ? jrData.data
       : [jrData.data]
     : []
 
-  // Group your incoming requirements dynamically without worrying about runtime exceptions
   const groupedRequirements = rawList.reduce(
     (acc: any, jr: any) => {
       if (!jr) return acc
-
-      // Use 'pending_approval' as a safe structural workflow fallback matching database defaults
       const currentStatus = jr.status || 'pending_approval'
-
       if (!acc[currentStatus]) {
         acc[currentStatus] = []
       }
@@ -164,6 +164,7 @@ export default function CreateJobRequirement() {
     },
     { pending_approval: [], approved: [], rejected: [] },
   )
+
   const { data: detailData, isLoading } = useQuery({
     queryKey: ['job-requirement-detail', id],
     queryFn: async () => {
@@ -175,7 +176,8 @@ export default function CreateJobRequirement() {
     },
     enabled: isEdit,
   })
-  // ── NOTES STATE & HANDLER CHANGES ──────────────────────────────────
+
+  // Notes configuration matrix
   const sortedNotes = [...(form.notes || [])].sort((a: any, b: any) => {
     return (
       new Date(b.Created_Time).getTime() - new Date(a.Created_Time).getTime()
@@ -196,9 +198,10 @@ export default function CreateJobRequirement() {
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
         body: JSON.stringify({
-          id: String(id), // Target JR ID
-          note: note.description, // Text Content
-          module: 'Job_Requirements', // Module indicator
+          id: String(id),
+          note: note.description,
+          module: 'Job_Requirements',
+          Parent_Id: String(id), // Directly maps parent token signature
         }),
       })
 
@@ -217,14 +220,12 @@ export default function CreateJobRequirement() {
 
   useEffect(() => {
     if (detailData?.data) {
-      // Safely access backend structures regardless of object vs single list mapping layouts
       const d = Array.isArray(detailData.data)
         ? detailData.data[0]
         : detailData.data
       if (d) {
         setForm({
           ...d,
-          // Extract the absolute string ID from the relationship dictionary returned by backend
           approver_id: d.approver?.id || d.approver_id || '',
           assignee_id: d.assignee?.id || d.assignee_id || '',
         })
@@ -240,10 +241,11 @@ export default function CreateJobRequirement() {
 
   const getVal = (key: string) => form[key] || ''
 
-  const originalApproverId = String(form['approver_id'] || '')
+  // Recruiter assignment clearance: Only active if requirement is approved, and user is an admin, manager, or HR
   const canModifyAssignment =
     isEdit &&
-    (userId === originalApproverId || ['admin', 'manager'].includes(role))
+    getVal('status') === 'approved' &&
+    (isSuperAdmin || isAdmin || isHRTeam || isManager)
 
   const mutation = useMutation({
     mutationFn: async () => {
@@ -253,11 +255,12 @@ export default function CreateJobRequirement() {
       if (!form.department || !form.department.trim()) {
         throw new Error('Department is mandatory')
       }
+
       const payload = {
         ...form,
         approver_id: form.approver_id ? String(form.approver_id) : null,
         assignee_id: form.assignee_id ? String(form.assignee_id) : null,
-        status: isEdit ? form.status || 'pending_approval' : 'pending_approval', // Sets initial structure safely
+        status: isEdit ? form.status || 'pending_approval' : 'pending_approval',
         no_of_vacancies: form.no_of_vacancies
           ? parseInt(form.no_of_vacancies, 10)
           : null,
@@ -288,7 +291,7 @@ export default function CreateJobRequirement() {
           : 'Requirement Created and Sent for Approval',
       )
       queryClient.invalidateQueries({ queryKey: ['job-requirements'] })
-      navigate('/hiring') // Redirects back to your board view instantly
+      navigate('/hiring')
     },
   })
 
@@ -296,6 +299,18 @@ export default function CreateJobRequirement() {
     return (
       <div className='flex justify-center items-center h-screen bg-background'>
         <Spinner className='h-10 w-10' />
+      </div>
+    )
+  }
+
+  // Frontend routing fallback gate
+  if (!canCreateJR) {
+    return (
+      <div className='flex justify-center items-center h-screen bg-background p-6 text-center'>
+        <p className='text-muted-foreground text-sm font-medium'>
+          Unauthorized access. Your profile doesn't have permissions to create
+          or alter Job Requirements.
+        </p>
       </div>
     )
   }
@@ -322,14 +337,27 @@ export default function CreateJobRequirement() {
                 department: !form.department || !String(form.department).trim(),
               }
 
-              // Set error state to trigger the red outlines on your field rows
               if (typeof setErrors === 'function') {
                 setErrors(newErrors)
               }
 
               if (newErrors.hiring_position || newErrors.department) {
                 toast.error('Please fill in all mandatory fields.')
-                return // Blocks mutation execution
+                return
+              }
+
+              // Double verification rule for non-superadmin actors trying to shift approvals bypass paths
+              const initialStatus =
+                detailData?.data?.[0]?.status || 'pending_approval'
+              if (
+                isEdit &&
+                form.status !== initialStatus &&
+                !canApproveOrRejectJR
+              ) {
+                toast.error(
+                  'Unauthorized: Your role does not allow modifying the requirement workflow status.',
+                )
+                return
               }
 
               mutation.mutate()
@@ -456,7 +484,8 @@ export default function CreateJobRequirement() {
                 onChange={(v) => set('gender', v)}
               />
             </FieldRow>
-            {/* 1. Show Approval Controls ONLY in Edit Mode */}
+
+            {/* Workflow status rendering logic */}
             {isEdit && (
               <FieldRow label='Workflow Status'>
                 <div className='flex items-center gap-3'>
@@ -464,15 +493,17 @@ export default function CreateJobRequirement() {
                     className={`px-2 py-1 rounded text-xs font-medium uppercase ${
                       getVal('status') === 'approved'
                         ? 'bg-green-100 text-green-800'
-                        : 'bg-yellow-100 text-yellow-800'
+                        : getVal('status') === 'rejected'
+                          ? 'bg-red-100 text-red-800'
+                          : 'bg-yellow-100 text-yellow-800'
                     }`}
                   >
                     {getVal('status') || 'pending_approval'}
                   </span>
 
-                  {/* Show Approval actions if user is the assigned approver and it isn't approved yet */}
-                  {getVal('status') !== 'approved' &&
-                    userId === String(getVal('approver_id')) && (
+                  {/* Approve Action: Visible ONLY to Super Admin actors */}
+                  {getVal('status') !== 'approved' && canApproveOrRejectJR && (
+                    <div className='flex gap-2'>
                       <Button
                         type='button'
                         size='sm'
@@ -480,46 +511,33 @@ export default function CreateJobRequirement() {
                         onClick={() => {
                           set('status', 'approved')
                           toast.info(
-                            "Status set to Approved. Click 'Save Requirement' to apply changes.",
+                            "Status marked as Approved. Click 'Save Requirement' to finalize.",
                           )
                         }}
                       >
                         Approve Request
                       </Button>
-                    )}
+                      <Button
+                        type='button'
+                        size='sm'
+                        variant='destructive'
+                        className='h-7 text-xs'
+                        onClick={() => {
+                          set('status', 'rejected')
+                          toast.warning(
+                            "Status marked as Rejected. Click 'Save Requirement' to finalize.",
+                          )
+                        }}
+                      >
+                        Reject
+                      </Button>
+                    </div>
+                  )}
                 </div>
               </FieldRow>
             )}
-            {/* 2. Recruiter Assignment Gate: Only visible once the Job Requirement has been Approved */}
-            {isEdit && getVal('status') === 'approved' && (
-              <FieldRow label='Assignee (HR Recruiter)'>
-                <Input
-                  value={getVal('assignee_id')}
-                  disabled={
-                    userId !== String(getVal('approver_id')) &&
-                    !['admin', 'manager'].includes(role)
-                  }
-                  onChange={(e) => set('assignee_id', e.target.value)}
-                  className='h-8'
-                  placeholder='Enter Recruiter User ID to allocate role'
-                />
-              </FieldRow>
-            )}
-            {/* <FieldRow label='Approver'>
-              <SelectField
-                value={getVal('approver_id')}
-                isEdit={true}
-                options={users
-                  .filter(
-                    (u) =>
-                      String(u.id) === '3899927000000201013' ||
-                      u.name === 'Anslem Prathap',
-                  )
-                  .map((s) => ({ label: s.name, value: String(s.id) }))}
-                onChange={(v) => set('approver_id', v)}
-              />
-            </FieldRow> */}
-            {/* CRITICAL EXCEL RULES GATEWAY: Show/lock fields depending on Approver Status roles */}
+
+            {/* Recruiter allocation row */}
             {isEdit && (
               <FieldRow label='Assignee (Recruiter)'>
                 <Input
@@ -528,13 +546,16 @@ export default function CreateJobRequirement() {
                   onChange={(e) => set('assignee_id', e.target.value)}
                   className='h-8'
                   placeholder={
-                    canModifyAssignment
-                      ? 'Enter HR Recruiter User ID'
-                      : 'Locked — Only assigned Approver can allocate'
+                    getVal('status') !== 'approved'
+                      ? 'Locked — Awaiting requirement approval'
+                      : canModifyAssignment
+                        ? 'Enter HR Recruiter User ID'
+                        : 'Locked — Unauthorized role level context'
                   }
                 />
               </FieldRow>
             )}
+
             <FieldRow label='Hiring Location (City)'>
               <SelectField
                 value={getVal('hiring_location_city')}
@@ -650,8 +671,9 @@ export default function CreateJobRequirement() {
             </FieldRow>
           </div>
         </CardContent>
-        <SectionHeader title='Notes' />
 
+        {/* ── NOTES CONTAINER DIALOG CHANNELS ── */}
+        <SectionHeader title='Notes' />
         <CardContent className='p-4 space-y-3'>
           <div className='flex items-center justify-between'>
             <p className='text-sm text-muted-foreground'>
@@ -727,52 +749,49 @@ export default function CreateJobRequirement() {
               )}
             </div>
           </div>
-        </CardContent>
 
-        {sortedNotes.length === 0 ? (
-          <p className='text-sm text-muted-foreground'>No notes available</p>
-        ) : (
-          visibleNotes.map((note: any, i: number) => {
-            const isCandidateNote = note.module === 'Candidates'
-            return (
-              <div
-                key={note.parent_id || i}
-                className={`p-3 rounded-lg border bg-muted/30 transition-all ${
-                  isCandidateNote
-                    ? 'border-l-4 border-l-teal-500'
-                    : 'border-l-4 border-l-blue-500'
-                }`}
-              >
-                <p className='text-sm'>{note.Note_Content}</p>
-                <div className='flex flex-wrap gap-3 text-[11px] text-muted-foreground uppercase mt-2 justify-between items-center w-full font-medium'>
-                  <div className='flex gap-3'>
-                    <span>Created By: {note.Created_By?.name || '—'}</span>
-                    <span>
-                      Created Date:{' '}
-                      {note.Created_Time
-                        ? new Date(note.Created_Time).toLocaleString()
-                        : '—'}
+          {sortedNotes.length === 0 ? (
+            <p className='text-sm text-muted-foreground'>No notes available</p>
+          ) : (
+            visibleNotes.map((note: any, i: number) => {
+              const isCandidateNote = note.module === 'Candidates'
+              return (
+                <div
+                  key={note.parent_id || i}
+                  className={`p-3 rounded-lg border bg-muted/30 transition-all ${
+                    isCandidateNote
+                      ? 'border-l-4 border-l-teal-500'
+                      : 'border-l-4 border-l-blue-500'
+                  }`}
+                >
+                  <p className='text-sm'>{note.Note_Content}</p>
+                  <div className='flex flex-wrap gap-3 text-[11px] text-muted-foreground uppercase mt-2 justify-between items-center w-full font-medium'>
+                    <div className='flex gap-3'>
+                      <span>Created By: {note.Created_By?.name || '—'}</span>
+                      <span>
+                        Created Date:{' '}
+                        {note.Created_Time
+                          ? new Date(note.Created_Time).toLocaleString()
+                          : '—'}
+                      </span>
+                    </div>
+                    <span
+                      className={`text-[9px] font-bold px-1.5 py-0.2 rounded border ${
+                        isCandidateNote
+                          ? 'text-teal-600 bg-teal-50 border-teal-100'
+                          : 'text-blue-600 bg-blue-50 border-blue-100'
+                      }`}
+                    >
+                      {isCandidateNote ? `Candidate` : 'Job Requirement'}
                     </span>
                   </div>
-                  <span
-                    className={`text-[9px] font-bold px-1.5 py-0.2 rounded border ${
-                      isCandidateNote
-                        ? 'text-teal-600 bg-teal-50 border-teal-100'
-                        : 'text-blue-600 bg-blue-50 border-blue-100'
-                    }`}
-                  >
-                    {isCandidateNote
-                      ? `Candidate`
-                      : 'Job Requirement'}
-                  </span>
                 </div>
-              </div>
-            )
-          })
-        )}
+              )
+            })
+          )}
 
-        {/* Render the entry trigger dialog only if the current entry exists in the DB */}
-        {isEdit && <NoteDialog onAddNote={handleAddNote} />}
+          {isEdit && <NoteDialog onAddNote={handleAddNote} />}
+        </CardContent>
       </Card>
     </div>
   )
