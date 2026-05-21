@@ -269,7 +269,15 @@ export default function CreateJobRequirement() {
         educational_qualification_ug: ugQualifications,
         educational_qualification_pg: pgQualifications,
       }
-
+      // FIX: Strip corrupted read-only IDs and relation objects
+      delete payload.id
+      delete payload.created_by_id
+      delete payload.created_time
+      delete payload.modified_time
+      delete payload.created_by
+      delete payload.approver
+      delete payload.assignee
+      delete payload.notes
       const res = await fetch(
         isEdit
           ? `${ENV.VITE_BACKEND_BASE_URL}/job-requirements/${id}`

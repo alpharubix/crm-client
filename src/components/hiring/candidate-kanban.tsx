@@ -312,7 +312,7 @@ export default function CandidateKanban() {
   }
 
   return (
-    <div className='w-full h-full p-6 flex flex-col max-w-[1600px] mx-auto'>
+    <div className='w-full h-full p-4 flex flex-col max-w-[1140px] mx-auto'>
       {/* Header with Navigation and Context */}
       <div className='flex items-center justify-between mb-8 pb-6 border-b'>
         <div className='flex items-center gap-4'>
@@ -411,7 +411,7 @@ export default function CandidateKanban() {
             ))}
           </SelectContent>
         </Select>
-
+        {/* <Label>Tentative Joining Date</Label>
         <Input
           type='date'
           className='w-40 h-9 text-xs rounded-xl'
@@ -422,7 +422,7 @@ export default function CandidateKanban() {
               tentative_joining_date: e.target.value,
             }))
           }
-        />
+        /> */}
 
         {(filters.candidate_status ||
           filters.candidate_name ||
