@@ -37,6 +37,7 @@ import {
   DialogTrigger,
 } from '../ui/dialog'
 import { useAuth } from '@/context/auth-context'
+import { formatExactDate } from '@/utils/date-formatter'
 
 export default function CreateCandidate() {
   const { id } = useParams()
@@ -127,6 +128,7 @@ export default function CreateCandidate() {
       return res.json()
     },
     enabled: isEdit,
+    refetchOnMount: 'always',
   })
 
   // Fetch dynamic users registry from backend instead of hardcoding
@@ -161,9 +163,15 @@ export default function CreateCandidate() {
         ...form,
         language_proficiency: languages,
       }
+      // FIX: Force assignee_id to string and remove read-only system IDs
+      delete payload.assignee_id
+      delete payload.created_by_id
+      delete payload.created_time
+      delete payload.modified_time
+
       delete payload.created_by
       delete payload.assignee
-      delete payload.notes // Ensure computed arrays are stripped too
+      delete payload.notes
       const url = isEdit
         ? `${ENV.VITE_BACKEND_BASE_URL}/candidates/${id}`
         : `${ENV.VITE_BACKEND_BASE_URL}/candidates`
@@ -203,6 +211,7 @@ export default function CreateCandidate() {
             <br />
             Id: {isEdit ? id : 'New'}
           </div>
+          <div className='text-2xl'>Job Requirement ID : {initialJrId}</div>
           <div className='flex gap-2'>
             <Button variant='outline' size='sm' onClick={() => navigate(-1)}>
               Cancel
@@ -334,13 +343,19 @@ export default function CreateCandidate() {
               />
             </FieldRow>
             <FieldRow label='Status Date'>
-              <Input
-                type='date'
-                value={getVal('status_date')?.split('T')[0]}
-                disabled={!canModifyCandidateDetails}
-                onChange={(e) => set('status_date', e.target.value)}
-                className='h-8'
-              />
+              <span className='text-sm font-medium text-muted-foreground h-8 flex items-center'>
+                {getVal('status_date')
+                  ? new Date(getVal('status_date')).toLocaleString('en-IN', {
+                      timeZone: 'Asia/Kolkata',
+                      day: '2-digit',
+                      month: 'short',
+                      year: 'numeric',
+                      hour: '2-digit',
+                      minute: '2-digit',
+                      hour12: true,
+                    })
+                  : 'No status updates yet'}
+              </span>
             </FieldRow>
             <FieldRow label='Call Back Date'>
               <Input
@@ -452,11 +467,9 @@ export default function CreateCandidate() {
           <div className='md:border-r'>
             <FieldRow label='Work Experience'>
               <Input
-                value={getVal('work_experience_duration')}
+                value={getVal('work_experience')}
                 disabled={!canModifyCandidateDetails}
-                onChange={(e) =>
-                  set('work_experience_duration', e.target.value)
-                }
+                onChange={(e) => set('work_experience', e.target.value)}
                 className='h-8'
                 placeholder='Duration (2y 8m)'
               />
