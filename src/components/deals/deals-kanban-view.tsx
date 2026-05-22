@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { Card, CardContent } from '../ui/card'
-import { useNavigate } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import {
   DndContext,
   DragOverlay,
@@ -47,6 +47,7 @@ const COLUMNS = [
   'Achievement',
   'Not Interested',
   'Active',
+  'No Status',
 ]
 
 const COLUMN_STYLES: Record<string, { header: string; dot: string }> = {
@@ -85,33 +86,35 @@ function DraggableTicketCard({ deal }: { deal: DealData }) {
       {...attributes}
       className={isDragging ? 'opacity-50' : ''}
     >
-      <Card
-        className="transition-colors py-0 gap-0 overflow-hidden cursor-grab hover:bg-muted/30"
-        onClick={() => navigate(`/deals/${deal.id}`)}
-      >
-        <CardContent className="p-3 text-sm grid gap-1">
-          <p className="font-semibold text-base leading-tight">
-            {deal.dealName}
-          </p>
-          <div className="grid grid-cols-[110px_1fr] gap-x-2 gap-y-1 mt-2 items-start text-xs">
-            <span className="text-muted-foreground font-medium">Deal ID</span>
-            <span className="font-medium line-clamp-1">
-              {deal.dealId || '-'}
-            </span>
-            <span className="text-muted-foreground font-medium">
-              Deal Owner
-            </span>
-            <span className="font-medium">
-              {(users as Record<string, string>)[deal.dealOwner] ||
-                `#${deal.dealOwner}`}
-            </span>
-            <span className="text-muted-foreground font-medium">
-              Lender Name
-            </span>
-            <span className="font-medium">{deal.lenderName || '-'}</span>
-          </div>
-        </CardContent>
-      </Card>
+      <Link to={`/deals/${deal.id}`} target='_blank'>
+        <Card
+          className='transition-colors py-0 gap-0 overflow-hidden hover:bg-muted/30'
+          // onClick={() => navigate(`/deals/${deal.id}`)}
+        >
+          <CardContent className='p-3 text-sm grid gap-1'>
+            <p className='font-semibold text-base leading-tight'>
+              {deal.dealName}
+            </p>
+            <div className='grid grid-cols-[110px_1fr] gap-x-2 gap-y-1 mt-2 items-start text-xs'>
+              <span className='text-muted-foreground font-medium'>Deal ID</span>
+              <span className='font-medium line-clamp-1'>
+                {deal.dealId || '-'}
+              </span>
+              <span className='text-muted-foreground font-medium'>
+                Deal Owner
+              </span>
+              <span className='font-medium'>
+                {(users as Record<string, string>)[deal.dealOwner] ||
+                  `#${deal.dealOwner}`}
+              </span>
+              <span className='text-muted-foreground font-medium'>
+                Lender Name
+              </span>
+              <span className='font-medium'>{deal.lenderName || '-'}</span>
+            </div>
+          </CardContent>
+        </Card>
+      </Link>
     </div>
   )
 }
@@ -140,12 +143,12 @@ function DroppableTicketColumn({
         className={`flex items-center gap-2 pb-2 border-b mb-1 ${style.header}`}
       >
         <span className={`w-2 h-2 rounded shrink-0 ${style.dot}`} />
-        <span className="text-xs font-semibold uppercase tracking-wide">
+        <span className='text-xs font-semibold uppercase tracking-wide'>
           {status}
         </span>
-        <span className="ml-auto text-xs font-mono">{tickets.length}</span>
+        <span className='ml-auto text-xs font-mono'>{tickets.length}</span>
       </div>
-      <div className="flex flex-col gap-3 flex-1 overflow-y-auto pr-1 pb-2">
+      <div className='flex flex-col gap-3 flex-1 overflow-y-auto pr-1 pb-2'>
         {tickets.map((t) => (
           <DraggableTicketCard key={t.id} deal={t} />
         ))}
@@ -179,7 +182,26 @@ export default function DealsKanbanView({
   const [ticketsList, setTicketsList] = useState<DealData[]>([])
   const [activeTicket, setActiveTicket] = useState<DealData | null>(null)
 
-  const { data: grouped = {}, isLoading } = useQuery({
+  // const { data: grouped = {}, isLoading } = useQuery({
+  //   queryKey: ['deals-kanban', filters],
+  //   queryFn: async () => {
+  //     const params = new URLSearchParams({ kanban: 'true' })
+  //     Object.entries(filters).forEach(([k, v]) => {
+  //       if (v) params.set(k, v)
+  //     })
+  //     const res = await fetch(`${ENV.VITE_BACKEND_BASE_URL}/deals?${params}`, {
+  //       credentials: 'include',
+  //     })
+  //     if (!res.ok) throw new Error('Failed')
+  //     const json = await res.json()
+  //     // return (json.data ?? {}) as Record<string, any[]>
+  //     return res.json()
+  //   },
+  //   enabled,
+  //   retry: false,
+  // })
+  // FIX: Fetch the complete payload object, not just .data
+  const { data: kanbanPayload, isLoading } = useQuery({
     queryKey: ['deals-kanban', filters],
     queryFn: async () => {
       const params = new URLSearchParams({ kanban: 'true' })
@@ -191,16 +213,17 @@ export default function DealsKanbanView({
       })
       if (!res.ok) throw new Error('Failed')
       const json = await res.json()
-      return (json.data ?? {}) as Record<string, any[]>
+      return json // Returns both { data: ..., page_info: ... } safely
     },
     enabled,
     retry: false,
   })
-
+  const groupedColumns = kanbanPayload?.data ?? {}
+  const totalRecords = kanbanPayload?.page_info?.total ?? 0
   useEffect(() => {
-    const flat: DealData[] = Object.entries(grouped).flatMap(
+    const flat: DealData[] = Object.entries(groupedColumns).flatMap(
       ([status, deals]) =>
-        deals.map((d: any) => ({
+        (deals as any[]).map((d: any) => ({
           id: String(d.id),
           dealName: d.account_name ?? '-',
           dealId: String(d.id),
@@ -210,7 +233,7 @@ export default function DealsKanbanView({
         })),
     )
     setTicketsList(flat)
-  }, [grouped])
+  }, [kanbanPayload])
 
   function onDragStart(event: DragStartEvent) {
     const ticket = ticketsList.find((t) => t.id === event.active.id)
@@ -229,7 +252,7 @@ export default function DealsKanbanView({
 
   if (!enabled) {
     return (
-      <div className="flex items-center justify-center h-full text-sm text-muted-foreground">
+      <div className='flex items-center justify-center h-full text-sm text-muted-foreground'>
         Apply filters to load deals
       </div>
     )
@@ -237,7 +260,7 @@ export default function DealsKanbanView({
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center h-full text-sm text-muted-foreground">
+      <div className='flex items-center justify-center h-full text-sm text-muted-foreground'>
         Loading...
       </div>
     )
@@ -250,7 +273,18 @@ export default function DealsKanbanView({
     onDragStart={onDragStart}
     onDragEnd={onDragEnd}
     > */}
-      <div className="flex gap-4 pb-4 overflow-x-auto items-start h-full min-h-0">
+      <div className='flex items-center gap-3'>
+        <span className='text-sm font-bold text-indigo-600'>
+          Total — {totalRecords}
+        </span>
+        {totalRecords > 200 && (
+          <span className='text-[11px] text-amber-600 font-medium italic bg-amber-50 px-2 py-0.5 rounded border border-amber-200/60'>
+            * Limit reached (200). Filter by date or owner to see specific
+            tickets.
+          </span>
+        )}
+      </div>
+      <div className='flex gap-5 pb-6 overflow-x-auto items-start h-[calc(92vh-140px)] min-h-0 px-1'>
         {COLUMNS.map((col) => (
           <DroppableTicketColumn
             key={col}
@@ -261,9 +295,9 @@ export default function DealsKanbanView({
       </div>
       {/* <DragOverlay> */}
       {activeTicket && (
-        <Card className="cursor-grabbing shadow-lg opacity-90 border-l-4 border-l-primary/50 py-0">
-          <CardContent className="p-3 text-sm">
-            <p className="font-semibold">{activeTicket.dealName}</p>
+        <Card className='cursor-grabbing shadow-lg opacity-90 border-l-4 border-l-primary/50 py-0'>
+          <CardContent className='p-3 text-sm'>
+            <p className='font-semibold'>{activeTicket.dealName}</p>
           </CardContent>
         </Card>
       )}
