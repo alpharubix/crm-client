@@ -82,6 +82,7 @@ const DealsPage = () => {
   const queryClient = useQueryClient()
   const [searchParams, setSearchParams] = useSearchParams()
 
+  // 1. Added explicit tracking keys into local state hook from URL params
   const [filters, setFilters] = useState({
     accountName: searchParams.get('accountName') || '',
     lenderName: searchParams.get('lenderName') || '',
@@ -90,7 +91,14 @@ const DealsPage = () => {
     loanType: searchParams.get('loanType') || '',
     typeOfCaseLogin: searchParams.get('typeOfCaseLogin') || '',
     dealOwnerId: searchParams.get('dealOwnerId') || '',
+    createdFrom: searchParams.get('createdFrom') || '',
+    createdTo: searchParams.get('createdTo') || '',
+    expectedClosingFrom: searchParams.get('expectedClosingFrom') || '',
+    expectedClosingTo: searchParams.get('expectedClosingTo') || '',
+    statusClosingFrom: searchParams.get('statusClosingFrom') || '',
+    statusClosingTo: searchParams.get('statusClosingTo') || '',
   })
+
   const [lenderSearch, setLenderSearch] = useState(
     searchParams.get('lenderName') || '',
   )
@@ -100,7 +108,7 @@ const DealsPage = () => {
     lenderSearch.length > 1
       ? LENDER_NAMES.filter((l: string) =>
           l.toLowerCase().includes(lenderSearch.toLowerCase()),
-        ).slice(0, 50) // cap at 50 results
+        ).slice(0, 50)
       : []
 
   const [appliedFilters, setAppliedFilters] = useState(filters)
@@ -147,11 +155,23 @@ const DealsPage = () => {
       if (appliedFilters.dealOwnerId)
         params.set('deal_owner_id', appliedFilters.dealOwnerId)
 
+      // 2. Map local hooks to match exact native backend endpoint keys
+      if (appliedFilters.createdFrom)
+        params.set('created_from', appliedFilters.createdFrom)
+      if (appliedFilters.createdTo)
+        params.set('created_to', appliedFilters.createdTo)
+      if (appliedFilters.expectedClosingFrom)
+        params.set('expected_closing_from', appliedFilters.expectedClosingFrom)
+      if (appliedFilters.expectedClosingTo)
+        params.set('expected_closing_to', appliedFilters.expectedClosingTo)
+      if (appliedFilters.statusClosingFrom)
+        params.set('status_closing_from', appliedFilters.statusClosingFrom)
+      if (appliedFilters.statusClosingTo)
+        params.set('status_closing_to', appliedFilters.statusClosingTo)
+
       const res = await fetch(
         `${ENV.VITE_BACKEND_BASE_URL}/deals?${params.toString()}`,
-        {
-          credentials: 'include',
-        }
+        { credentials: 'include' },
       )
       if (!res.ok) throw new Error('Failed to fetch deals')
       return res.json()
@@ -177,22 +197,6 @@ const DealsPage = () => {
     setCurrentPage(1)
   }
 
-  const exportParams = new URLSearchParams()
-  if (appliedFilters.accountName)
-    exportParams.set('account_name', appliedFilters.accountName)
-  if (appliedFilters.lenderName)
-    exportParams.set('lender_name', appliedFilters.lenderName)
-  if (appliedFilters.caseStatus)
-    exportParams.set('case_status', appliedFilters.caseStatus)
-  if (appliedFilters.ticketLogin)
-    exportParams.set('ticket_login', appliedFilters.ticketLogin)
-  if (appliedFilters.loanType)
-    exportParams.set('loan_type', appliedFilters.loanType)
-  if (appliedFilters.typeOfCaseLogin)
-    exportParams.set('type_of_case_login', appliedFilters.typeOfCaseLogin)
-  if (appliedFilters.dealOwnerId)
-    exportParams.set('deal_owner_id', appliedFilters.dealOwnerId)
-
   const handleClear = () => {
     const emptyFilters = {
       accountName: '',
@@ -202,7 +206,14 @@ const DealsPage = () => {
       loanType: '',
       typeOfCaseLogin: '',
       dealOwnerId: '',
+      createdFrom: '',
+      createdTo: '',
+      expectedClosingFrom: '',
+      expectedClosingTo: '',
+      statusClosingFrom: '',
+      statusClosingTo: '',
     }
+    setLenderSearch('')
     setFilters(emptyFilters)
     setAppliedFilters(emptyFilters)
     setSearchParams(new URLSearchParams())
@@ -223,7 +234,7 @@ const DealsPage = () => {
         queryFn: async () => {
           const res = await fetch(
             `${ENV.VITE_BACKEND_BASE_URL}/deals?deal_id=${id}`,
-            { credentials: 'include' }
+            { credentials: 'include' },
           )
           if (!res.ok) throw new Error('Failed to fetch deal')
           return res.json()
@@ -280,12 +291,11 @@ const DealsPage = () => {
         </div>
       </div>
 
-      <div className='grid grid-cols-[260px_1fr] gap-4'>
+      <div className='grid grid-cols-[280px_1fr] gap-4'>
         {/* Filter sidebar */}
-        <div className='border rounded-md p-3 space-y-4 bg-background overflow-y-auto h-[calc(100vh-140px)]'>
+        <div className='border rounded-md p-3 space-y-4 bg-background overflow-y-auto h-[calc(100vh-140px)] pr-2'>
           <h3 className='font-semibold text-sm'>Filter Deals by</h3>
 
-          {/* Account Name */}
           <div className='space-y-2'>
             <Label>Deal Name</Label>
             <Input
@@ -297,7 +307,6 @@ const DealsPage = () => {
             />
           </div>
 
-          {/* Deal Owner */}
           {showOwnerFilter && (
             <div className='space-y-2'>
               <Label>Deal Owner</Label>
@@ -319,7 +328,6 @@ const DealsPage = () => {
             </div>
           )}
 
-          {/* Lender Name */}
           <div className='space-y-2'>
             <Label>Lender Name</Label>
             <div className='relative'>
@@ -328,7 +336,7 @@ const DealsPage = () => {
                 onChange={(e) => {
                   setLenderSearch(e.target.value)
                   setLenderOpen(true)
-                  handleFilterChange('lenderName', e.target.value) // Sync with filter state
+                  handleFilterChange('lenderName', e.target.value)
                 }}
                 onFocus={() => setLenderOpen(true)}
                 onBlur={() => setTimeout(() => setLenderOpen(false), 200)}
@@ -342,7 +350,7 @@ const DealsPage = () => {
                       key={name}
                       className='p-2 hover:bg-muted cursor-pointer text-sm'
                       onMouseDown={() => {
-                        handleFilterChange('lenderName', name) // FIXED HERE
+                        handleFilterChange('lenderName', name)
                         setLenderSearch(name)
                         setLenderOpen(false)
                       }}
@@ -355,7 +363,6 @@ const DealsPage = () => {
             </div>
           </div>
 
-          {/* Case Status */}
           <div className='space-y-2'>
             <Label>Case Status</Label>
             <Select
@@ -375,7 +382,6 @@ const DealsPage = () => {
             </Select>
           </div>
 
-          {/* Ticket Login */}
           <div className='space-y-2'>
             <Label>Ticket Login</Label>
             <Select
@@ -395,7 +401,6 @@ const DealsPage = () => {
             </Select>
           </div>
 
-          {/* Loan Type */}
           <div className='space-y-2'>
             <Label>Type of Loan</Label>
             <Select
@@ -415,7 +420,6 @@ const DealsPage = () => {
             </Select>
           </div>
 
-          {/* Type of Case Login */}
           <div className='space-y-2'>
             <Label>Type of Case Login</Label>
             <Select
@@ -437,7 +441,81 @@ const DealsPage = () => {
             </Select>
           </div>
 
-          <div className='flex gap-2 pt-2'>
+          <div className='border-t border-dashed border-zinc-400 pt-3 space-y-3'>
+            {/* 3. Created Date Inputs Block */}
+            <div className='space-y-1.5'>
+              <Label className=''>Created From</Label>
+              <Input
+                type='date'
+                className='h-9 text-xs'
+                value={filters.createdFrom || ''}
+                onChange={(e) =>
+                  handleFilterChange('createdFrom', e.target.value)
+                }
+              />
+            </div>
+            <div className='space-y-1.5'>
+              <Label className=''>Created To</Label>
+              <Input
+                type='date'
+                className='h-9 text-xs'
+                value={filters.createdTo || ''}
+                onChange={(e) =>
+                  handleFilterChange('createdTo', e.target.value)
+                }
+              />
+            </div>
+
+            {/* 4. Expected Closing Inputs Block */}
+            <div className='border-t border-dashed border-zinc-400 space-y-1.5 pt-1'>
+              <Label className=''>Expected From</Label>
+              <Input
+                type='date'
+                className='h-9 text-xs'
+                value={filters.expectedClosingFrom || ''}
+                onChange={(e) =>
+                  handleFilterChange('expectedClosingFrom', e.target.value)
+                }
+              />
+            </div>
+            <div className='space-y-1.5'>
+              <Label className=''>Expected To</Label>
+              <Input
+                type='date'
+                className='h-9 text-xs'
+                value={filters.expectedClosingTo || ''}
+                onChange={(e) =>
+                  handleFilterChange('expectedClosingTo', e.target.value)
+                }
+              />
+            </div>
+
+            {/* 5. Status Closing Inputs Block */}
+            <div className='border-t border-dashed border-zinc-400 space-y-1.5 pt-1'>
+              <Label className=''>Status Closing From</Label>
+              <Input
+                type='date'
+                className='h-9 text-xs'
+                value={filters.statusClosingFrom || ''}
+                onChange={(e) =>
+                  handleFilterChange('statusClosingFrom', e.target.value)
+                }
+              />
+            </div>
+            <div className='space-y-1.5'>
+              <Label className=''>Status Closing To</Label>
+              <Input
+                type='date'
+                className='h-9 text-xs'
+                value={filters.statusClosingTo || ''}
+                onChange={(e) =>
+                  handleFilterChange('statusClosingTo', e.target.value)
+                }
+              />
+            </div>
+          </div>
+
+          <div className='flex gap-2 pt-2 sticky bottom-0 bg-background pb-1'>
             <Button className='flex-1 cursor-pointer' onClick={handleSearch}>
               Search
             </Button>
@@ -451,7 +529,7 @@ const DealsPage = () => {
           </div>
         </div>
 
-        {/* Table */}
+        {/* Table Content window */}
         <div className='flex flex-col gap-4 min-w-0 h-[calc(100vh-140px)]'>
           {isLoading ? (
             <div className='flex items-center justify-center h-64 border rounded-md'>
@@ -477,7 +555,7 @@ const DealsPage = () => {
                   <TableBody>
                     {DealsData.length === 0 ? (
                       <TableRow>
-                        <TableCell colSpan={6} className='text-center h-24'>
+                        <TableCell colSpan={8} className='text-center h-24'>
                           No deals found.
                         </TableCell>
                       </TableRow>
@@ -501,14 +579,12 @@ const DealsPage = () => {
                             ] || '-'}
                           </TableCell>
 
-                          <TableCell>{deal.lender_name || '-'}</TableCell>
-
+                          <TableCell className=''>
+                            {deal.lender_name || '-'}
+                          </TableCell>
                           <TableCell>{deal.case_status || '-'}</TableCell>
-
                           <TableCell>{deal.ticket_login || '-'}</TableCell>
-
                           <TableCell>{deal.loan_type || '-'}</TableCell>
-
                           <TableCell>
                             {deal.type_of_case_login || '-'}
                           </TableCell>
@@ -517,7 +593,7 @@ const DealsPage = () => {
                             {deal.deal_call_back_datetime
                               ? formatExactDate(
                                   deal.deal_call_back_datetime,
-                                  'dd MMM yyyy, hh:mm a'
+                                  'dd MMM yyyy, hh:mm a',
                                 )
                               : '—'}
                           </TableCell>

@@ -756,13 +756,20 @@ export default function UpdateDeals() {
                     ? new Date(formValues.dealExpectedClosing)
                     : undefined
                 }
-                onChange={(date) =>
-                  setValue(
-                    'dealExpectedClosing',
-                    date ? date.toISOString().split('T')[0] : '',
-                    { shouldDirty: true },
-                  )
-                }
+                onChange={(date) => {
+                  if (!date) {
+                    setValue('dealExpectedClosing', '')
+                    return
+                  }
+
+                  const year = date.getFullYear()
+                  const month = String(date.getMonth() + 1).padStart(2, '0')
+                  const day = String(date.getDate()).padStart(2, '0')
+
+                  setValue('dealExpectedClosing', `${year}-${month}-${day}`, {
+                    shouldDirty: true,
+                  })
+                }}
               />
             </FieldRow>
           </div>

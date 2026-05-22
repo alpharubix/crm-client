@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { Card, CardContent } from '../ui/card'
-import { useNavigate } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import {
   DndContext,
   DragOverlay,
@@ -95,33 +95,37 @@ function DraggableTicketCard({ ticket }: { ticket: TicketData }) {
       {...attributes}
       className={isDragging ? 'opacity-50' : ''}
     >
-      <Card
-        className='transition-colors py-0 gap-0 overflow-hidden cursor-grab hover:bg-muted/30'
-        onClick={() => navigate(`/tickets/${ticket.id}`)}
-      >
-        <CardContent className='p-3 text-sm grid gap-1'>
-          <p className='font-semibold text-base leading-tight'>
-            {ticket.dealName}
-          </p>
-          <div className='grid grid-cols-[110px_1fr] gap-x-2 gap-y-1 mt-2 items-start text-xs'>
-            <span className='text-muted-foreground font-medium'>Ticket ID</span>
-            <span className='font-medium line-clamp-1'>
-              {ticket.ticketId || '-'}
-            </span>
-            <span className='text-muted-foreground font-medium'>
-              Deal Owner
-            </span>
-            <span className='font-medium'>
-              {(users as Record<string, string>)[ticket.dealOwner] ||
-                `#${ticket.dealOwner}`}
-            </span>
-            <span className='text-muted-foreground font-medium'>
-              Lender Name
-            </span>
-            <span className='font-medium'>{ticket.lenderName || '-'}</span>
-          </div>
-        </CardContent>
-      </Card>
+      <Link to={`/tickets/${ticket.id}`} target='_blank'>
+        <Card
+          className='transition-colors py-0 gap-0 overflow-hidden hover:bg-muted/30'
+          // onClick={() => navigate(`/tickets/${ticket.id}`)}
+        >
+          <CardContent className='p-3 text-sm grid gap-1'>
+            <p className='font-semibold text-base leading-tight'>
+              {ticket.dealName}
+            </p>
+            <div className='grid grid-cols-[110px_1fr] gap-x-2 gap-y-1 mt-2 items-start text-xs'>
+              <span className='text-muted-foreground font-medium'>
+                Ticket ID
+              </span>
+              <span className='font-medium line-clamp-1'>
+                {ticket.ticketId || '-'}
+              </span>
+              <span className='text-muted-foreground font-medium'>
+                Deal Owner
+              </span>
+              <span className='font-medium'>
+                {(users as Record<string, string>)[ticket.dealOwner] ||
+                  `#${ticket.dealOwner}`}
+              </span>
+              <span className='text-muted-foreground font-medium'>
+                Lender Name
+              </span>
+              <span className='font-medium'>{ticket.lenderName || '-'}</span>
+            </div>
+          </CardContent>
+        </Card>
+      </Link>
     </div>
   )
 }
@@ -273,9 +277,9 @@ export default function TicketsKanbanView({
         {/* If you have the data from the hook: */}
         Total - {data?.page_info?.total || 0}
       </span>
-      {data?.page_info?.total > 100 && (
+      {data?.page_info?.total > 200 && (
         <span className='text-[11px] text-amber-600 font-medium italic'>
-          * Limit reached (100). Filter by date or owner to see specific
+          * Limit reached (200). Filter by date or owner to see specific
           tickets.
         </span>
       )}

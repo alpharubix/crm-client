@@ -58,13 +58,22 @@ function getDefaultDates() {
 
 export default function TicketsKanban() {
   const [defaultDates] = useState(getDefaultDates)
+
   const [localFilters, setLocalFilters] = useState<LocalFilters>({
     ...defaultFilters,
     created_from: defaultDates.created_from,
     created_to: defaultDates.created_to,
   })
-  const [appliedFilters, setAppliedFilters] =
-    useState<KanbanFilters>(defaultDates)
+
+  const [appliedFilters, setAppliedFilters] = useState<KanbanFilters>({
+    created_from: defaultDates.created_from,
+    created_to: defaultDates.created_to,
+    targeted_disbursement_from: '',
+    targeted_disbursement_to: '',
+    disbursement_from: '',
+    disbursement_to: '',
+  })
+
   const [hasApplied, setHasApplied] = useState(true)
   const [totalTickets, setTotalTickets] = useState(0)
 
@@ -72,7 +81,7 @@ export default function TicketsKanban() {
     setLocalFilters((prev) => ({ ...prev, [key]: value }))
   }
 
-  const { data: ownerResponse, isSuccess } = useQuery({
+  const { data: ownerResponse } = useQuery({
     queryKey: ['deal-owners'],
     queryFn: async () => {
       const res = await fetch(`${ENV.VITE_BACKEND_BASE_URL}/user/filter`, {
@@ -85,7 +94,13 @@ export default function TicketsKanban() {
   const owners = ownerResponse?.data ?? []
 
   function applyFilters() {
-    const f: KanbanFilters = {}
+    const f: KanbanFilters = {
+      targeted_disbursement_from: '',
+      targeted_disbursement_to: '',
+      disbursement_from: '',
+      disbursement_to: '',
+    }
+
     if (localFilters.search) f.account_name = localFilters.search
     if (localFilters.type_of_loan !== 'all')
       f.type_of_loan = localFilters.type_of_loan
@@ -93,11 +108,9 @@ export default function TicketsKanban() {
       f.ticket_status = localFilters.ticket_status
     if (localFilters.created_from) f.created_from = localFilters.created_from
     if (localFilters.created_to) f.created_to = localFilters.created_to
-
-    if (localFilters.deal_owner_id !== 'all') {
+    if (localFilters.deal_owner_id !== 'all')
       f.deal_owner_id = localFilters.deal_owner_id
-    }
-    // Lender Login dates
+
     if (localFilters.lender_login_from)
       f.lender_login_from = localFilters.lender_login_from
     if (localFilters.lender_login_to)
@@ -110,45 +123,38 @@ export default function TicketsKanban() {
       f.disbursement_from = localFilters.disbursement_from
     if (localFilters.disbursement_to)
       f.disbursement_to = localFilters.disbursement_to
+
     setAppliedFilters(f)
     setHasApplied(true)
   }
 
+  // 👉 FIXED: Explicitly reset input fields and applied filters back to the true default state values
   function clearFilters() {
     setLocalFilters({
       ...defaultFilters,
-      created_from: defaultDates.created_from,
-      created_to: defaultDates.created_to,
+      // created_from: defaultDates.created_from,
+      // created_to: defaultDates.created_to,
     })
-    setAppliedFilters(defaultDates)
-  }
 
-  // const hasActiveFilters =
-  //   localFilters.search ||
-  //   localFilters.assignee_id !== 'all' ||
-  //   localFilters.type_of_loan !== 'all' ||
-  //   localFilters.ticket_status !== 'all' ||
-  //   localFilters.created_from !== defaultDates.created_from ||
-  //   localFilters.created_to !== defaultDates.created_to
+    setAppliedFilters({
+      created_from: '',
+      created_to: '',
+      targeted_disbursement_from: '',
+      targeted_disbursement_to: '',
+      disbursement_from: '',
+      disbursement_to: '',
+    })
+    setHasApplied(true)
+  }
 
   return (
     <div className='w-full h-full p-4 flex flex-col max-w-[1400px] mx-auto'>
       <div className='flex flex-col flex-1 min-h-0'>
         <div className='flex items-center justify-between mb-4 shrink-0'>
           <h1 className='text-xl font-bold tracking-tight'>Tickets Kanban</h1>
-          <div className='flex items-center gap-2 bg-zinc-100 px-3 py-1.5 rounded-full border'>
-            <span className='text-[11px] font-semibold uppercase text-zinc-500'>
-              Total Tickets:
-            </span>
-            <span className='text-sm font-bold text-indigo-600'>
-              {/* If you have the data from the hook: */}
-              {/*{data?.page_info?.total || 0}*/}
-            </span>
-          </div>
         </div>
-        {/* Filter Section */}
+
         <div className='bg-white border rounded-xl shadow-sm p-4 mb-6 shrink-0 space-y-4'>
-          {/* Row 1: Search & Selects */}
           <div className='flex flex-wrap items-end gap-4'>
             <div className='space-y-1.5'>
               <Label className='text-[11px] uppercase tracking-wider text-muted-foreground'>
@@ -178,7 +184,6 @@ export default function TicketsKanban() {
                   <SelectItem value='all'>All Types</SelectItem>
                   <SelectItem value='SCF'>SCF</SelectItem>
                   <SelectItem value='SCF Renewal'>SCF Renewal</SelectItem>
-                  {/* ... other items ... */}
                 </SelectContent>
               </Select>
             </div>
@@ -206,32 +211,32 @@ export default function TicketsKanban() {
                 </SelectContent>
               </Select>
             </div>
+
+            <div className='space-y-1.5'>
+              <Label className='text-[11px] uppercase tracking-wider text-muted-foreground'>
+                Deal Owner
+              </Label>
+              <Select
+                value={localFilters.deal_owner_id}
+                onValueChange={(v) => setFilter('deal_owner_id', v)}
+              >
+                <SelectTrigger className='h-9 text-sm w-44'>
+                  <SelectValue placeholder='All Owners' />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value='all'>All Owners</SelectItem>
+                  {owners.map((owner: any) => (
+                    <SelectItem key={owner.id} value={owner.id.toString()}>
+                      {owner.full_name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
           </div>
-          <div className='space-y-1.5'>
-            <Label className='text-[11px] uppercase tracking-wider text-muted-foreground'>
-              Deal Owner
-            </Label>
-            <Select
-              value={localFilters.deal_owner_id}
-              onValueChange={(v) => setFilter('deal_owner_id', v)}
-            >
-              <SelectTrigger className='h-9 text-sm w-44'>
-                <SelectValue placeholder='All Owners' />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value='all'>All Owners</SelectItem>
-                {owners.map((owner: any) => (
-                  <SelectItem key={owner.id} value={owner.id.toString()}>
-                    {owner.full_name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-          {/* Row 2: Date Filters */}
+
           <div className='flex flex-wrap items-end justify-between gap-4 pt-2 border-t border-dashed'>
             <div className='flex flex-wrap gap-6'>
-              {/* Created At Group */}
               <div className='flex items-center gap-2'>
                 <div className='space-y-1.5'>
                   <Label className='text-[11px] font-medium text-zinc-500'>
@@ -257,7 +262,6 @@ export default function TicketsKanban() {
                 </div>
               </div>
 
-              {/* Lender Login Group */}
               <div className='flex items-center gap-2 border-l pl-6'>
                 <div className='space-y-1.5'>
                   <Label className='text-[11px] font-medium text-zinc-500'>
@@ -313,6 +317,7 @@ export default function TicketsKanban() {
                 </div>
               </div>
             </div>
+
             <div className='flex items-center gap-1 border-l pl-4'>
               <div className='space-y-1.5'>
                 <Label className='text-[11px] font-medium text-zinc-500'>
@@ -359,7 +364,6 @@ export default function TicketsKanban() {
           </div>
         </div>
 
-        {/* Kanban Content */}
         <div className='flex-1 overflow-hidden'>
           <TicketsKanbanView
             filters={appliedFilters}
