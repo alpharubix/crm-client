@@ -20,6 +20,8 @@ import {
   LANGUAGE_OPTIONS,
   LOCATIONS,
   EMPLOYEE_OPTIONS,
+  BUSINESS_VERTICAL,
+  POSITION_TYPE,
 } from '@/utils/hiring-constants'
 import { X } from 'lucide-react'
 import {
@@ -31,6 +33,7 @@ import {
 } from '../ui/dialog'
 import NoteDialog from '../shared/note-dialog'
 import { useAuth } from '@/context/auth-context'
+import { CitySelector } from '../shared/city-selector'
 
 function MultiSelectField({
   value,
@@ -476,12 +479,37 @@ export default function CreateJobRequirement() {
                 type='number'
               />
             </FieldRow>
+            <FieldRow label='Avg Annual CTC'>
+              <Input
+                value={getVal('avg_anual_ctc')}
+                onChange={(e) => set('avg_annual_ctc', e.target.value)}
+                className='h-8'
+                placeholder='Currency'
+                type='number'
+              />
+            </FieldRow>
             <FieldRow label='No of vacancies'>
               <Input
                 type='number'
                 value={getVal('no_of_vacancies')}
                 onChange={(e) => set('no_of_vacancies', e.target.value)}
                 className='h-8'
+              />
+            </FieldRow>
+            <FieldRow label='Business Vertical'>
+              <SelectField
+                value={getVal('business_vertical')}
+                isEdit={true}
+                options={BUSINESS_VERTICAL}
+                onChange={(v) => set('business_vertical', v)}
+              />
+            </FieldRow>
+            <FieldRow label='Position Type'>
+              <SelectField
+                value={getVal('position_type')}
+                isEdit={true}
+                options={POSITION_TYPE}
+                onChange={(v) => set('position_type', v)}
               />
             </FieldRow>
             <FieldRow label='Gender'>
@@ -544,7 +572,23 @@ export default function CreateJobRequirement() {
                 </div>
               </FieldRow>
             )}
-
+            {/* <FieldRow label='Hiring Location (City)'> */}
+            {/* <SelectField
+                value={getVal('hiring_location_city')}
+                isEdit={true}
+                options={LOCATIONS}
+                onChange={(v) => set('hiring_location_city', v)}
+              /> */}
+            {/* <div className='grid justify-center items-center'> */}
+            {/* <div>Hello</div> */}
+            <CitySelector
+              label='Hiring Location (City)'
+              value={getVal('hiring_location_city')}
+              onChange={(v) => set('hiring_location_city', v)}
+              isEdit={true}
+            />
+            {/* </div> */}
+            {/* </FieldRow> */}
             {/* Recruiter allocation row */}
             {isEdit && (
               <FieldRow label='Assignee (Recruiter)'>
@@ -563,15 +607,6 @@ export default function CreateJobRequirement() {
                 />
               </FieldRow>
             )}
-
-            <FieldRow label='Hiring Location (City)'>
-              <SelectField
-                value={getVal('hiring_location_city')}
-                isEdit={true}
-                options={LOCATIONS}
-                onChange={(v) => set('hiring_location_city', v)}
-              />
-            </FieldRow>
           </div>
         </CardContent>
 
@@ -628,13 +663,13 @@ export default function CreateJobRequirement() {
                 onChange={(v) => set('experience', v)}
               />
             </FieldRow>
-            <FieldRow label='Work Description'>
+            {/* <FieldRow label='Work Description'>
               <textarea
                 value={getVal('work_description')}
                 onChange={(e) => set('work_description', e.target.value)}
                 className='w-full h-20 px-2 border rounded-md text-sm outline-none'
               />
-            </FieldRow>
+            </FieldRow> */}
           </div>
           <div>
             <FieldRow label='Department *'>

@@ -796,20 +796,18 @@ export default function CreateAccount() {
               <FieldRow label='Street'>
                 <Input {...register('applicantStreet')} className='h-8' />
               </FieldRow>
-              <FieldRow label='State'>
-                <StateSelector
-                  value={data.applicantState}
-                  onChange={(val) => setValue('applicantState', val)}
-                  isEdit={true}
-                />
-              </FieldRow>
-              <FieldRow label='City'>
-                <CitySelector
-                  value={data.applicantCity}
-                  onChange={(val) => setValue('applicantCity', val)}
-                  isEdit={true}
-                />
-              </FieldRow>
+              <StateSelector
+                label='State'
+                value={data.applicantState}
+                onChange={(val) => setValue('applicantState', val)}
+                isEdit={true}
+              />
+              <CitySelector
+                label='City'
+                value={data.applicantCity}
+                onChange={(val) => setValue('applicantCity', val)}
+                isEdit={true}
+              />
               <FieldRow label='Country'>
                 <Input
                   {...register('applicantCountry')}
@@ -819,13 +817,12 @@ export default function CreateAccount() {
               </FieldRow>
             </div>
             <div>
-              <FieldRow label='Pincode'>
-                <PincodeSelector
-                  value={data.applicantPincode}
-                  onChange={(val) => setValue('applicantPincode', val)}
-                  isEdit={true}
-                />
-              </FieldRow>
+              <PincodeSelector
+                label='Pincode'
+                value={data.applicantPincode}
+                onChange={(val) => setValue('applicantPincode', val)}
+                isEdit={true}
+              />
               <FieldRow label='No of Years residing in current residence'>
                 <Input
                   {...register('applicantYearsResiding')}
@@ -889,22 +886,20 @@ export default function CreateAccount() {
               <FieldRow label='Street'>
                 <Input {...register('coApplicantStreet')} className='h-8' />
               </FieldRow>
-              <FieldRow label='State'>
-                <StateSelector
-                  value={data.coApplicantState}
-                  onChange={(val) => setValue('coApplicantState', val)}
-                  isEdit={true}
-                />
-              </FieldRow>
+              <StateSelector
+                label='State'
+                value={data.coApplicantState}
+                onChange={(val) => setValue('coApplicantState', val)}
+                isEdit={true}
+              />
             </div>
             <div>
-              <FieldRow label='City'>
-                <CitySelector
-                  value={data.coApplicantCity}
-                  onChange={(val) => setValue('coApplicantCity', val)}
-                  isEdit={true}
-                />
-              </FieldRow>
+              <CitySelector
+                label='City'
+                value={data.coApplicantCity}
+                onChange={(val) => setValue('coApplicantCity', val)}
+                isEdit={true}
+              />
               <FieldRow label='Country'>
                 <Input
                   {...register('coApplicantCountry')}
@@ -912,13 +907,12 @@ export default function CreateAccount() {
                   defaultValue='India'
                 />
               </FieldRow>
-              <FieldRow label='Pincode'>
-                <PincodeSelector
-                  value={data.coApplicantPincode}
-                  onChange={(val) => setValue('coApplicantPincode', val)}
-                  isEdit={true}
-                />
-              </FieldRow>
+              <PincodeSelector
+                label='Pincode'
+                value={data.coApplicantPincode}
+                onChange={(val) => setValue('coApplicantPincode', val)}
+                isEdit={true}
+              />
               <FieldRow label='No of Years residing in current residence'>
                 <Input
                   {...register('coApplicantYearsResiding')}

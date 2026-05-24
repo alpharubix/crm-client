@@ -475,8 +475,19 @@ export default function CreateCandidate() {
               />
             </FieldRow>
           </div>
+          <div className='md:border-r'>
+            <FieldRow label='Work description'>
+              <Input
+                value={getVal('work_description')}
+                disabled={!canModifyCandidateDetails}
+                onChange={(e) => set('work_description', e.target.value)}
+                className='h-8'
+                placeholder='Description...'
+              />
+            </FieldRow>
+          </div>
           {/* Right Column */}
-          <div>
+          <div className='md:border-r'>
             <FieldRow label='Industry'>
               <SelectField
                 value={getVal('industry')}

@@ -95,7 +95,7 @@ function DraggableCandidateCard({
               }}
               className='opacity-0 group-hover:opacity-100 p-1 rounded hover:bg-zinc-100 text-zinc-400 hover:text-teal-600 transition-all'
             >
-              <Pencil size={12} />
+              <Pencil size={15} />
             </button>
           </div>
 
