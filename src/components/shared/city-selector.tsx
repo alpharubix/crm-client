@@ -2,6 +2,7 @@ import { useLocationData } from '@/hooks/use-location'
 import { AutocompleteInput } from './autocomplete-input'
 
 interface CitySelectorProps {
+  label: string
   value: string
   onChange: (city: string) => void
   isEdit?: boolean
@@ -9,6 +10,7 @@ interface CitySelectorProps {
 }
 
 export function CitySelector({
+  label,
   value,
   onChange,
   isEdit = true,
@@ -17,12 +19,13 @@ export function CitySelector({
   const { cities, searchCities } = useLocationData()
 
   return (
-    <AutocompleteInput
-      value={value}
-      onValueChange={onChange}
-      options={cities}
-      placeholder={placeholder}
-      isEdit={isEdit}
-    />
+      <AutocompleteInput
+        value={value}
+        onValueChange={onChange}
+        options={cities}
+        placeholder={placeholder}
+        label={label}
+        isEdit={isEdit}
+      />
   )
 }

@@ -10,6 +10,8 @@ export const DEPARTMENTS = [
 ]
 
 export const HIRING_POSITIONS = [
+  'Full Stack Developer',
+  'Digital Marketing',
   'Portfolio Manager',
   'Branch Manager',
   'Cluster Head',
@@ -54,6 +56,7 @@ export const LANGUAGE_OPTIONS = [
   'Tamil',
   'Telugu',
   'Bengali',
+  'Marathi',
 ]
 export const LOCATIONS = [
   'Bangalore',
@@ -117,7 +120,8 @@ export const EMPLOYEE_OPTIONS = [
   'Branch Manager',
   'Cluster Manager',
 ]
-
+export const BUSINESS_VERTICAL = ['R1Xchange', '5Pointcredit']
+export const POSITION_TYPE = ['New', 'Replacement']
 // Kanban columns for JR board - group by department
 export const JR_KANBAN_COLUMNS = DEPARTMENTS
 

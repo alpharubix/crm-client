@@ -6,6 +6,7 @@ interface PincodeSelectorProps {
   onChange: (pincode: string) => void
   isEdit?: boolean
   placeholder?: string
+  label: string
 }
 
 export function PincodeSelector({
@@ -13,6 +14,7 @@ export function PincodeSelector({
   onChange,
   isEdit = true,
   placeholder = 'Enter Pincode',
+  label,
 }: PincodeSelectorProps) {
   const { pincodes } = useLocationData()
 
@@ -21,6 +23,7 @@ export function PincodeSelector({
       value={value}
       onValueChange={onChange}
       options={pincodes}
+      label={label}
       placeholder={placeholder}
       isEdit={isEdit}
     />

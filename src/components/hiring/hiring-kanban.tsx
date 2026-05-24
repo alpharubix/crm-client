@@ -15,9 +15,11 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import {
+  BUSINESS_VERTICAL,
   DEPARTMENTS,
   HIRING_POSITIONS,
   LOCATIONS,
+  POSITION_TYPE,
 } from '@/utils/hiring-constants'
 import { Label } from '../ui/label'
 import { useAuth } from '@/context/auth-context'
@@ -72,7 +74,7 @@ function JRCard({
             }}
             className='p-1.5 rounded-md hover:bg-zinc-100 text-zinc-400 hover:text-blue-600 transition-colors'
           >
-            <Pencil size={12} />
+            <Pencil size={15} />
           </button>
         </div>
 
@@ -202,6 +204,8 @@ export default function HiringKanban() {
     hiring_position: '',
     hiring_location_city: '',
     tentative_joining_date: '',
+    business_vertical: '',
+    position_type: '',
   })
 
   const KANBAN_COLUMNS = ['Pending Approval', ...DEPARTMENTS]
@@ -305,7 +309,7 @@ export default function HiringKanban() {
             setFilters((f) => ({ ...f, department: v === 'all' ? '' : v }))
           }
         >
-          <SelectTrigger className='h-8 text-xs w-[160px]'>
+          <SelectTrigger className='h-8 text-xs w-40'>
             <SelectValue placeholder='Department' />
           </SelectTrigger>
           <SelectContent>
@@ -324,7 +328,7 @@ export default function HiringKanban() {
             setFilters((f) => ({ ...f, hiring_position: v === 'all' ? '' : v }))
           }
         >
-          <SelectTrigger className='h-8 text-xs w-[180px]'>
+          <SelectTrigger className='h-8 text-xs w-45'>
             <SelectValue placeholder='Hiring Position' />
           </SelectTrigger>
           <SelectContent>
@@ -346,7 +350,7 @@ export default function HiringKanban() {
             }))
           }
         >
-          <SelectTrigger className='h-8 text-xs w-[140px]'>
+          <SelectTrigger className='h-8 text-xs w-35'>
             <SelectValue placeholder='Location' />
           </SelectTrigger>
           <SelectContent>
@@ -359,10 +363,54 @@ export default function HiringKanban() {
           </SelectContent>
         </Select>
 
-        <Label className='text-xs text-zinc-500'>Tentative Joining Date</Label>
+        <Select
+          value={filters.business_vertical || 'all'}
+          onValueChange={(v) =>
+            setFilters((f) => ({
+              ...f,
+              business_vertical: v === 'all' ? '' : v,
+            }))
+          }
+        >
+          <SelectTrigger className='h-8 text-xs w-35'>
+            <SelectValue placeholder='Vertical' />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value='all'>All Verticals</SelectItem>
+            {BUSINESS_VERTICAL.map((l) => (
+              <SelectItem key={l} value={l}>
+                {l}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+
+        <Select
+          value={filters.position_type || 'all'}
+          onValueChange={(v) =>
+            setFilters((f) => ({
+              ...f,
+              position_type: v === 'all' ? '' : v,
+            }))
+          }
+        >
+          <SelectTrigger className='h-8 text-xs w-35'>
+            <SelectValue placeholder='Positions' />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value='all'>All Positions</SelectItem>
+            {POSITION_TYPE.map((l) => (
+              <SelectItem key={l} value={l}>
+                {l}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+
+        <Label className='text-xs text-zinc-500'>Joining Date</Label>
         <Input
           type='date'
-          className='h-8 text-xs w-[160px]'
+          className='h-8 text-xs w-40'
           value={filters.tentative_joining_date}
           onChange={(e) =>
             setFilters((f) => ({
@@ -375,7 +423,9 @@ export default function HiringKanban() {
         {(filters.department ||
           filters.hiring_position ||
           filters.hiring_location_city ||
-          filters.tentative_joining_date) && (
+          filters.tentative_joining_date ||
+          filters.business_vertical ||
+          filters.position_type) && (
           <Button
             variant='ghost'
             size='sm'
@@ -386,6 +436,8 @@ export default function HiringKanban() {
                 hiring_position: '',
                 hiring_location_city: '',
                 tentative_joining_date: '',
+                business_vertical: '',
+                position_type: '',
               })
             }
           >
