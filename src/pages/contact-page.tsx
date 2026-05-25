@@ -67,7 +67,7 @@ export default function ContactsPage() {
         `${ENV.VITE_BACKEND_BASE_URL}/contacts?${params.toString()}`,
         {
           credentials: 'include',
-        }
+        },
       )
       if (!res.ok) throw new Error('Failed to fetch contacts')
       return res.json()
@@ -134,15 +134,15 @@ export default function ContactsPage() {
         queryFn: async () => {
           const res = await fetch(
             `${ENV.VITE_BACKEND_BASE_URL}/contacts?contact_id=${id}`,
-            { credentials: 'include' }
+            { credentials: 'include' },
           )
           if (!res.ok) throw new Error('Failed to fetch contact')
           return res.json()
         },
       })
-      navigate(`/contacts/${id}`)
+      window.open(`${window.location.origin}/contacts/${id}`, '_blank')
     } catch (error) {
-      navigate(`/contacts/${id}`)
+      window.open(`${window.location.origin}/accounts/${id}`, '_blank')
     }
   }
 
