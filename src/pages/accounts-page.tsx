@@ -194,10 +194,10 @@ export default function AccountsPage() {
           return res.json()
         },
       })
-      navigate(`/accounts/${id}`)
+      window.open(`${window.location.origin}/accounts/${id}`, '_blank')
     } catch (error) {
       // If fetch fails, navigate anyway so the user sees the error on the page
-      navigate(`/accounts/${id}`)
+      window.open(`${window.location.origin}/accounts/${id}`, '_blank')
     }
   }
   const { user } = useAuth()

@@ -149,7 +149,7 @@ function DroppableCandidateColumn({
         </span>
       </div>
 
-      <div className='flex flex-col gap-3 overflow-y-auto pr-1 flex-1 min-h-[450px]'>
+      <div className='flex flex-col gap-3 overflow-y-auto pr-1 flex-1 max-h-[calc(100vh-280px)]'>
         {isLoading ? (
           <div className='text-center py-10 text-zinc-400 text-xs'>
             Loading candidates...

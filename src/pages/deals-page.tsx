@@ -240,9 +240,9 @@ const DealsPage = () => {
           return res.json()
         },
       })
-      navigate(`/deals/${id}`)
+      window.open(`${window.location.origin}/deals/${id}`, '_blank')
     } catch (error) {
-      navigate(`/deals/${id}`)
+      window.open(`${window.location.origin}/deals/${id}`, '_blank')
     }
   }
 

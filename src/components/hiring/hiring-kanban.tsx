@@ -451,7 +451,7 @@ export default function HiringKanban() {
           Loading Hiring Board Pipelines...
         </div>
       ) : (
-        <div className='flex gap-5 pb-6 overflow-x-auto items-start flex-1 min-h-[550px]'>
+        <div className='flex gap-5 pb-6 overflow-x-auto items-start h-[calc(92vh-140px)] min-h-0 px-1'>
           {KANBAN_COLUMNS.map((columnName) => (
             <KanbanColumn
               key={columnName}
