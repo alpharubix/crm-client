@@ -341,7 +341,7 @@ export default function HiringKanban() {
           </SelectContent>
         </Select>
 
-        <Select
+        {/* <Select
           value={filters.hiring_location_city || 'all'}
           onValueChange={(v) =>
             setFilters((f) => ({
@@ -361,7 +361,21 @@ export default function HiringKanban() {
               </SelectItem>
             ))}
           </SelectContent>
-        </Select>
+        </Select> */}
+
+        <div className='space-y-1'>
+          <Input
+            placeholder='City'
+            className='h-8 text-xs w-40'
+            value={filters.hiring_location_city}
+            onChange={(e) =>
+              setFilters((f) => ({
+                ...f,
+                hiring_location_city: e.target.value,
+              }))
+            }
+          />
+        </div>
 
         <Select
           value={filters.business_vertical || 'all'}

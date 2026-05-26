@@ -481,7 +481,7 @@ export default function CreateJobRequirement() {
             </FieldRow>
             <FieldRow label='Avg Annual CTC'>
               <Input
-                value={getVal('avg_anual_ctc')}
+                value={getVal('avg_annual_ctc')}
                 onChange={(e) => set('avg_annual_ctc', e.target.value)}
                 className='h-8'
                 placeholder='Currency'
