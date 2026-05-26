@@ -393,7 +393,7 @@ export default function CandidateKanban() {
           </SelectContent>
         </Select>
 
-        <Select
+        {/* <Select
           value={filters.location_city || 'all'}
           onValueChange={(v) =>
             setFilters((f) => ({ ...f, location_city: v === 'all' ? '' : v }))
@@ -410,7 +410,21 @@ export default function CandidateKanban() {
               </SelectItem>
             ))}
           </SelectContent>
-        </Select>
+        </Select> */}
+        <div className='space-y-2'>
+          {/* <Label>City</Label> */}
+          <Input
+            placeholder='City'
+            className='w-40 h-9 text-xs rounded-xl'
+            value={filters.location_city}
+            onChange={(e) =>
+              setFilters((f) => ({
+                ...f,
+                location_city: e.target.value,
+              }))
+            }
+          />
+        </div>
         {/* <Label>Tentative Joining Date</Label>
         <Input
           type='date'

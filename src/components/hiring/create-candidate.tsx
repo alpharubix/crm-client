@@ -38,6 +38,7 @@ import {
 } from '../ui/dialog'
 import { useAuth } from '@/context/auth-context'
 import { formatExactDate } from '@/utils/date-formatter'
+import { CitySelector } from '../shared/city-selector'
 
 export default function CreateCandidate() {
   const { id } = useParams()
@@ -281,14 +282,20 @@ export default function CreateCandidate() {
                 />
               </div>
             </FieldRow>
-            <FieldRow label='Location (City)'>
+            {/* <FieldRow label='Location (City)'>
               <SelectField
                 value={getVal('location_city')}
                 isEdit={canModifyCandidateDetails}
                 options={LOCATIONS}
                 onChange={(v) => set('location_city', v)}
               />
-            </FieldRow>
+            </FieldRow> */}
+            <CitySelector
+              label='Location (City)'
+              value={getVal('location_city')}
+              isEdit={canModifyCandidateDetails}
+              onChange={(v) => set('location_city', v)}
+            />
             <FieldRow label='Created by'>
               <div className='h-8 flex items-center px-3 text-sm text-muted-foreground bg-muted/30 rounded-md border border-transparent'>
                 System Driven (User)
