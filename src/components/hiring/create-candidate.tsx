@@ -417,6 +417,22 @@ export default function CreateCandidate() {
                 />
               </div>
             </FieldRow>
+            <FieldRow
+              label={<span className='font-semibold'>Data Source</span>}
+            >
+              <div>
+                <Input
+                  value={getVal('data_source')}
+                  disabled={!canModifyCandidateDetails}
+                  onChange={(e) => {
+                    set('data_source', e.target.value)
+                  }}
+                  className='h-8'
+                  type='text'
+                  placeholder='Data Source'
+                />
+              </div>
+            </FieldRow>
           </div>
         </CardContent>
 

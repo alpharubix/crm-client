@@ -1027,9 +1027,9 @@ export default function UpdateAccounts() {
           </div>
 
           <div>
-            <FieldRow label='Parent Account'>
+            {/* <FieldRow label='Parent Account'>
               <span>{display(data.parentAccount)}</span>
-            </FieldRow>
+            </FieldRow> */}
 
             {/* UPDATED: Type of Business - from business_details */}
             <FieldRow label='Type of Business'>
