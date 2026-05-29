@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
-import { useForm } from 'react-hook-form'
+import { useForm, Controller } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useBeforeUnload, useNavigate, useParams } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
@@ -31,7 +31,6 @@ import SelectField from '@/components/shared/select-field'
 import DateField from '@/components/shared/date-field'
 import NoteDialog from '@/components/shared/note-dialog'
 import { Spinner } from '@/components/ui/spinner'
-import users from '@/utils/users.json'
 
 import {
   updateAccountSchema,
@@ -56,7 +55,6 @@ import {
 } from '../ui/select'
 import { useAuth } from '@/context/auth-context'
 
-// Language options for multi-select
 const LANGUAGE_OPTIONS = [
   'English',
   'Hindi',
@@ -70,16 +68,14 @@ const LANGUAGE_OPTIONS = [
   'Punjabi',
 ]
 
-// Shows "—" only for empty values
 function display(v: any) {
   if (v === null || v === undefined) return '—'
   if (typeof v === 'string' && v.trim() === '') return '—'
   return v
 }
 
-// Multi-Select Component
 function MultiSelectField({
-  value,
+  value = [],
   options,
   isEdit,
   onChange,
@@ -94,29 +90,31 @@ function MultiSelectField({
   const [isOpen, setIsOpen] = useState(false)
   const [searchTerm, setSearchTerm] = useState('')
 
+  const safeValue = Array.isArray(value) ? value : []
+
   const filteredOptions = options.filter(
     (opt) =>
       opt.toLowerCase()?.includes(searchTerm.toLowerCase()) &&
-      !value?.includes(opt),
+      !safeValue?.includes(opt),
   )
 
   const addLanguage = (lang: string) => {
-    onChange([...value, lang])
+    onChange([...safeValue, lang])
     setSearchTerm('')
   }
 
   const removeLanguage = (lang: string) => {
-    onChange(value.filter((l) => l !== lang))
+    onChange(safeValue.filter((l) => l !== lang))
   }
 
   if (!isEdit) {
-    return <span>{display(value?.join(', '))}</span>
+    return <span>{display(safeValue?.join(', '))}</span>
   }
 
   return (
     <div className='relative'>
       <div className='flex flex-wrap gap-1 mb-2'>
-        {value.map((lang) => (
+        {safeValue.map((lang) => (
           <span
             key={lang}
             className='bg-blue-100 text-blue-800 px-2 py-0.5 rounded-md text-sm flex items-center gap-1'
@@ -161,16 +159,16 @@ function MultiSelectField({
   )
 }
 
-// Map API response to form values (UPDATED for new structure)
 function mapAccountToForm(apiData: any): UpdateAccountFormValues {
   return {
-    // Account Status Section
     assignmentDate: apiData.assignment_date
       ? new Date(apiData.assignment_date)
       : undefined,
     source: apiData.source ?? '',
     accountName: apiData.account_name ?? '',
-    accountOwnerId: apiData.account_owner_id ?? 0,
+    accountOwnerId: apiData.account_owner_id
+      ? String(apiData.account_owner_id)
+      : '',
     sourceType: apiData.source_type ?? '',
     sourceOther: apiData.source_other ?? '',
     distributorCode: apiData.distributor_code ?? '',
@@ -182,7 +180,6 @@ function mapAccountToForm(apiData: any): UpdateAccountFormValues {
     accountStage: apiData.account_stage ?? '',
     businessStatus: apiData.business_status ?? '',
 
-    // Customer Basic Details
     firstName: apiData.first_name ?? '',
     lastName: apiData.last_name ?? '',
     phone: apiData.phone ?? '',
@@ -193,7 +190,6 @@ function mapAccountToForm(apiData: any): UpdateAccountFormValues {
       : [],
     createdBy: apiData.created_by?.full_name ?? '',
 
-    // Customer Business Details (NEW JSONB structure)
     businessVintage: apiData.business_details?.vintage_years?.toString() ?? '',
     businessRegistrationType: apiData.business_details?.registration_type ?? '',
     suppliers: apiData.business_details?.suppliers ?? '',
@@ -208,7 +204,7 @@ function mapAccountToForm(apiData: any): UpdateAccountFormValues {
     parentAccount: apiData.parent_account ?? '',
     applicantOwnership:
       apiData.applicant_residence_address?.ownership_type ?? '',
-    // Address Information - Business Premise (NEW JSONB structure)
+
     businessStreet: apiData.business_premise_address?.street ?? '',
     businessCity: apiData.business_premise_address?.city ?? '',
     businessState: apiData.business_premise_address?.state ?? '',
@@ -219,7 +215,6 @@ function mapAccountToForm(apiData: any): UpdateAccountFormValues {
     businessGpsLocation: apiData.business_premise_address?.gps_location ?? '',
     businessOwnership: apiData.business_premise_address?.ownership_type ?? '',
 
-    // Address Information - Applicant Residence (NEW JSONB structure)
     applicantStreet: apiData.applicant_residence_address?.street ?? '',
     applicantCity: apiData.applicant_residence_address?.city ?? '',
     applicantState: apiData.applicant_residence_address?.state ?? '',
@@ -230,7 +225,6 @@ function mapAccountToForm(apiData: any): UpdateAccountFormValues {
     applicantGpsLocation:
       apiData.applicant_residence_address?.gps_location ?? '',
 
-    // Address Information - Co-Applicant Residence (NEW)
     coApplicantName: apiData.co_applicant_residence_address?.name ?? '',
     coApplicantPhone: apiData.co_applicant_residence_address?.phone ?? '',
     coApplicantRelationship:
@@ -248,17 +242,23 @@ function mapAccountToForm(apiData: any): UpdateAccountFormValues {
       apiData.co_applicant_residence_address?.gps_location ?? '',
     coApplicantOwnership:
       apiData.co_applicant_residence_address?.ownership_type ?? '',
+
     applicantCode:
       apiData.applicant_residence_address?.pincode ??
       apiData.custom_fields?.applicant_code ??
       '',
-    noOfBusinessYears: apiData.business_premise_address?.years_residing ?? '',
+    noOfBusinessYears:
+      apiData.business_premise_address?.years_residing?.toString() ?? '',
     gpsLocation: apiData.business_premise_address?.gps_location ?? '',
+    noOfYears:
+      apiData.applicant_residence_address?.years_residing?.toString() ?? '',
+    // applicantGpsLocation:
+    //   apiData.applicant_residence_address?.gps_location ?? '',
 
-    coApplicantCode: apiData.co_applicant_residence_address?.pincode ?? '',
-    coApplicantYears:
-      apiData.co_applicant_residence_address?.years_residing ?? '',
-    // References (UPDATED with relationship and address)
+    // coApplicantCode: apiData.co_applicant_residence_address?.pincode ?? '',
+    // coApplicantYears:
+    //   apiData.co_applicant_residence_address?.years_residing?.toString() ?? '',
+
     ref1Name: apiData.customer_references?.person1?.name ?? '',
     ref1Phone: apiData.customer_references?.person1?.phone ?? '',
     ref1Email: apiData.customer_references?.person1?.email ?? '',
@@ -272,22 +272,19 @@ function mapAccountToForm(apiData: any): UpdateAccountFormValues {
   }
 }
 
-// Map form values to API payload (UPDATED for new structure)
 function mapFormToApi(
   formData: UpdateAccountFormValues,
   dirtyFields: Partial<Record<keyof UpdateAccountFormValues, boolean>>,
 ): any {
   const payload: any = {}
 
-  // Simple fields
-  // if (dirtyFields.assignmentDate)
-  //   payload.assignment_date = formData.assignmentDate
+  // 1. Simple / Core Database Columns
   if (dirtyFields.source) payload.source = formData.source
   if (dirtyFields.accountName) payload.account_name = formData.accountName
   if (dirtyFields.sourceType) payload.source_type = formData.sourceType
   if (dirtyFields.sourceOther) payload.source_other = formData.sourceOther
   if (dirtyFields.accountOwnerId)
-    payload.account_owner_id = formData.accountOwnerId
+    payload.account_owner_id = parseInt(formData.accountOwnerId) || null
   if (dirtyFields.distributorCode)
     payload.distributor_code = formData.distributorCode
   if (dirtyFields.wabaInterested)
@@ -307,156 +304,176 @@ function mapFormToApi(
     payload.preferred_languages = formData.preferredLanguages
   if (dirtyFields.parentAccount) payload.parent_account = formData.parentAccount
 
-  // Business Details JSONB
-  const businessDetails: any = {}
-  if (dirtyFields.businessRegistrationType)
-    businessDetails.registration_type = formData.businessRegistrationType
-  if (dirtyFields.businessVintage)
-    businessDetails.vintage_years = parseInt(formData.businessVintage) || 0
-  if (dirtyFields.suppliers) businessDetails.suppliers = formData.suppliers
-  if (dirtyFields.description)
-    businessDetails.description = formData.description
-  if (dirtyFields.typeOfBusiness)
-    businessDetails.type_of_business = formData.typeOfBusiness
-  if (dirtyFields.industry) businessDetails.industry = formData.industry
-  if (dirtyFields.gstn) businessDetails.gstn = formData.gstn
-  if (dirtyFields.pan) businessDetails.pan = formData.pan
-  if (Object.keys(businessDetails).length > 0)
-    payload.business_details = businessDetails
-
-  // Business Premise Address JSONB
-  const businessPremiseAddress: any = {}
-  if (dirtyFields.businessStreet)
-    businessPremiseAddress.street = formData.businessStreet
-  if (dirtyFields.businessCity)
-    businessPremiseAddress.city = formData.businessCity
-  if (dirtyFields.businessState)
-    businessPremiseAddress.state = formData.businessState
-  if (dirtyFields.businessCountry)
-    businessPremiseAddress.country = formData.businessCountry
-  if (dirtyFields.businessPincode)
-    businessPremiseAddress.pincode = formData.businessPincode
-  if (dirtyFields.businessYearsResiding)
-    businessPremiseAddress.years_residing =
-      parseInt(formData.businessYearsResiding) || 0
-  if (dirtyFields.businessGpsLocation)
-    businessPremiseAddress.gps_location = formData.businessGpsLocation
-  if (dirtyFields.businessOwnership)
-    businessPremiseAddress.ownership_type = formData.businessOwnership
-  if (Object.keys(businessPremiseAddress).length > 0)
-    payload.business_premise_address = businessPremiseAddress
-
-  // Applicant Residence Address JSONB
-  const applicantResidenceAddress: any = {}
-  if (dirtyFields.applicantStreet)
-    applicantResidenceAddress.street = formData.applicantStreet
-  if (dirtyFields.applicantCity)
-    applicantResidenceAddress.city = formData.applicantCity
-  if (dirtyFields.applicantState)
-    applicantResidenceAddress.state = formData.applicantState
-  if (dirtyFields.applicantCountry)
-    applicantResidenceAddress.country = formData.applicantCountry
-  if (dirtyFields.applicantPincode)
-    applicantResidenceAddress.pincode = formData.applicantPincode
-  if (dirtyFields.applicantYearsResiding)
-    applicantResidenceAddress.years_residing =
-      parseInt(formData.applicantYearsResiding) || 0
-  if (dirtyFields.applicantGpsLocation)
-    applicantResidenceAddress.gps_location = formData.applicantGpsLocation
-  if (dirtyFields.applicantOwnership)
-    applicantResidenceAddress.ownership_type = formData.applicantOwnership
-  if (Object.keys(applicantResidenceAddress).length > 0)
-    payload.applicant_residence_address = applicantResidenceAddress
-
-  // Co-Applicant Residence Address JSONB
-  const coApplicantResidenceAddress: any = {}
-  if (dirtyFields.coApplicantName)
-    coApplicantResidenceAddress.name = formData.coApplicantName
-  if (dirtyFields.coApplicantPhone)
-    coApplicantResidenceAddress.phone = formData.coApplicantPhone
-  if (dirtyFields.coApplicantRelationship)
-    coApplicantResidenceAddress.relationship = formData.coApplicantRelationship
-  if (dirtyFields.coApplicantEmail)
-    coApplicantResidenceAddress.email = formData.coApplicantEmail
-  if (dirtyFields.coApplicantStreet)
-    coApplicantResidenceAddress.street = formData.coApplicantStreet
-  if (dirtyFields.coApplicantCity)
-    coApplicantResidenceAddress.city = formData.coApplicantCity
-  if (dirtyFields.coApplicantState)
-    coApplicantResidenceAddress.state = formData.coApplicantState
-  if (dirtyFields.coApplicantCountry)
-    coApplicantResidenceAddress.country = formData.coApplicantCountry
-  if (dirtyFields.coApplicantPincode)
-    coApplicantResidenceAddress.pincode = formData.coApplicantPincode
-  if (dirtyFields.coApplicantYearsResiding)
-    coApplicantResidenceAddress.years_residing =
-      parseInt(formData.coApplicantYearsResiding) || 0
-  if (dirtyFields.coApplicantGpsLocation)
-    coApplicantResidenceAddress.gps_location = formData.coApplicantGpsLocation
-  if (dirtyFields.coApplicantOwnership)
-    coApplicantResidenceAddress.ownership_type = formData.coApplicantOwnership
-  if (Object.keys(coApplicantResidenceAddress).length > 0)
-    payload.co_applicant_residence_address = coApplicantResidenceAddress
-
-  // In mapFormToApi - add these to the respective JSONB objects
-  // Add to business_premise_address
-  if (dirtyFields.noOfBusinessYears) {
-    businessPremiseAddress.years_residing =
-      parseInt(formData.noOfBusinessYears) || 0
-  }
-  if (dirtyFields.gpsLocation) {
-    businessPremiseAddress.gps_location = formData.gpsLocation
+  // 2. Business Details Object Block
+  if (
+    dirtyFields.businessRegistrationType ||
+    dirtyFields.businessVintage ||
+    dirtyFields.suppliers ||
+    dirtyFields.description ||
+    dirtyFields.typeOfBusiness ||
+    dirtyFields.industry ||
+    dirtyFields.gstn ||
+    dirtyFields.pan
+  ) {
+    payload.business_details = {
+      registration_type: formData.businessRegistrationType || null,
+      vintage_years: parseInt(formData.businessVintage) || 0,
+      suppliers: formData.suppliers || null,
+      description: formData.description || null,
+      type_of_business: formData.typeOfBusiness || null,
+      industry: formData.industry || null,
+      gstn: formData.gstn || null,
+      pan: formData.pan || null,
+    }
   }
 
-  // Add to applicant_residence_address
-  if (dirtyFields.applicantCity)
-    applicantResidenceAddress.city = formData.applicantCity
-  if (dirtyFields.applicantCountry)
-    applicantResidenceAddress.country = formData.applicantCountry
-  if (dirtyFields.applicantPincode)
-    applicantResidenceAddress.pincode = formData.applicantCode
-  if (dirtyFields.applicantYearsResiding)
-    applicantResidenceAddress.years_residing = parseInt(formData.noOfYears) || 0
+  // 3. Business Premise Address Object Block
+  if (
+    dirtyFields.businessStreet ||
+    dirtyFields.businessCity ||
+    dirtyFields.businessState ||
+    dirtyFields.businessCountry ||
+    dirtyFields.businessPincode ||
+    dirtyFields.businessYearsResiding ||
+    dirtyFields.noOfBusinessYears ||
+    dirtyFields.businessGpsLocation ||
+    dirtyFields.gpsLocation ||
+    dirtyFields.businessOwnership
+  ) {
+    payload.business_premise_address = {
+      street: formData.businessStreet || null,
+      city: formData.businessCity || null,
+      state: formData.businessState || null,
+      country: formData.businessCountry || 'India',
+      pincode: formData.businessPincode || null,
+      years_residing:
+        parseInt(
+          formData.businessYearsResiding || formData.noOfBusinessYears,
+        ) || 0,
+      gps_location:
+        formData.businessGpsLocation || formData.gpsLocation || null,
+      ownership_type: formData.businessOwnership || null,
+    }
+  }
 
-  // Add to co_applicant_residence_address
-  if (dirtyFields.coApplicantStreet)
-    coApplicantResidenceAddress.street = formData.coApplicantStreet
-  if (dirtyFields.coApplicantState)
-    coApplicantResidenceAddress.state = formData.coApplicantState
-  if (dirtyFields.coApplicantCity)
-    coApplicantResidenceAddress.city = formData.coApplicantCity
-  if (dirtyFields.coApplicantCountry)
-    coApplicantResidenceAddress.country = formData.coApplicantCountry
-  if (dirtyFields.coApplicantPincode)
-    coApplicantResidenceAddress.pincode = formData.coApplicantCode
-  if (dirtyFields.coApplicantYearsResiding)
-    coApplicantResidenceAddress.years_residing =
-      parseInt(formData.coApplicantYears) || 0
-  if (dirtyFields.coApplicantOwnership)
-    coApplicantResidenceAddress.ownership_type = formData.coApplicantOwnership
-  // Customer References JSONB (UPDATED with relationship and address)
+  // 4. Applicant Residence Address Object Block
+  if (
+    dirtyFields.applicantStreet ||
+    dirtyFields.applicantCity ||
+    dirtyFields.applicantState ||
+    dirtyFields.applicantCountry ||
+    dirtyFields.applicantPincode ||
+    dirtyFields.applicantCode ||
+    dirtyFields.applicantYearsResiding ||
+    dirtyFields.noOfYears ||
+    dirtyFields.applicantGpsLocation ||
+    dirtyFields.applicantOwnership
+  ) {
+    payload.applicant_residence_address = {
+      street: formData.applicantStreet || null,
+      city: formData.applicantCity || null,
+      state: formData.applicantState || null,
+      country: formData.applicantCountry || 'India',
+      pincode: formData.applicantPincode || formData.applicantCode || null,
+      years_residing:
+        parseInt(formData.applicantYearsResiding || formData.noOfYears) || 0,
+      gps_location: formData.applicantGpsLocation || null,
+      ownership_type: formData.applicantOwnership || null,
+    }
+  }
+
+  // 5. Co-Applicant Residence Address Object Block
+  if (
+    dirtyFields.coApplicantName ||
+    dirtyFields.coApplicantPhone ||
+    dirtyFields.coApplicantRelationship ||
+    dirtyFields.coApplicantEmail ||
+    dirtyFields.coApplicantStreet ||
+    dirtyFields.coApplicantCity ||
+    dirtyFields.coApplicantState ||
+    dirtyFields.coApplicantCountry ||
+    dirtyFields.coApplicantPincode ||
+    dirtyFields.coApplicantCode ||
+    dirtyFields.coApplicantYearsResiding ||
+    dirtyFields.coApplicantYears ||
+    dirtyFields.coApplicantGpsLocation ||
+    dirtyFields.coApplicantOwnership
+  ) {
+    payload.co_applicant_residence_address = {
+      name: formData.coApplicantName || null,
+      phone: formData.coApplicantPhone || null,
+      relationship: formData.coApplicantRelationship || null,
+      email: formData.coApplicantEmail || null,
+      street: formData.coApplicantStreet || null,
+      city: formData.coApplicantCity || null,
+      state: formData.coApplicantState || null,
+      country: formData.coApplicantCountry || 'India',
+      pincode: formData.coApplicantPincode || formData.coApplicantCode || null,
+      years_residing:
+        parseInt(
+          formData.coApplicantYearsResiding || formData.coApplicantYears,
+        ) || 0,
+      gps_location: formData.coApplicantGpsLocation || null,
+      ownership_type: formData.coApplicantOwnership || null,
+    }
+  }
+
+  // 6. Customer References Object Block
   const customerReferences: any = {}
-  const person1: any = {}
-  const person2: any = {}
 
-  if (dirtyFields.ref1Name) person1.name = formData.ref1Name
-  if (dirtyFields.ref1Phone) person1.phone = formData.ref1Phone
-  if (dirtyFields.ref1Email) person1.email = formData.ref1Email
-  if (dirtyFields.ref1Relationship)
-    person1.relationship = formData.ref1Relationship
-  if (dirtyFields.ref1Address) person1.address = formData.ref1Address
-  if (Object.keys(person1).length > 0) customerReferences.person1 = person1
+  if (
+    dirtyFields.ref1Name ||
+    dirtyFields.ref1Phone ||
+    dirtyFields.ref1Email ||
+    dirtyFields.ref1Relationship ||
+    dirtyFields.ref1Address
+  ) {
+    customerReferences.person1 = {
+      name: formData.ref1Name || null,
+      phone: formData.ref1Phone || null,
+      email: formData.ref1Email || null,
+      relationship: formData.ref1Relationship || null,
+      address: formData.ref1Address || null,
+    }
+  } else if (formData.ref1Name || formData.ref1Phone) {
+    // Retain existing form state if the sibling person changed instead
+    customerReferences.person1 = {
+      name: formData.ref1Name || null,
+      phone: formData.ref1Phone || null,
+      email: formData.ref1Email || null,
+      relationship: formData.ref1Relationship || null,
+      address: formData.ref1Address || null,
+    }
+  }
 
-  if (dirtyFields.ref2Name) person2.name = formData.ref2Name
-  if (dirtyFields.ref2Phone) person2.phone = formData.ref2Phone
-  if (dirtyFields.ref2Email) person2.email = formData.ref2Email
-  if (dirtyFields.ref2Relationship)
-    person2.relationship = formData.ref2Relationship
-  if (dirtyFields.ref2Address) person2.address = formData.ref2Address
-  if (Object.keys(person2).length > 0) customerReferences.person2 = person2
+  if (
+    dirtyFields.ref2Name ||
+    dirtyFields.ref2Phone ||
+    dirtyFields.ref2Email ||
+    dirtyFields.ref2Relationship ||
+    dirtyFields.ref2Address
+  ) {
+    customerReferences.person2 = {
+      name: formData.ref2Name || null,
+      phone: formData.ref2Phone || null,
+      email: formData.ref2Email || null,
+      relationship: formData.ref2Relationship || null,
+      address: formData.ref2Address || null,
+    }
+  } else if (formData.ref2Name || formData.ref2Phone) {
+    // Retain existing form state if the sibling person changed instead
+    customerReferences.person2 = {
+      name: formData.ref2Name || null,
+      phone: formData.ref2Phone || null,
+      email: formData.ref2Email || null,
+      relationship: formData.ref2Relationship || null,
+      address: formData.ref2Address || null,
+    }
+  }
 
-  if (Object.keys(customerReferences).length > 0)
+  if (Object.keys(customerReferences).length > 0) {
     payload.customer_references = customerReferences
+  }
 
   return payload
 }
@@ -470,7 +487,6 @@ export default function UpdateAccounts() {
   const [openAllDeals, setOpenAllDeals] = useState(false)
 
   const navigate = useNavigate()
-  // For Business Premise State
   const [businessStateSearch, setBusinessStateSearch] = useState('')
   const [businessStateOpen, setBusinessStateOpen] = useState(false)
   const [businessCitySearch, setBusinessCitySearch] = useState('')
@@ -491,10 +507,10 @@ export default function UpdateAccounts() {
     watch,
     setValue,
     reset,
+    control,
     formState: { errors, isDirty, dirtyFields },
   } = form
 
-  // Fetch account data
   const {
     data: apiResponse,
     isLoading,
@@ -529,6 +545,12 @@ export default function UpdateAccounts() {
     if (accountData) {
       const formValues = mapAccountToForm(accountData)
       reset(formValues)
+      if (formValues.businessState)
+        setBusinessStateSearch(formValues.businessState)
+      if (formValues.businessCity)
+        setBusinessCitySearch(formValues.businessCity)
+      if (formValues.businessPincode)
+        setBusinessPincodeSearch(formValues.businessPincode)
     }
   }, [accountData, reset])
 
@@ -547,7 +569,6 @@ export default function UpdateAccounts() {
     onSuccess: (data, variables) => {
       toast.success('Account updated successfully')
       setIsEdit(false)
-      reset(variables)
       queryClient.invalidateQueries({ queryKey: ['account', id] })
     },
     onError: () => {
@@ -605,7 +626,7 @@ export default function UpdateAccounts() {
       return res.json()
     },
   })
-  const users = usersData?.data || []
+  const usersList = usersData?.data || []
 
   const handleAddNote = async (note: { description: string }) => {
     try {
@@ -665,23 +686,27 @@ export default function UpdateAccounts() {
 
           <FieldRow label='Account Owner'>
             {isEdit && isAllow ? (
-              <Select
-                value={data.accountOwnerId || ''}
-                onValueChange={(val) =>
-                  setValue('accountOwnerId', val, { shouldDirty: true })
-                }
-              >
-                <SelectTrigger className='h-8'>
-                  <SelectValue placeholder='Select Account Owner' />
-                </SelectTrigger>
-                <SelectContent>
-                  {users?.map((user: any) => (
-                    <SelectItem key={user.id} value={user.id}>
-                      {user.full_name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <Controller
+                control={control}
+                name='accountOwnerId'
+                render={({ field }) => (
+                  <Select
+                    value={field.value || ''}
+                    onValueChange={field.onChange}
+                  >
+                    <SelectTrigger className='h-8'>
+                      <SelectValue placeholder='Select Account Owner' />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {usersList?.map((u: any) => (
+                        <SelectItem key={u.id} value={String(u.id)}>
+                          {u.full_name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                )}
+              />
             ) : (
               <span className='text-base font-bold'>{ownerName}</span>
             )}
@@ -736,42 +761,56 @@ export default function UpdateAccounts() {
             </FieldRow>
 
             <FieldRow label='Source' error={errors.source?.message}>
-              <SelectField
-                value={data.source}
-                isEdit={isEdit}
-                options={[
-                  'Himalaya',
-                  'CavinKare',
-                  'Alpharubix',
-                  'Condor Footwear',
-                  'DVG Dist Petroleum',
-                  'Havells',
-                  'Liberty',
-                  'Marico',
-                  'Reference',
-                  'Swastik',
-                  'Unicharm',
-                  'Vibhava Marketing',
-                  'R1X Website',
-                  '5pointcredit',
-                ]}
-                onChange={(v) => setValue('source', v, { shouldDirty: true })}
+              <Controller
+                control={control}
+                name='source'
+                render={({ field }) => (
+                  <SelectField
+                    value={field.value}
+                    isEdit={isEdit}
+                    options={[
+                      'Himalaya',
+                      'CavinKare',
+                      'Alpharubix',
+                      'Condor Footwear',
+                      'DVG Dist Petroleum',
+                      'Havells',
+                      'Liberty',
+                      'Marico',
+                      'Reference',
+                      'Swastik',
+                      'Unicharm',
+                      'Vibhava Marketing',
+                      'R1X Website',
+                      '5pointcredit',
+                    ]}
+                    onChange={field.onChange}
+                  />
+                )}
               />
             </FieldRow>
 
-            {/* NEW: Source Type */}
             <FieldRow label='Source Type' error={errors.sourceType?.message}>
-              <SelectField
-                value={data.sourceType}
-                isEdit={isEdit}
-                options={['Direct', 'Referral', 'Partner', 'Website', 'Other']}
-                onChange={(v) =>
-                  setValue('sourceType', v, { shouldDirty: true })
-                }
+              <Controller
+                control={control}
+                name='sourceType'
+                render={({ field }) => (
+                  <SelectField
+                    value={field.value}
+                    isEdit={isEdit}
+                    options={[
+                      'Direct',
+                      'Referral',
+                      'Partner',
+                      'Website',
+                      'Other',
+                    ]}
+                    onChange={field.onChange}
+                  />
+                )}
               />
             </FieldRow>
 
-            {/* NEW: Source (Others) - Shows only when Source Type is 'Other' */}
             {data.sourceType === 'Other' && (
               <FieldRow label='Source (Others)'>
                 {isEdit ? (
@@ -794,34 +833,35 @@ export default function UpdateAccounts() {
             </FieldRow>
 
             <FieldRow label='WABA Interested'>
-              <SelectField
-                value={
-                  data.wabaInterested === null ||
-                  data.wabaInterested === undefined
-                    ? '—'
-                    : data.wabaInterested
-                      ? 'Yes'
-                      : 'No'
-                }
-                isEdit={isEdit}
-                options={['Yes', 'No']}
-                onChange={(v) =>
-                  setValue('wabaInterested', v === 'Yes', { shouldDirty: true })
-                }
+              <Controller
+                control={control}
+                name='wabaInterested'
+                render={({ field }) => (
+                  <SelectField
+                    value={field.value ? 'Yes' : 'No'}
+                    isEdit={isEdit}
+                    options={['Yes', 'No']}
+                    onChange={(v) => field.onChange(v === 'Yes')}
+                  />
+                )}
               />
             </FieldRow>
           </div>
 
           <div>
             <FieldRow label='Call Back Date/ Time'>
-              <DateField
-                value={data.callBackDate}
-                isEdit={isEdit}
-                showTime={true}
-                disablePast={true}
-                onChange={(d) =>
-                  setValue('callBackDate', d, { shouldDirty: true })
-                }
+              <Controller
+                control={control}
+                name='callBackDate'
+                render={({ field }) => (
+                  <DateField
+                    value={field.value}
+                    isEdit={isEdit}
+                    showTime={true}
+                    disablePast={true}
+                    onChange={field.onChange}
+                  />
+                )}
               />
             </FieldRow>
 
@@ -829,24 +869,28 @@ export default function UpdateAccounts() {
               label='Account Status'
               error={errors.accountStatus?.message}
             >
-              <SelectField
-                value={data.accountStatus}
-                isEdit={isEdit}
-                options={[
-                  'Yet to be dialed',
-                  'Wrong Number',
-                  'Contact Established',
-                  'Contact Not Established',
-                  'Awareness',
-                  'Attention',
-                  'Assessment',
-                  'Lender Review',
-                  'Not Interested',
-                  'Location Unserviceable',
-                ]}
-                onChange={(v) =>
-                  setValue('accountStatus', v, { shouldDirty: true })
-                }
+              <Controller
+                control={control}
+                name='accountStatus'
+                render={({ field }) => (
+                  <SelectField
+                    value={field.value}
+                    isEdit={isEdit}
+                    options={[
+                      'Yet to be dialed',
+                      'Wrong Number',
+                      'Contact Established',
+                      'Contact Not Established',
+                      'Awareness',
+                      'Attention',
+                      'Assessment',
+                      'Lender Review',
+                      'Not Interested',
+                      'Location Unserviceable',
+                    ]}
+                    onChange={field.onChange}
+                  />
+                )}
               />
             </FieldRow>
 
@@ -854,25 +898,29 @@ export default function UpdateAccounts() {
               label='Account Stage'
               error={errors.accountStage?.message}
             >
-              <SelectField
-                value={data.accountStage}
-                isEdit={isEdit}
-                options={[
-                  'Initial Pitch',
-                  'Product Offering',
-                  'Doc List Shared to Cust',
-                  'Partial Docs Rec',
-                  'Yet To Review',
-                  'Under Internal Review',
-                  'In Review with Lender',
-                  'Interested',
-                  'Commercial NI',
-                  'Location not doable',
-                  'No Requirement',
-                ]}
-                onChange={(v) =>
-                  setValue('accountStage', v, { shouldDirty: true })
-                }
+              <Controller
+                control={control}
+                name='accountStage'
+                render={({ field }) => (
+                  <SelectField
+                    value={field.value}
+                    isEdit={isEdit}
+                    options={[
+                      'Initial Pitch',
+                      'Product Offering',
+                      'Doc List Shared to Cust',
+                      'Partial Docs Rec',
+                      'Yet To Review',
+                      'Under Internal Review',
+                      'In Review with Lender',
+                      'Interested',
+                      'Commercial NI',
+                      'Location not doable',
+                      'No Requirement',
+                    ]}
+                    onChange={field.onChange}
+                  />
+                )}
               />
             </FieldRow>
 
@@ -880,13 +928,17 @@ export default function UpdateAccounts() {
               label='Business Status'
               error={errors.businessStatus?.message}
             >
-              <SelectField
-                value={data.businessStatus}
-                isEdit={isEdit}
-                options={['Active', 'Inactive', 'Not Sure']}
-                onChange={(v) =>
-                  setValue('businessStatus', v, { shouldDirty: true })
-                }
+              <Controller
+                control={control}
+                name='businessStatus'
+                render={({ field }) => (
+                  <SelectField
+                    value={field.value}
+                    isEdit={isEdit}
+                    options={['Active', 'Inactive', 'Not Sure']}
+                    onChange={field.onChange}
+                  />
+                )}
               />
             </FieldRow>
           </div>
@@ -903,7 +955,6 @@ export default function UpdateAccounts() {
                 <span>{display(data.firstName)}</span>
               )}
             </FieldRow>
-
             <FieldRow label='Phone No' error={errors.phone?.message}>
               {isEdit ? (
                 <Input {...register('phone')} className='h-8' />
@@ -911,7 +962,6 @@ export default function UpdateAccounts() {
                 <span>{display(data.phone)}</span>
               )}
             </FieldRow>
-
             <FieldRow label='Email' error={errors.email?.message}>
               {isEdit ? (
                 <Input {...register('email')} className='h-8' />
@@ -919,7 +969,6 @@ export default function UpdateAccounts() {
                 <span>{display(data.email)}</span>
               )}
             </FieldRow>
-
             <FieldRow label='Created By'>
               <span>{display(data.createdBy)}</span>
             </FieldRow>
@@ -933,8 +982,6 @@ export default function UpdateAccounts() {
                 <span>{display(data.lastName)}</span>
               )}
             </FieldRow>
-
-            {/* UPDATED: Mothers Name - now direct column */}
             <FieldRow label="Mother's Name">
               {isEdit ? (
                 <Input {...register('mothersName')} className='h-8' />
@@ -942,17 +989,19 @@ export default function UpdateAccounts() {
                 <span>{display(data.mothersName)}</span>
               )}
             </FieldRow>
-
-            {/* UPDATED: Preferred Language - now multi-select */}
             <FieldRow label='Preferred Language Support'>
-              <MultiSelectField
-                value={data.preferredLanguages}
-                options={LANGUAGE_OPTIONS}
-                isEdit={isEdit}
-                onChange={(v) =>
-                  setValue('preferredLanguages', v, { shouldDirty: true })
-                }
-                placeholder='Select languages...'
+              <Controller
+                control={control}
+                name='preferredLanguages'
+                render={({ field }) => (
+                  <MultiSelectField
+                    value={field.value}
+                    options={LANGUAGE_OPTIONS}
+                    isEdit={isEdit}
+                    onChange={field.onChange}
+                    placeholder='Select languages...'
+                  />
+                )}
               />
             </FieldRow>
           </div>
@@ -962,7 +1011,6 @@ export default function UpdateAccounts() {
         <SectionHeader title='Customer Business Details' />
         <CardContent className='p-0 grid grid-cols-1 md:grid-cols-2'>
           <div className='md:border-r'>
-            {/* UPDATED: Business Vintage - from business_details */}
             <FieldRow
               label='Business Vintage (No of Years)'
               error={errors.businessVintage?.message}
@@ -978,24 +1026,26 @@ export default function UpdateAccounts() {
               )}
             </FieldRow>
 
-            {/* UPDATED: Business Registration Type - from business_details */}
             <FieldRow label='Business Registration Type'>
-              <SelectField
-                value={display(data.businessRegistrationType)}
-                isEdit={isEdit}
-                options={[
-                  '-None-',
-                  'Proprietorship',
-                  'Partnership',
-                  'Private Limited',
-                ]}
-                onChange={(v) =>
-                  setValue('businessRegistrationType', v, { shouldDirty: true })
-                }
+              <Controller
+                control={control}
+                name='businessRegistrationType'
+                render={({ field }) => (
+                  <SelectField
+                    value={field.value}
+                    isEdit={isEdit}
+                    options={[
+                      '-None-',
+                      'Proprietorship',
+                      'Partnership',
+                      'Private Limited',
+                    ]}
+                    onChange={field.onChange}
+                  />
+                )}
               />
             </FieldRow>
 
-            {/* UPDATED: Suppliers - from business_details */}
             <FieldRow label='Suppliers'>
               {isEdit ? (
                 <Input {...register('suppliers')} className='h-8' />
@@ -1003,8 +1053,6 @@ export default function UpdateAccounts() {
                 <span>{display(data.suppliers)}</span>
               )}
             </FieldRow>
-
-            {/* UPDATED: Description - from business_details */}
             <FieldRow label='Description'>
               {isEdit ? (
                 <textarea
@@ -1015,8 +1063,6 @@ export default function UpdateAccounts() {
                 <span>{display(data.description)}</span>
               )}
             </FieldRow>
-
-            {/* NEW: GSTN */}
             <FieldRow label='GSTN'>
               {isEdit ? (
                 <Input {...register('gstn')} className='h-8' />
@@ -1027,56 +1073,59 @@ export default function UpdateAccounts() {
           </div>
 
           <div>
-            {/* <FieldRow label='Parent Account'>
-              <span>{display(data.parentAccount)}</span>
-            </FieldRow> */}
-
-            {/* UPDATED: Type of Business - from business_details */}
             <FieldRow label='Type of Business'>
-              <SelectField
-                value={display(data.typeOfBusiness)}
-                isEdit={isEdit}
-                options={[
-                  'Manufacturer',
-                  'Distributor',
-                  'Franchise/FOFO',
-                  'Wholesale Trader',
-                  'Retailer',
-                  'Super Stockist',
-                  'Sub Distributor',
-                  'Inst Customers',
-                  'Govt Institutions',
-                  'Co Operative Society',
-                ]}
-                onChange={(v) =>
-                  setValue('typeOfBusiness', v, { shouldDirty: true })
-                }
+              <Controller
+                control={control}
+                name='typeOfBusiness'
+                render={({ field }) => (
+                  <SelectField
+                    value={field.value}
+                    isEdit={isEdit}
+                    options={[
+                      'Manufacturer',
+                      'Distributor',
+                      'Franchise/FOFO',
+                      'Wholesale Trader',
+                      'Retailer',
+                      'Super Stockist',
+                      'Sub Distributor',
+                      'Inst Customers',
+                      'Govt Institutions',
+                      'Co Operative Society',
+                    ]}
+                    onChange={field.onChange}
+                  />
+                )}
               />
             </FieldRow>
 
-            {/* UPDATED: Industry - from business_details */}
             <FieldRow label='Industry'>
-              <SelectField
-                value={display(data.industry)}
-                isEdit={isEdit}
-                options={[
-                  'Pharma',
-                  'AHP',
-                  'CPD',
-                  'FMCG',
-                  'OTX',
-                  'Footwear',
-                  'OTC',
-                  'RAAGA',
-                  'Hardware',
-                  'Electronics',
-                  'DVG Dist Petroleum',
-                ]}
-                onChange={(v) => setValue('industry', v, { shouldDirty: true })}
+              <Controller
+                control={control}
+                name='industry'
+                render={({ field }) => (
+                  <SelectField
+                    value={field.value}
+                    isEdit={isEdit}
+                    options={[
+                      'Pharma',
+                      'AHP',
+                      'CPD',
+                      'FMCG',
+                      'OTX',
+                      'Footwear',
+                      'OTC',
+                      'RAAGA',
+                      'Hardware',
+                      'Electronics',
+                      'DVG Dist Petroleum',
+                    ]}
+                    onChange={field.onChange}
+                  />
+                )}
               />
             </FieldRow>
 
-            {/* NEW: PAN */}
             <FieldRow label='PAN'>
               {isEdit ? (
                 <Input {...register('pan')} className='h-8' />
@@ -1256,21 +1305,25 @@ export default function UpdateAccounts() {
               )}
             </FieldRow>
             <FieldRow label='Business Premise Ownership'>
-              <SelectField
-                value={display(data.businessOwnership)}
-                isEdit={isEdit}
-                options={[
-                  'Self Owned',
-                  'Rented',
-                  'Parent Owned',
-                  'Leased',
-                  'Children Owned',
-                  'Spouse Owned',
-                  'Relative Owned',
-                ]}
-                onChange={(v) =>
-                  setValue('businessOwnership', v, { shouldDirty: true })
-                }
+              <Controller
+                control={control}
+                name='businessOwnership'
+                render={({ field }) => (
+                  <SelectField
+                    value={field.value}
+                    isEdit={isEdit}
+                    options={[
+                      'Self Owned',
+                      'Rented',
+                      'Parent Owned',
+                      'Leased',
+                      'Children Owned',
+                      'Spouse Owned',
+                      'Relative Owned',
+                    ]}
+                    onChange={field.onChange}
+                  />
+                )}
               />
             </FieldRow>
           </div>
@@ -1287,26 +1340,34 @@ export default function UpdateAccounts() {
                 <span>{display(data.applicantStreet)}</span>
               )}
             </FieldRow>
-
-            <FieldRow label='State'>
-              <StateSelector
-                value={data.applicantState}
-                onChange={(val) =>
-                  setValue('applicantState', val, { shouldDirty: true })
-                }
-                isEdit={isEdit}
-              />
-            </FieldRow>
-
-            <FieldRow label='City'>
-              <CitySelector
-                value={data.applicantCity}
-                onChange={(val) =>
-                  setValue('applicantCity', val, { shouldDirty: true })
-                }
-                isEdit={isEdit}
-              />
-            </FieldRow>
+            {/* <FieldRow label='State'> */}
+            <Controller
+              control={control}
+              name='applicantState'
+              render={({ field }) => (
+                <StateSelector
+                  label='State'
+                  value={field.value}
+                  onChange={field.onChange}
+                  isEdit={isEdit}
+                />
+              )}
+            />
+            {/* </FieldRow> */}
+            {/* <FieldRow label='City'> */}
+            <Controller
+              control={control}
+              name='applicantCity'
+              render={({ field }) => (
+                <CitySelector
+                  label='City'
+                  value={field.value}
+                  onChange={field.onChange}
+                  isEdit={isEdit}
+                />
+              )}
+            />
+            {/* </FieldRow> */}
             <FieldRow label='Country'>
               {isEdit ? (
                 <Input
@@ -1321,16 +1382,20 @@ export default function UpdateAccounts() {
           </div>
 
           <div>
-            <FieldRow label='Pincode'>
-              <PincodeSelector
-                value={data.applicantCode}
-                onChange={(val) =>
-                  setValue('applicantCode', val, { shouldDirty: true })
-                }
-                isEdit={isEdit}
-              />
-            </FieldRow>
-
+            {/* <FieldRow label='Pincode'> */}
+            <Controller
+              control={control}
+              name='applicantCode'
+              render={({ field }) => (
+                <PincodeSelector
+                  label='Pincode'
+                  value={field.value}
+                  onChange={field.onChange}
+                  isEdit={isEdit}
+                />
+              )}
+            />
+            {/* </FieldRow> */}
             <FieldRow label='No of Years residing in current residence'>
               {isEdit ? (
                 <Input {...register('noOfYears')} className='h-8' />
@@ -1338,23 +1403,26 @@ export default function UpdateAccounts() {
                 <span>{display(data.noOfYears)}</span>
               )}
             </FieldRow>
-
             <FieldRow label='Residence Ownership'>
-              <SelectField
-                value={display(data.applicantOwnership)}
-                isEdit={isEdit}
-                options={[
-                  'Self Owned',
-                  'Rented',
-                  'Parent Owned',
-                  'Leased',
-                  'Children Owned',
-                  'Spouse Owned',
-                  'Relative Owned',
-                ]}
-                onChange={(v) =>
-                  setValue('applicantOwnership', v, { shouldDirty: true })
-                }
+              <Controller
+                control={control}
+                name='applicantOwnership'
+                render={({ field }) => (
+                  <SelectField
+                    value={field.value}
+                    isEdit={isEdit}
+                    options={[
+                      'Self Owned',
+                      'Rented',
+                      'Parent Owned',
+                      'Leased',
+                      'Children Owned',
+                      'Spouse Owned',
+                      'Relative Owned',
+                    ]}
+                    onChange={field.onChange}
+                  />
+                )}
               />
             </FieldRow>
             <FieldRow label='Residential Location GPS'>
@@ -1378,26 +1446,34 @@ export default function UpdateAccounts() {
                 <span>{display(data.coApplicantStreet)}</span>
               )}
             </FieldRow>
-
-            <FieldRow label='State'>
-              <StateSelector
-                value={data.coApplicantState}
-                onChange={(val) =>
-                  setValue('coApplicantState', val, { shouldDirty: true })
-                }
-                isEdit={isEdit}
-              />
-            </FieldRow>
-
-            <FieldRow label='City'>
-              <CitySelector
-                value={data.coApplicantCity}
-                onChange={(val) =>
-                  setValue('coApplicantCity', val, { shouldDirty: true })
-                }
-                isEdit={isEdit}
-              />
-            </FieldRow>
+            {/* <FieldRow label='State'> */}
+            <Controller
+              control={control}
+              name='coApplicantState'
+              render={({ field }) => (
+                <StateSelector
+                  label='State'
+                  value={field.value}
+                  onChange={field.onChange}
+                  isEdit={isEdit}
+                />
+              )}
+            />
+            {/* </FieldRow> */}
+            {/* <FieldRow label='City'> */}
+            <Controller
+              control={control}
+              name='coApplicantCity'
+              render={({ field }) => (
+                <CitySelector
+                  label='City'
+                  value={field.value}
+                  onChange={field.onChange}
+                  isEdit={isEdit}
+                />
+              )}
+            />
+            {/* </FieldRow> */}
           </div>
 
           <div>
@@ -1412,17 +1488,20 @@ export default function UpdateAccounts() {
                 <span>{display(data.coApplicantCountry)}</span>
               )}
             </FieldRow>
-
-            <FieldRow label='Pincode'>
-              <PincodeSelector
-                value={data.coApplicantCode}
-                onChange={(val) =>
-                  setValue('coApplicantCode', val, { shouldDirty: true })
-                }
-                isEdit={isEdit}
-              />
-            </FieldRow>
-
+            {/* <FieldRow label='Pincode'> */}
+            <Controller
+              control={control}
+              name='coApplicantCode'
+              render={({ field }) => (
+                <PincodeSelector
+                  label='Pincode'
+                  value={field.value}
+                  onChange={field.onChange}
+                  isEdit={isEdit}
+                />
+              )}
+            />
+            {/* </FieldRow> */}
             <FieldRow label='No of Years residing in current residence'>
               {isEdit ? (
                 <Input {...register('coApplicantYears')} className='h-8' />
@@ -1430,23 +1509,26 @@ export default function UpdateAccounts() {
                 <span>{display(data.coApplicantYears)}</span>
               )}
             </FieldRow>
-
             <FieldRow label='Residence Ownership'>
-              <SelectField
-                value={display(data.coApplicantOwnership)}
-                isEdit={isEdit}
-                options={[
-                  'Self Owned',
-                  'Rented',
-                  'Parent Owned',
-                  'Leased',
-                  'Children Owned',
-                  'Spouse Owned',
-                  'Relative Owned',
-                ]}
-                onChange={(v) =>
-                  setValue('coApplicantOwnership', v, { shouldDirty: true })
-                }
+              <Controller
+                control={control}
+                name='coApplicantOwnership'
+                render={({ field }) => (
+                  <SelectField
+                    value={field.value}
+                    isEdit={isEdit}
+                    options={[
+                      'Self Owned',
+                      'Rented',
+                      'Parent Owned',
+                      'Leased',
+                      'Children Owned',
+                      'Spouse Owned',
+                      'Relative Owned',
+                    ]}
+                    onChange={field.onChange}
+                  />
+                )}
               />
             </FieldRow>
             <FieldRow label='Residential Location GPS'>
@@ -1493,7 +1575,6 @@ export default function UpdateAccounts() {
                 <span>{display(data.ref1Email)}</span>
               )}
             </FieldRow>
-            {/* NEW: Person 1 Relationship */}
             <FieldRow label='Person 1 Relationship with Borrower'>
               {isEdit ? (
                 <Input {...register('ref1Relationship')} className='h-8' />
@@ -1501,7 +1582,6 @@ export default function UpdateAccounts() {
                 <span>{display(data.ref1Relationship)}</span>
               )}
             </FieldRow>
-            {/* NEW: Person 1 Address */}
             <FieldRow label='Address of Person 1'>
               {isEdit ? (
                 <Input {...register('ref1Address')} className='h-8' />
@@ -1538,7 +1618,6 @@ export default function UpdateAccounts() {
                 <span>{display(data.ref2Email)}</span>
               )}
             </FieldRow>
-            {/* NEW: Person 2 Relationship */}
             <FieldRow label='Person 2 Relationship with Borrower'>
               {isEdit ? (
                 <Input {...register('ref2Relationship')} className='h-8' />
@@ -1546,7 +1625,6 @@ export default function UpdateAccounts() {
                 <span>{display(data.ref2Relationship)}</span>
               )}
             </FieldRow>
-            {/* NEW: Person 2 Address */}
             <FieldRow label='Address of Person 2'>
               {isEdit ? (
                 <Input {...register('ref2Address')} className='h-8' />
@@ -1670,9 +1748,7 @@ export default function UpdateAccounts() {
                             className='cursor-pointer'
                           >
                             <TableCell>
-                              {(users as Record<string, string>)[
-                                deal.deal_owner_id
-                              ] || '—'}
+                              {uListLookup(deal.deal_owner_id, usersList)}
                             </TableCell>
                             <TableCell>{deal.deal_type || '—'}</TableCell>
                             <TableCell>{deal.deal_status || '—'}</TableCell>
@@ -1711,7 +1787,7 @@ export default function UpdateAccounts() {
                 {Deals.length === 0 ? (
                   <TableRow>
                     <TableCell
-                      colSpan={5}
+                      colSpan={6}
                       className='text-center text-muted-foreground'
                     >
                       No deals available
@@ -1725,9 +1801,7 @@ export default function UpdateAccounts() {
                       className='cursor-pointer'
                     >
                       <TableCell>
-                        {(users as Record<string, string>)[
-                          deal.deal_owner_id
-                        ] || '—'}
+                        {uListLookup(deal.deal_owner_id, usersList)}
                       </TableCell>
                       <TableCell>{deal.deal_type || '—'}</TableCell>
                       <TableCell>{deal.deal_status || '—'}</TableCell>
@@ -1875,4 +1949,10 @@ export default function UpdateAccounts() {
       </Card>
     </div>
   )
+}
+
+function uListLookup(ownerId: any, list: any[]) {
+  if (!ownerId || !Array.isArray(list)) return '—'
+  const found = list.find((u) => String(u.id) === String(ownerId))
+  return found ? found.full_name : '—'
 }
