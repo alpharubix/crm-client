@@ -167,11 +167,7 @@ function DraggableProjectCard({
       <Card
         className={`transition-colors py-0 gap-0 overflow-hidden border ${
           canDrag ? 'cursor-grab' : 'cursor-default'
-        } ${
-          overdue
-            ? ''
-            : 'hover:shadow-sm'
-        }`}
+        } ${overdue ? '' : 'hover:shadow-sm'}`}
         onClick={() => {
           if (isOwner || isApprover || isAssigneeOnly)
             navigate(`/projects/${project.id}`)
@@ -183,18 +179,18 @@ function DraggableProjectCard({
             <h3 className='font-semibold text-sm leading-snug line-clamp-2'>
               {project.name}
             </h3>
-            {(isOwner || isApprover) && (
-              <button
-                onPointerDown={(e) => e.stopPropagation()}
-                onClick={(e) => {
-                  e.stopPropagation()
-                  onEdit(project)
-                }}
-                className='cursor-pointer transition-colors shrink-0 p-0.5 rounded '
-              >
-                <Pencil className='w-3.5 h-3.5' />
-              </button>
-            )}
+            {/* {(isOwner || isApprover) && ( */}
+            <button
+              onPointerDown={(e) => e.stopPropagation()}
+              onClick={(e) => {
+                e.stopPropagation()
+                onEdit(project)
+              }}
+              className='cursor-pointer transition-colors shrink-0 p-0.5 rounded '
+            >
+              <Pencil className='w-3.5 h-3.5' />
+            </button>
+            {/* )} */}
           </div>
 
           {/* Metadata */}
@@ -254,7 +250,7 @@ function DraggableProjectCard({
                       e,
                       project.status === 'pending_for_approve'
                         ? 'planning'
-                        : 'completed'
+                        : 'completed',
                     )
                   }
                   className='flex-1 text-[11px] font-bold py-1.5 rounded bg-emerald-50 text-emerald-700 hover:bg-emerald-100 border border-emerald-200 transition-colors'
@@ -349,7 +345,7 @@ export default function ProjectKanban({
   const navigate = useNavigate()
   const [projectList, setProjectList] = useState<any[]>([])
   const sensors = useSensors(
-    useSensor(PointerSensor, { activationConstraint: { distance: 5 } })
+    useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
   )
 
   const { data: projects } = useQuery({
@@ -371,7 +367,7 @@ export default function ProjectKanban({
         `${ENV.VITE_BACKEND_BASE_URL}/projects?${params.toString()}`,
         {
           credentials: 'include',
-        }
+        },
       )
       if (res.status === 403) return { forbidden: true }
       if (!res.ok) throw new Error('Failed')
@@ -387,7 +383,7 @@ export default function ProjectKanban({
           ...p,
           id: String(p.id),
           actioner_ids: (p.actioner_ids ?? []).map(String),
-        }))
+        })),
       )
     }
   }, [projects])
@@ -402,8 +398,8 @@ export default function ProjectKanban({
     // optimistic update
     setProjectList((prev) =>
       prev.map((p) =>
-        String(p.id) === String(active.id) ? { ...p, status: newStatus } : p
-      )
+        String(p.id) === String(active.id) ? { ...p, status: newStatus } : p,
+      ),
     )
 
     // persist
@@ -440,7 +436,7 @@ export default function ProjectKanban({
         <div className='flex gap-5 pb-6 overflow-x-auto items-start h-[calc(92vh-140px)] min-h-0 px-1'>
           {COLUMNS.map((col) => {
             const colProjects = projectList.filter(
-              (p) => p.status === STATUS_MAP[col]
+              (p) => p.status === STATUS_MAP[col],
             )
             return (
               <DroppableProjectColumn
@@ -451,7 +447,7 @@ export default function ProjectKanban({
                 navigate={navigate}
                 onStatusChange={(id, status) =>
                   setProjectList((prev) =>
-                    prev.map((p) => (p.id === id ? { ...p, status } : p))
+                    prev.map((p) => (p.id === id ? { ...p, status } : p)),
                   )
                 }
               />
