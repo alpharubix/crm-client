@@ -28,6 +28,7 @@ export const HIRING_POSITIONS = [
   'Operations Executive',
   'Manager Invoice/Payments',
   'Banking Manager - alliance and Business',
+  'Manager Business Alliance and Anchor onboarding'
 ]
 
 export const LEVELS = [
