@@ -19,7 +19,7 @@ import {
   SelectValue,
 } from '../ui/select'
 import { Badge } from '../ui/badge'
-import { X, Link as LinkIcon } from 'lucide-react'
+import { X, Link as LinkIcon, MessageSquare, Send } from 'lucide-react'
 import {
   API_TO_STATUS,
   ENV,
@@ -52,19 +52,19 @@ export default function EditProjectModal({
   onUpdated,
 }: EditProjectModalProps) {
   const queryClient = useQueryClient()
-  const { user } = useAuth()
+  const { user: authUser } = useAuth() // Fix: Renamed 'user' to 'authUser' to avoid naming collisions within template maps
 
   const [activeTab, setActiveTab] = useState<'details' | 'history'>('details')
 
-  // Derive role for the current user on this project
+  // Role permissions routing maps
   const isOwner =
-    user &&
+    authUser &&
     project &&
-    String(user.user_id) === String((project as any).created_by)
+    String(authUser.user_id) === String((project as any).created_by)
   const isApprover =
-    user &&
+    authUser &&
     project &&
-    String(user.user_id) === String((project as any).approver_id)
+    String(authUser.user_id) === String((project as any).approver_id)
 
   const [form, setForm] = useState({
     name: '',
@@ -76,12 +76,31 @@ export default function EditProjectModal({
     endDate: '',
     projectType: '',
     approverId: '',
-    attachment_links: [] as string[], // ADDED THIS
+    attachment_links: [] as string[],
   })
-  const [errors, setErrors] = useState<Record<string, string>>({})
-  const [currentLink, setCurrentLink] = useState('') // Local state for link input
 
-  // ─── FETCH LOGS & TASKS (For History Tab) ─────────────────────────────
+  const [errors, setErrors] = useState<Record<string, string>>({})
+  const [currentLink, setCurrentLink] = useState('')
+  const [newComment, setNewComment] = useState('') // Thread board message field state tracker
+
+  // ─── QUERY: READ PROJECT COMMENT FEEDS ──────────────────────────────────
+  const { data: commentsData } = useQuery({
+    queryKey: ['project-comments', project?.id],
+    queryFn: async () => {
+      const res = await fetch(
+        `${ENV.VITE_BACKEND_BASE_URL}/projects/${project?.id}/comments`,
+        { credentials: 'include' },
+      )
+      if (!res.ok) throw new Error('Failed to fetch project comments')
+      return res.json()
+    },
+    // FIX: Force React Query to pull fresh data from the server every single time the modal opens
+    enabled: !!project?.id && open,
+    staleTime: 0,
+    refetchOnMount: true,
+  })
+
+  // ─── QUERY: ACTIVITY LOGS AUDIT PIPELINE ────────────────────────────────
   const { data: logsData, isLoading: logsLoading } = useQuery({
     queryKey: ['project-logs', project?.id],
     queryFn: async () => {
@@ -102,9 +121,7 @@ export default function EditProjectModal({
     queryFn: async () => {
       const res = await fetch(
         `${ENV.VITE_BACKEND_BASE_URL}/projects/${project?.id}/tasks`,
-        {
-          credentials: 'include',
-        },
+        { credentials: 'include' },
       )
       if (!res.ok) throw new Error('Failed to fetch tasks')
       return res.json()
@@ -116,7 +133,6 @@ export default function EditProjectModal({
     acc[t.id] = t.title
     return acc
   }, {})
-  // ──────────────────────────────────────────────────────────────────────
 
   useEffect(() => {
     if (project && open) {
@@ -130,7 +146,7 @@ export default function EditProjectModal({
         status: API_TO_STATUS[project.status ?? ''] ?? '',
         assignees: ((project as any).actioner_ids ?? []).map((id: number) => ({
           id: String(id),
-          name: String(id),
+          name: USERS_MAP[String(id)] || String(id),
         })),
         startDate: (project as any).start_date ?? '',
         endDate: (project as any).end_date ?? '',
@@ -139,24 +155,28 @@ export default function EditProjectModal({
             (project as any).project_type.slice(1)
           : '',
         approverId: String((project as any).approver_id ?? ''),
-        attachment_links: (project as any).attachment_links || [], // FETCH EXISTING LINKS
+        attachment_links: (project as any).attachment_links || [],
       })
       setActiveTab('details')
       setErrors({})
       setCurrentLink('')
+      setNewComment('')
     }
   }, [project?.id, open])
 
-  const users = Object.entries(USERS_MAP).map(([id, name]) => ({ id, name }))
+  const projectUsersList = Object.entries(USERS_MAP).map(([id, name]) => ({
+    id,
+    name,
+  }))
 
   function set<K extends keyof typeof form>(key: K, value: (typeof form)[K]) {
     setForm((f) => ({ ...f, [key]: value }))
     setErrors((e) => ({ ...e, [key]: '' }))
   }
 
-  function toggleAssignee(user: any) {
+  function toggleAssignee(uItem: any) {
     if (!isOwner && !isApprover) return
-    const mapped: any = { id: user.id, name: user.name }
+    const mapped: any = { id: uItem.id, name: uItem.name }
     setForm((f) => {
       const exists = f.assignees.some((u) => u.id === mapped.id)
       return {
@@ -168,7 +188,6 @@ export default function EditProjectModal({
     })
   }
 
-  // LINK HANDLERS
   function handleAddLink() {
     if (!currentLink.trim()) return
     setForm((f) => ({
@@ -198,6 +217,7 @@ export default function EditProjectModal({
     return e
   }
 
+  // MUTATION: PATCH SAVE DISPATCH MANAGEMENT
   const mutation = useMutation({
     mutationFn: async (body: typeof form) => {
       const res = await fetch(
@@ -215,7 +235,8 @@ export default function EditProjectModal({
             end_date: body.endDate,
             actioner_ids: body.assignees.map((u) => u.id),
             approver_id: body.approverId,
-            attachment_links: body.attachment_links, // PASSED TO BACKEND
+            project_type: body.projectType.toLowerCase(),
+            attachment_links: body.attachment_links,
           }),
         },
       )
@@ -229,6 +250,34 @@ export default function EditProjectModal({
     },
   })
 
+  // MUTATION: WRITE NEW COMMENT SUBMISSION PIPELINE
+  const commentMutation = useMutation({
+    mutationFn: async (content: string) => {
+      const res = await fetch(
+        `${ENV.VITE_BACKEND_BASE_URL}/projects/${project?.id}/comments`,
+        {
+          method: 'POST',
+          credentials: 'include',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ content }),
+        },
+      )
+      if (!res.ok) throw new Error('Failed to post project comment')
+      return res.json()
+    },
+    onSuccess: () => {
+      setNewComment('')
+      queryClient.invalidateQueries({
+        queryKey: ['project-comments', project?.id],
+      })
+    },
+  })
+
+  function handleSendComment() {
+    if (!newComment.trim() || commentMutation.isPending) return
+    commentMutation.mutate(newComment.trim())
+  }
+
   function handleSubmit() {
     const errs = validate()
     if (Object.keys(errs).length > 0) {
@@ -238,7 +287,6 @@ export default function EditProjectModal({
     mutation.mutate(form)
   }
 
-  // Helper to format values elegantly
   const formatVal = (val: any) => {
     if (typeof val === 'string') {
       return val.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase())
@@ -246,7 +294,6 @@ export default function EditProjectModal({
     return val
   }
 
-  // ── LOG RENDERING HELPER ──
   const renderLogDetails = (log: any) => {
     const changes = log.changes || {}
     const keys = Object.keys(changes)
@@ -255,13 +302,12 @@ export default function EditProjectModal({
       : ''
 
     if (log.action === 'CREATED') {
-      if (log.entity_type === 'PROJECT')
-        return <span >Created the project</span>
+      if (log.entity_type === 'PROJECT') return <span>Created the project</span>
       return (
-        <div >
+        <div>
           <span>
             Created task{' '}
-            <span className='font-medium '>{changes.title || taskName}</span>
+            <span className='font-medium'>{changes.title || taskName}</span>
           </span>
         </div>
       )
@@ -269,27 +315,23 @@ export default function EditProjectModal({
 
     if (log.action === 'COMMENTED') {
       return (
-        <span >
-          Commented on <span className='font-medium '>{taskName}</span>:{' '}
-          <span className='italic '>"{changes.content}"</span>
+        <span>
+          Commented on <span className='font-medium'>{taskName}</span>:{' '}
+          <span className='italic'>"{changes.content}"</span>
         </span>
       )
     }
 
     if (log.action === 'UPDATED') {
       if (keys.length === 0)
-        return (
-          <span >
-            Updated {log.entity_type.toLowerCase()} details
-          </span>
-        )
+        return <span>Updated {log.entity_type.toLowerCase()} details</span>
 
       return (
-        <div >
+        <div>
           <span>
             Updated{' '}
             {log.entity_type === 'TASK' ? (
-              <span className='font-medium '>{taskName}</span>
+              <span className='font-medium'>{taskName}</span>
             ) : (
               'project'
             )}{' '}
@@ -313,12 +355,10 @@ export default function EditProjectModal({
               }
 
               return (
-                <div key={key} className='text-[11px] '>
-                  <span className=''>↳</span> Changed{' '}
-                  <span className='font-medium  capitalize'>
-                    {formattedKey}
-                  </span>{' '}
-                  to <span className='font-medium '>{val}</span>
+                <div key={key} className='text-[11px]'>
+                  <span>↳</span> Changed{' '}
+                  <span className='font-medium capitalize'>{formattedKey}</span>{' '}
+                  to <span className='font-medium'>{val}</span>
                 </div>
               )
             })}
@@ -327,7 +367,7 @@ export default function EditProjectModal({
       )
     }
 
-    return <span className=''>Performed an action</span>
+    return <span>Performed an action</span>
   }
 
   return (
@@ -337,15 +377,15 @@ export default function EditProjectModal({
         if (!o) onClose()
       }}
     >
-      <DialogContent className='max-w-md'>
+      <DialogContent className='max-w-md flex flex-col max-h-[85vh]'>
         <DialogHeader>
           <DialogTitle className='text-base font-semibold'>
             {project?.name || 'Edit Project'}
           </DialogTitle>
         </DialogHeader>
 
-        {/* TABS */}
-        <div className='flex items-center gap-4 border-b mt-2'>
+        {/* TABS SELECTION CONTROLS */}
+        <div className='flex items-center gap-4 border-b mt-2 shrink-0'>
           <button
             className={`text-xs font-semibold pb-2 px-1 ${activeTab === 'details' ? 'text-blue-600 border-b-2 border-blue-600' : ''}`}
             onClick={() => setActiveTab('details')}
@@ -360,12 +400,11 @@ export default function EditProjectModal({
           </button>
         </div>
 
-        {/* TAB CONTENTS */}
-        <div className='max-h-[60vh] overflow-y-auto pr-1 py-2'>
-          {/* --- DETAILS TAB --- */}
+        {/* UNIFIED CONTAINER */}
+        <div className='flex-1 overflow-y-auto pr-1 py-2 space-y-4 min-h-0'>
           {activeTab === 'details' && (
             <div className='space-y-4'>
-              {/* Name */}
+              {/* Project Name Field */}
               <div>
                 <Label className='text-xs font-medium'>
                   Project Name <span className='text-red-500'>*</span>
@@ -381,7 +420,7 @@ export default function EditProjectModal({
                 )}
               </div>
 
-              {/* Description */}
+              {/* Description TextBox */}
               <div>
                 <Label className='text-xs font-medium'>Description</Label>
                 <Textarea
@@ -393,7 +432,7 @@ export default function EditProjectModal({
                 />
               </div>
 
-              {/* Attachment Links (NEW) */}
+              {/* External Documents Reference Lists */}
               <div>
                 <Label className='text-xs font-medium'>Attachment Links</Label>
                 {(isOwner || isApprover) && (
@@ -432,20 +471,20 @@ export default function EditProjectModal({
                         className='flex items-center justify-between border rounded px-2 py-1.5'
                       >
                         <div className='flex items-center gap-2 overflow-hidden'>
-                          <LinkIcon size={12} className=' shrink-0' />
+                          <LinkIcon size={12} className='shrink-0' />
                           <span className='text-xs truncate max-w-[300px] text-blue-600 hover:underline'>
                             <a href={link} target='_blank' rel='noreferrer'>
                               {link}
                             </a>
                           </span>
                         </div>
-                        {(!isOwner || !isApprover) && (
+                        {(isOwner || isApprover) && (
                           <button
                             type='button'
                             onClick={() => handleRemoveLink(idx)}
-                            className=' hover:text-red-500 shrink-0 ml-2'
+                            className='hover:text-red-500 shrink-0 ml-2'
                           >
-                            <X size={18} className='cursor-pointer' />
+                            <X size={14} className='cursor-pointer' />
                           </button>
                         )}
                       </div>
@@ -454,13 +493,15 @@ export default function EditProjectModal({
                 ) : (
                   !isOwner &&
                   !isApprover && (
-                    <p className='text-xs  mt-1'>No attachments provided.</p>
+                    <p className='text-xs mt-1 text-muted-foreground'>
+                      No attachments provided.
+                    </p>
                   )
                 )}
               </div>
 
-              {/* Priority + Status + Type */}
-              <div className='flex items-center gap-4 flex-wrap'>
+              {/* Status Metric Parameters Matrix Grid */}
+              <div className='grid grid-cols-2 gap-3'>
                 <div>
                   <Label className='text-xs font-medium'>
                     Priority <span className='text-red-500'>*</span>
@@ -511,29 +552,27 @@ export default function EditProjectModal({
                     <p className='text-xs text-red-500 mt-1'>{errors.status}</p>
                   )}
                 </div>
-
                 <div>
                   <Label className='text-xs font-medium'>
                     Project Type <span className='text-red-500'>*</span>
                   </Label>
                   <Select
                     value={form.projectType}
-                    onValueChange={(v) => set('projectType', v as ProjectType)}
+                    onValueChange={(v) => set('projectType', v)}
                     disabled={!isOwner && !isApprover}
                   >
                     <SelectTrigger className='mt-1 h-8 text-sm'>
                       <SelectValue placeholder='Select' />
                     </SelectTrigger>
                     <SelectContent>
-                      {PROJECT_TYPES.map((s) => (
-                        <SelectItem key={s} value={s} className='text-sm'>
-                          {s}
+                      {PROJECT_TYPES.map((t) => (
+                        <SelectItem key={t} value={t} className='text-sm'>
+                          {t}
                         </SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
                 </div>
-
                 <div>
                   <Label className='text-xs font-medium'>Approver</Label>
                   <Select
@@ -545,11 +584,11 @@ export default function EditProjectModal({
                       <SelectValue placeholder='Select' />
                     </SelectTrigger>
                     <SelectContent>
-                      {users
+                      {projectUsersList
                         .filter(
                           (u) =>
-                            String(u.id) === '3899927000000201013' ||
-                            u.name === 'Anslem Prathap'
+                            u.name === 'Anslem Prathap' ||
+                            u.id === '3899927000000201013',
                         )
                         .map((u) => (
                           <SelectItem
@@ -563,15 +602,9 @@ export default function EditProjectModal({
                     </SelectContent>
                   </Select>
                 </div>
-                <div className='text-sm mt-4'>
-                  <span className='font-medium block'>
-                    {USERS_MAP[project?.created_by || ''] || 'Unknown User'}{' '}
-                    (Initiator)
-                  </span>
-                </div>
               </div>
 
-              {/* Dates */}
+              {/* Deadlines Schedule Selectors */}
               <div className='grid grid-cols-2 gap-3'>
                 <div>
                   <Label className='text-xs font-medium'>
@@ -609,74 +642,148 @@ export default function EditProjectModal({
                 </div>
               </div>
 
-              {/* Team */}
+              {/* Assignment Distribution Map List Selection Block */}
               <div>
                 <Label className='text-xs font-medium'>Team Members</Label>
                 <div
-                  className={`mt-1 border rounded-md overflow-hidden divide-y max-h-40 overflow-y-auto ${!isOwner && !isApprover ? 'opacity-70 pointer-events-none' : ''}`}
+                  className={`mt-1 border rounded-md overflow-hidden divide-y max-h-32 overflow-y-auto ${!isOwner && !isApprover ? 'opacity-70 pointer-events-none' : ''}`}
                 >
-                  {users.map((user: { id: string; name: string }) => {
+                  {projectUsersList.map((uItem) => {
                     const selected = form.assignees.some(
-                      (u) => u.id === user.id
+                      (u) => u.id === uItem.id,
                     )
                     return (
                       <div
-                        key={user.id}
-                        onClick={() => toggleAssignee(user)}
-                        className={`flex items-center gap-2.5 px-3 py-2 cursor-pointer select-none transition-colors ${selected ? 'bg-accent' : 'hover:bg-accent'}`}
+                        key={uItem.id}
+                        onClick={() => toggleAssignee(uItem)}
+                        className={`flex items-center gap-2.5 px-3 py-1.5 cursor-pointer text-sm hover:bg-muted ${selected ? 'bg-accent' : ''}`}
                       >
                         <div
-                          className={`w-4 h-4 rounded border flex items-center justify-center shrink-0 transition-colors ${selected ? 'bg-zinc-900' : 'border-zinc-300'}`}
+                          className={`w-3.5 h-3.5 rounded border flex items-center justify-center shrink-0 ${selected ? 'bg-zinc-900 border-zinc-900 text-white' : 'border-zinc-300'}`}
                         >
                           {selected && (
                             <svg
-                              className='w-2.5 h-2.5'
+                              className='w-2 h-2'
                               fill='none'
                               viewBox='0 0 10 10'
                             >
                               <path
                                 d='M1.5 5l2.5 2.5 4.5-4.5'
                                 stroke='currentColor'
-                                strokeWidth='1.5'
+                                strokeWidth='2'
                                 strokeLinecap='round'
                                 strokeLinejoin='round'
                               />
                             </svg>
                           )}
                         </div>
-                        <div className='w-6 h-6 rounded-full bg-zinc-200 text-zinc-600 flex items-center justify-center text-xs font-semibold shrink-0'>
-                          {user.name[0]}
+                        <div className='w-5 h-5 rounded-full bg-zinc-200 text-zinc-600 flex items-center justify-center text-[10px] font-semibold'>
+                          {uItem.name[0]}
                         </div>
-                        <div className='min-w-0'>
-                          <p className='text-sm leading-none '>{user.name}</p>
-                        </div>
+                        <span className='truncate text-xs'>{uItem.name}</span>
                       </div>
                     )
                   })}
                 </div>
-                {form.assignees.length > 0 && (
-                  <div className='flex flex-wrap gap-1 mt-2'>
-                    {form.assignees.map((u) => (
-                      <Badge
-                        key={u.id}
-                        variant='secondary'
-                        className='text-xs gap-1 pl-2 pr-1'
+              </div>
+
+              {/* PROJECT NOTES CHAT TIMELINE BOARD ELEMENT */}
+              {/* COMMENTS UI COMPONENT */}
+              <div className='border-t pt-4 space-y-3'>
+                <div className='flex items-center gap-2 text-xs font-semibold text-zinc-700'>
+                  <MessageSquare size={14} />
+                  <span>Project Discussion Board</span>
+                </div>
+
+                {/* 1. Project-Specific Discussion Thread */}
+                <Label className='text-[11px] font-medium text-zinc-500 uppercase tracking-wider block mt-2'>
+                  Project Notes
+                </Label>
+                <div className='space-y-2 max-h-32 overflow-y-auto border rounded-md p-2 bg-zinc-50/50'>
+                  {(commentsData?.project_comments ?? []).length === 0 ? (
+                    <p className='text-xs text-muted-foreground text-center py-2'>
+                      No project-level discussions yet.
+                    </p>
+                  ) : (
+                    commentsData.project_comments.map((c: any) => (
+                      <div
+                        key={`p-comm-${c.id}`}
+                        className='text-xs border-b last:border-none pb-1.5 mb-1.5 last:pb-0 last:mb-0'
                       >
-                        {USERS_MAP[u.id]}
-                        {(isOwner || isApprover) && (
-                          <button
-                            onClick={() =>
-                              toggleAssignee({ id: u.id, name: u.name })
-                            }
-                            className='hover:text-red-500 transition-colors ml-0.5'
-                          >
-                            <X size={10} />
-                          </button>
-                        )}
-                      </Badge>
-                    ))}
-                  </div>
-                )}
+                        <div className='flex justify-between items-center text-[10px] text-muted-foreground mb-0.5'>
+                          <span className='font-semibold text-zinc-800'>
+                            {c.user_name || 'System User'}
+                          </span>
+                          <span>{c.created_at}</span>
+                        </div>
+                        <p className='text-zinc-600 leading-relaxed'>
+                          {c.content}
+                        </p>
+                      </div>
+                    ))
+                  )}
+                </div>
+
+                {/* 2. Sub-Task Cascading Contextual Feed Timeline */}
+                <Label className='text-[11px] font-medium text-zinc-500 uppercase tracking-wider block mt-2'>
+                  Activity on Sub-Tasks
+                </Label>
+                <div className='space-y-2 max-h-32 overflow-y-auto border rounded-md p-2 bg-zinc-50/50'>
+                  {(commentsData?.cascading_task_comments ?? []).length ===
+                  0 ? (
+                    <p className='text-xs text-muted-foreground text-center py-2'>
+                      No activity recorded on tasks yet.
+                    </p>
+                  ) : (
+                    commentsData.cascading_task_comments.map((c: any) => (
+                      <div
+                        key={`t-comm-${c.id}`}
+                        className='text-xs border-b last:border-none pb-1.5 mb-1.5 last:pb-0 last:mb-0'
+                      >
+                        <div className='flex justify-between items-center text-[10px] text-muted-foreground mb-0.5'>
+                          <span className='font-semibold text-zinc-800'>
+                            {c.user_name || 'System User'}{' '}
+                            <Badge
+                              variant='outline'
+                              className='text-[9px] px-1 py-0 ml-1 bg-zinc-100 text-zinc-600'
+                            >
+                              Task #{c.task_id}
+                            </Badge>
+                          </span>
+                          <span>{c.created_at}</span>
+                        </div>
+                        <p className='text-zinc-600 leading-relaxed'>
+                          {c.content}
+                        </p>
+                      </div>
+                    ))
+                  )}
+                </div>
+
+                {/* Message Write Action Input Controls Area */}
+                <div className='flex gap-2 items-center mt-2'>
+                  <Input
+                    className='h-8 text-xs flex-1'
+                    placeholder='Type a project comment...'
+                    value={newComment}
+                    onChange={(e) => setNewComment(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') {
+                        e.preventDefault()
+                        handleSendComment()
+                      }
+                    }}
+                  />
+                  <Button
+                    type='button'
+                    size='sm'
+                    className='h-8 w-8 p-0 shrink-0'
+                    onClick={handleSendComment}
+                    disabled={!newComment.trim() || commentMutation.isPending}
+                  >
+                    <Send size={12} />
+                  </Button>
+                </div>
               </div>
             </div>
           )}
@@ -684,25 +791,25 @@ export default function EditProjectModal({
           {/* --- HISTORY TAB --- */}
           {activeTab === 'history' && (
             <div className='space-y-4'>
-              {logsLoading && <p className='text-xs '>Loading history...</p>}
-
+              {logsLoading && <p className='text-xs'>Loading history...</p>}
               {!logsLoading && (logsData?.data ?? []).length === 0 && (
-                <p className='text-xs '>No activity recorded yet.</p>
+                <p className='text-xs'>No activity recorded yet.</p>
               )}
-
               {!logsLoading &&
                 Array.isArray(logsData?.data) &&
                 logsData.data.map((log: any) => (
-                  <div key={log.id} className='flex gap-3 text-xs'>
-                    <div className='w-2 h-2 rounded-full mt-1 shrink-0'></div>
-                    <div className='flex-1 pb-3 border-b last:border-0'>
-                      <div className='mb-0.5'>
-                        <span className='font-medium '>
+                  <div
+                    key={log.id}
+                    className='flex gap-3 text-xs border-b pb-2 last:border-none'
+                  >
+                    <div className='flex-1'>
+                      <div className='mb-0.5 text-muted-foreground'>
+                        <span className='font-semibold text-zinc-800'>
                           {USERS_MAP[String(log.user_id)] || 'Unknown User'}
-                        </span>{' '}
+                        </span>
                       </div>
                       {renderLogDetails(log)}
-                      <div className='text-[10px]  mt-1.5'>
+                      <div className='text-[10px] text-muted-foreground mt-1'>
                         {new Date(log.created_at).toLocaleString()}
                       </div>
                     </div>
@@ -712,7 +819,7 @@ export default function EditProjectModal({
           )}
         </div>
 
-        <DialogFooter className='gap-2 mt-2 pt-2 border-t'>
+        <DialogFooter className='gap-2 mt-2 pt-2 border-t shrink-0'>
           <Button variant='outline' size='sm' onClick={onClose}>
             Cancel
           </Button>
