@@ -284,7 +284,7 @@ function mapFormToApi(
   if (dirtyFields.sourceType) payload.source_type = formData.sourceType
   if (dirtyFields.sourceOther) payload.source_other = formData.sourceOther
   if (dirtyFields.accountOwnerId)
-    payload.account_owner_id = parseInt(formData.accountOwnerId) || null
+    payload.account_owner_id = formData.accountOwnerId
   if (dirtyFields.distributorCode)
     payload.distributor_code = formData.distributorCode
   if (dirtyFields.wabaInterested)
