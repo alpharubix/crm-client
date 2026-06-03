@@ -1,13 +1,16 @@
-import { z } from 'zod';
+import { z } from 'zod'
 
 export const updateTicketSchema = z.object({
-  lenderName: z.string().optional(),
-  typeOfLoan: z.string().optional(),
-  ticketStatus: z.string().optional(),
-  ticketStage: z.string().optional(),
-  lenderLoginType: z.string().optional(),
-  lenderLoginDate: z.string().optional(),
-  ticketLogin: z.string().optional(),
+  // Required fields (NOT NULL / critical business fields)
+  lenderName: z.string().min(1, 'Lender name is required'),
+  loanType: z.string().min(1, 'Type of loan is required'),
+  ticketStatus: z.string().min(1, 'Ticket status is required'),
+  ticketStage: z.string().min(1, 'Ticket stage is required'),
+  lenderLoginType: z.string().min(1, 'Lender login type is required'),
+  lenderLoginDate: z.string().min(1, 'Lender login date is required'),
+  ticketLogin: z.string().min(1, 'Ticket login is required'),
+
+  // Optional fields
   potential: z.string().optional(),
   approvedAmount: z.string().optional(),
   sanctionAmount: z.string().optional(),
@@ -26,6 +29,6 @@ export const updateTicketSchema = z.object({
   lenderRejectionReason: z.string().optional(),
   lenderRejectionStatusExplanation: z.string().optional(),
   partnerCode: z.string().optional(),
-});
+})
 
-export type UpdateTicketFormValues = z.infer<typeof updateTicketSchema>;
+export type UpdateTicketFormValues = z.infer<typeof updateTicketSchema>

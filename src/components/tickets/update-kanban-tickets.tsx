@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
-import { useForm } from 'react-hook-form'
+import { useForm, type SubmitHandler } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useBeforeUnload, useParams, useNavigate } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
@@ -23,14 +23,9 @@ import {
   DialogTrigger,
 } from '@/components/ui/dialog'
 import { ENV } from '@/conf'
-import type { Deal } from '@/types'
 import users from '@/utils/users.json'
 import LENDER_NAMES from '@/utils/lenders.json'
 
-import {
-  updateDealSchema,
-  type UpdateDealFormValues,
-} from '@/validators/updateDeal.schema'
 import { formatExactDate } from '@/utils/date-formatter'
 import { formatAmount } from '@/utils/number-formatter'
 import { format } from 'date-fns'
@@ -43,7 +38,7 @@ import {
 function mapTicketToForm(apiData: any): UpdateTicketFormValues {
   return {
     lenderName: apiData.lender_name || '',
-    typeOfLoan: apiData.type_of_loan || '',
+    loanType: apiData.type_of_loan || '',
     ticketStatus: apiData.ticket_status || '',
     ticketStage: apiData.ticket_stage || '',
     lenderLoginType: apiData.lender_login_type || '',
@@ -85,117 +80,124 @@ function mapTicketToForm(apiData: any): UpdateTicketFormValues {
 
 function mapFormToApi(
   formData: UpdateTicketFormValues,
-  dirtyFields: Partial<Record<keyof UpdateDealFormValues, boolean>>,
+  dirtyFields: Partial<Record<keyof UpdateTicketFormValues, boolean>>,
 ): any {
-  const allFields = {
-    account_id: {
-      value: formData.accountId ? String(formData.accountId) : null,
-      key: 'accountId',
-    },
-    account_name: { value: formData.accountName, key: 'accountName' },
-    ticket_id: {
-      value: formData.ticketId ? String(formData.ticketId) : null,
-      key: 'ticketId',
-    },
-    ticket_number: {
-      value: formData.ticketNumber ? String(formData.ticketNumber) : null,
-      key: 'ticketNumber',
-    },
-    ticket_stage: { value: formData.caseStage, key: 'caseStage' },
-    ticket_status: { value: formData.caseStatus, key: 'caseStatus' },
-    deal_type: { value: formData.dealType, key: 'dealType' },
-    loan_type: { value: formData.loanType, key: 'loanType' },
-    type_of_login: { value: formData.typeOfLogin, key: 'typeOfLogin' },
-    type_of_case_login: {
-      value: formData.typeOfCaseLogin,
-      key: 'typeOfCaseLogin',
-    },
-    ticket_login: { value: formData.ticketLogin, key: 'ticketLogin' },
+  // Only ticket table columns — keyed exactly as the API expects
+  const allFields: Record<
+    string,
+    { value: any; key: keyof UpdateTicketFormValues }
+  > = {
+    lender_name: { value: formData.lenderName, key: 'lenderName' },
     type_of_loan: { value: formData.loanType, key: 'loanType' },
-    disbursed_amount: {
-      value: formData.disbursedAmount,
-      key: 'disbursedAmount',
-    },
-    partner_code: { value: formData.partnerCode, key: 'partnerCode' }, // Remove parseInt
-    sanction_amount: { value: formData.sanctionAmount, key: 'sanctionAmount' },
+    ticket_status: { value: formData.ticketStatus, key: 'ticketStatus' },
+    ticket_stage: { value: formData.ticketStage, key: 'ticketStage' },
     lender_login_type: {
       value: formData.lenderLoginType,
       key: 'lenderLoginType',
     },
-    approved_amount: { value: formData.approvedAmount, key: 'approvedAmount' },
-    amount_required: { value: formData.amountRequired, key: 'amountRequired' },
-    processing_fees: { value: formData.processingFees, key: 'processingFees' },
-    mm_charges: { value: formData.mmCharges, key: 'mmCharges' },
-    insurance_amount: {
-      value: formData.insuranceAmount,
-      key: 'insuranceAmount',
-    },
-    pf_percentage: {
-      value: formData.pfPercentage ? parseFloat(formData.pfPercentage) : null,
-      key: 'pfPercentage',
-    },
-    rate_of_interest: {
-      value: formData.rateOfInterest
-        ? parseFloat(formData.rateOfInterest)
-        : null,
-      key: 'rateOfInterest',
-    },
-    interest_type: { value: formData.interestType, key: 'interestType' },
-    deal_call_back_datetime: {
-      value: formData.dealCallBackDatetime,
-      key: 'dealCallBackDatetime',
-    },
-    disbursement_date: {
-      value: formData.disbursementDate,
-      key: 'disbursementDate',
-    },
     lender_login_date: {
-      value: formData.lenderLoginDate,
+      value: formData.lenderLoginDate || null,
       key: 'lenderLoginDate',
     },
-    loan_start_date: { value: formData.loanStartDate, key: 'loanStartDate' },
-    loan_end_date: { value: formData.loanEndDate, key: 'loanEndDate' },
-    targeted_disbursement_date: {
-      value: formData.targetedDisbursementDate,
-      key: 'targetedDisbursementDate',
-    },
-    tenure: {
-      value: formData.tenure ? String(formData.tenure) : null,
-      key: 'tenure',
-    },
-    lender_code: { value: formData.lenderCode, key: 'lenderCode' },
-    lender_name: { value: formData.lenderName, key: 'lenderName' },
-    customer_rejection_reason: {
-      value: formData.customerRejectionReason,
-      key: 'customerRejectionReason',
-    },
-    customer_rejection_status_explanation: {
-      value: formData.customerRejectionStatusExplanation,
-      key: 'customerRejectionStatusExplanation',
-    },
-    lender_rejection_reason: {
-      value: formData.lenderRejectionReason,
-      key: 'lenderRejectionReason',
-    },
-    lender_rejection_status_explanation: {
-      value: formData.lenderRejectionStatusExplanation,
-      key: 'lenderRejectionStatusExplanation',
-    },
-    payment_receipt: { value: formData.paymentReceipt, key: 'paymentReceipt' },
+    ticket_login: { value: formData.ticketLogin, key: 'ticketLogin' },
     potential: {
       value:
         formData.potential && formData.potential !== ''
-          ? parseFloat(String(formData.potential))
+          ? parseFloat(formData.potential)
           : null,
       key: 'potential',
     },
-    product: { value: formData.product, key: 'product' },
+    approved_amount: {
+      value:
+        formData.approvedAmount && formData.approvedAmount !== ''
+          ? parseFloat(formData.approvedAmount)
+          : null,
+      key: 'approvedAmount',
+    },
+    sanction_amount: {
+      value:
+        formData.sanctionAmount && formData.sanctionAmount !== ''
+          ? parseFloat(formData.sanctionAmount)
+          : null,
+      key: 'sanctionAmount',
+    },
+    disbursed_amount: {
+      value:
+        formData.disbursedAmount && formData.disbursedAmount !== ''
+          ? parseFloat(formData.disbursedAmount)
+          : null,
+      key: 'disbursedAmount',
+    },
+    processing_fees: {
+      value:
+        formData.processingFees && formData.processingFees !== ''
+          ? parseFloat(formData.processingFees)
+          : null,
+      key: 'processingFees',
+    },
+    pf_percentage: {
+      value:
+        formData.pfPercentage && formData.pfPercentage !== ''
+          ? parseFloat(formData.pfPercentage)
+          : null,
+      key: 'pfPercentage',
+    },
+    insurance_amount: {
+      value:
+        formData.insuranceAmount && formData.insuranceAmount !== ''
+          ? parseFloat(formData.insuranceAmount)
+          : null,
+      key: 'insuranceAmount',
+    },
+    rate_of_interest: {
+      value:
+        formData.rateOfInterest && formData.rateOfInterest !== ''
+          ? parseFloat(formData.rateOfInterest)
+          : null,
+      key: 'rateOfInterest',
+    },
+    interest_type: {
+      value: formData.interestType || null,
+      key: 'interestType',
+    },
+    tenure: {
+      value:
+        formData.tenure && formData.tenure !== ''
+          ? parseInt(formData.tenure, 10)
+          : null,
+      key: 'tenure',
+    },
+    loan_start_date: {
+      value: formData.loanStartDate || null,
+      key: 'loanStartDate',
+    },
+    loan_end_date: { value: formData.loanEndDate || null, key: 'loanEndDate' },
+    targeted_disbursement_date: {
+      value: formData.targetedDisbursementDate || null,
+      key: 'targetedDisbursementDate',
+    },
+    disbursement_date: {
+      value: formData.disbursementDate || null,
+      key: 'disbursementDate',
+    },
+    loan_account_status: {
+      value: formData.loanAccountStatus || null,
+      key: 'loanAccountStatus',
+    },
+    lender_rejection_reason: {
+      value: formData.lenderRejectionReason || null,
+      key: 'lenderRejectionReason',
+    },
+    lender_rejection_status_explanation: {
+      value: formData.lenderRejectionStatusExplanation || null,
+      key: 'lenderRejectionStatusExplanation',
+    },
+    partner_code: { value: formData.partnerCode || null, key: 'partnerCode' },
   }
 
   const payload: any = {}
 
   Object.entries(allFields).forEach(([apiKey, { value, key }]) => {
-    // @ts-ignore
     if (dirtyFields[key]) {
       payload[apiKey] = value
     }
@@ -229,10 +231,6 @@ export default function UpdateDeals() {
     formState: { errors, isDirty, dirtyFields },
   } = useForm<UpdateTicketFormValues>({
     resolver: zodResolver(updateTicketSchema),
-    defaultValues: {
-      createdBy: 'System Driven Field (User)',
-      modifiedBy: 'System Driven Field (User)',
-    },
   })
   const [lenderSearch, setLenderSearch] = useState('')
   const [lenderOpen, setLenderOpen] = useState(false)
@@ -317,7 +315,10 @@ export default function UpdateDeals() {
 
   const formValues = watch()
 
-  const onSave = (values: UpdateTicketFormValues) => {
+  const onSave: SubmitHandler<UpdateTicketFormValues> = (values) => {
+    const payload = mapFormToApi(values, dirtyFields)
+    console.log('[Ticket Save] dirtyFields:', dirtyFields)
+    console.log('[Ticket Save] payload:', payload)
     updateMutation.mutate(values)
   }
 
@@ -447,7 +448,10 @@ export default function UpdateDeals() {
         <SectionHeader title='Loan Account Status' />
         <CardContent className='p-0 grid grid-cols-1 md:grid-cols-2 border-b'>
           <div className='md:border-r'>
-            <FieldRow label='Ticket Login' error={errors.ticketLogin?.message}>
+            <FieldRow
+              label='Ticket Login *'
+              error={errors.ticketLogin?.message}
+            >
               <SelectField
                 isEdit={isEdit}
                 options={['Approved', 'Disapproved']}
@@ -474,7 +478,7 @@ export default function UpdateDeals() {
               )}
             </FieldRow>
             <FieldRow
-              label='Lender Login Date'
+              label='Lender Login Date *'
               error={errors.lenderLoginDate?.message}
             >
               {isEdit ? (
@@ -574,7 +578,7 @@ export default function UpdateDeals() {
             </FieldRow>
           </div>
           <div>
-            <FieldRow label='Lender Name' error={errors.lenderName?.message}>
+            <FieldRow label='Lender Name *' error={errors.lenderName?.message}>
               <div className='relative'>
                 {/* Input must be present */}
                 <Input
@@ -612,7 +616,7 @@ export default function UpdateDeals() {
               </div>
             </FieldRow>
             <FieldRow
-              label='Lender Login Type'
+              label='Lender Login Type *'
               error={errors.lenderLoginType?.message}
             >
               <SelectField
@@ -641,7 +645,7 @@ export default function UpdateDeals() {
                 <span>{formValues.partnerCode || '—'}</span>
               )}
             </FieldRow>
-            <FieldRow label='Type of Loan' error={errors.loanType?.message}>
+            <FieldRow label='Type of Loan *' error={errors.loanType?.message}>
               <SelectField
                 isEdit={isEdit}
                 options={[
@@ -666,11 +670,15 @@ export default function UpdateDeals() {
                   setValue('loanType', value, {
                     shouldValidate: true,
                     shouldDirty: true,
+                    shouldTouch: true,
                   })
                 }
               />
             </FieldRow>
-            <FieldRow label='Ticket Status' error={errors.loanType?.message}>
+            <FieldRow
+              label='Ticket Status *'
+              error={errors.ticketStatus?.message}
+            >
               <SelectField
                 isEdit={isEdit}
                 options={[
@@ -691,7 +699,10 @@ export default function UpdateDeals() {
                 }
               />
             </FieldRow>
-            <FieldRow label='Ticket Stage' error={errors.loanType?.message}>
+            <FieldRow
+              label='Ticket Stage *'
+              error={errors.ticketStage?.message}
+            >
               <SelectField
                 isEdit={isEdit}
                 options={[
