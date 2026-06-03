@@ -747,7 +747,7 @@ export default function UpdateDeals() {
                   : 'No change recorded'}
               </span>
             </FieldRow>
-            <FieldRow label='Expected Closing Date'>
+            <FieldRow label='Expected Closing Date *' error={errors.dealExpectedClosing?.message}>
               <DateField
                 isEdit={isEdit}
                 showTime={false}

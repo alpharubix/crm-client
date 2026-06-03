@@ -41,7 +41,7 @@ export const updateDealSchema = z.object({
   customerRejectionStatusExplanation: z.string().optional(),
   lenderRejectionReason: z.string().optional(),
   lenderRejectionStatusExplanation: z.string().optional(),
-  dealExpectedClosing: z.string().optional(),
+  dealExpectedClosing: z.string().min(1, 'Expected closing date is required'),
   dealStatusClosing: z.string().optional(),
 
   paymentReceipt: z.string().optional(),
