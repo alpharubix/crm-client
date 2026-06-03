@@ -35,90 +35,56 @@ import { formatExactDate } from '@/utils/date-formatter'
 import { formatAmount } from '@/utils/number-formatter'
 import { format } from 'date-fns'
 import { useAuth } from '@/context/auth-context'
+import {
+  updateTicketSchema,
+  type UpdateTicketFormValues,
+} from '@/validators/updateTicket.schema'
 
-function mapDealToForm(apiData: any): UpdateDealFormValues {
+function mapTicketToForm(apiData: any): UpdateTicketFormValues {
   return {
-    accountId: apiData.account_id ? String(apiData.account_id) : '',
-    accountName: apiData.account_name || '',
-    ticketId: apiData.ticket_id ? String(apiData.ticket_id) : '',
-    ticketNumber: apiData.ticket_number ? String(apiData.ticket_number) : '',
-    dealType: apiData.deal_type || '',
-    loanType: apiData.type_of_loan || '',
-    typeOfLogin: apiData.type_of_login || '',
-    typeOfCaseLogin: apiData.type_of_case_login || '',
-    ticketLogin: apiData.ticket_login || '',
-    caseStage: apiData.ticket_stage || '',
-    caseStatus: apiData.ticket_status || '',
-    disbursedAmount:
-      apiData.disbursed_amount !== null &&
-      apiData.disbursed_amount !== undefined
-        ? String(apiData.disbursed_amount)
-        : '',
-    sanctionAmount:
-      apiData.sanction_amount !== null && apiData.sanction_amount !== undefined
-        ? String(apiData.sanction_amount)
-        : '',
-    approvedAmount:
-      apiData.approved_amount !== null && apiData.approved_amount !== undefined
-        ? String(apiData.approved_amount)
-        : '',
-    amountRequired:
-      apiData.amount_required !== null && apiData.amount_required !== undefined
-        ? String(apiData.amount_required)
-        : '',
-    processingFees:
-      apiData.processing_fees !== null && apiData.processing_fees !== undefined
-        ? String(apiData.processing_fees)
-        : '',
-    mmCharges:
-      apiData.mm_charges !== null && apiData.mm_charges !== undefined
-        ? String(apiData.mm_charges)
-        : '',
-    insuranceAmount:
-      apiData.insurance_amount !== null &&
-      apiData.insurance_amount !== undefined
-        ? String(apiData.insurance_amount)
-        : '',
-    pfPercentage:
-      apiData.pf_percentage !== null && apiData.pf_percentage !== undefined
-        ? String(apiData.pf_percentage)
-        : '',
-    rateOfInterest:
-      apiData.rate_of_interest !== null &&
-      apiData.rate_of_interest !== undefined
-        ? String(apiData.rate_of_interest)
-        : '',
-    interestType: apiData.interest_type || '',
-    dealCallBackDatetime: apiData.deal_call_back_datetime || '',
+    lenderName: apiData.lender_name || '',
+    typeOfLoan: apiData.type_of_loan || '',
+    ticketStatus: apiData.ticket_status || '',
+    ticketStage: apiData.ticket_stage || '',
     lenderLoginType: apiData.lender_login_type || '',
-    disbursementDate: apiData.disbursement_date || '',
     lenderLoginDate: apiData.lender_login_date || '',
+    ticketLogin: apiData.ticket_login || '',
+    potential: apiData.potential ? String(apiData.potential) : '',
+    approvedAmount: apiData.approved_amount
+      ? String(apiData.approved_amount)
+      : '',
+    sanctionAmount: apiData.sanction_amount
+      ? String(apiData.sanction_amount)
+      : '',
+    disbursedAmount: apiData.disbursed_amount
+      ? String(apiData.disbursed_amount)
+      : '',
+    processingFees: apiData.processing_fees
+      ? String(apiData.processing_fees)
+      : '',
+    pfPercentage: apiData.pf_percentage ? String(apiData.pf_percentage) : '',
+    insuranceAmount: apiData.insurance_amount
+      ? String(apiData.insurance_amount)
+      : '',
+    rateOfInterest: apiData.rate_of_interest
+      ? String(apiData.rate_of_interest)
+      : '',
+    interestType: apiData.interest_type || '',
+    tenure: apiData.tenure ? String(apiData.tenure) : '',
     loanStartDate: apiData.loan_start_date || '',
     loanEndDate: apiData.loan_end_date || '',
     targetedDisbursementDate: apiData.targeted_disbursement_date || '',
-    tenure:
-      apiData.tenure !== null && apiData.tenure !== undefined
-        ? String(apiData.tenure)
-        : '',
-    lenderCode: apiData.lender_code || '',
-    lenderName: apiData.lender_name || '',
-    customerRejectionReason: apiData.customer_rejection_reason || '',
-    customerRejectionStatusExplanation:
-      apiData.customer_rejection_status_explanation || '',
+    disbursementDate: apiData.disbursement_date || '',
+    loanAccountStatus: apiData.loan_account_status || '',
     lenderRejectionReason: apiData.lender_rejection_reason || '',
     lenderRejectionStatusExplanation:
       apiData.lender_rejection_status_explanation || '',
-    paymentReceipt: apiData.payment_receipt || '',
-    potential: apiData.potential || '',
-    product: apiData.product || '',
     partnerCode: apiData.partner_code || '',
-    createdBy: apiData.created_by || 'System Driven Field (User)',
-    modifiedBy: apiData.modified_by || 'System Driven Field (User)',
   }
 }
 
 function mapFormToApi(
-  formData: UpdateDealFormValues,
+  formData: UpdateTicketFormValues,
   dirtyFields: Partial<Record<keyof UpdateDealFormValues, boolean>>,
 ): any {
   const allFields = {
@@ -261,8 +227,8 @@ export default function UpdateDeals() {
     setValue,
     reset,
     formState: { errors, isDirty, dirtyFields },
-  } = useForm<UpdateDealFormValues>({
-    resolver: zodResolver(updateDealSchema),
+  } = useForm<UpdateTicketFormValues>({
+    resolver: zodResolver(updateTicketSchema),
     defaultValues: {
       createdBy: 'System Driven Field (User)',
       modifiedBy: 'System Driven Field (User)',
@@ -318,13 +284,13 @@ export default function UpdateDeals() {
 
   useEffect(() => {
     if (dealData) {
-      reset(mapDealToForm(dealData))
+      reset(mapTicketToForm(dealData))
       setLenderSearch(dealData.lender_name || '')
     }
   }, [dealData, reset])
 
   const updateMutation = useMutation({
-    mutationFn: async (values: UpdateDealFormValues) => {
+    mutationFn: async (values: UpdateTicketFormValues) => {
       const payload = mapFormToApi(values, dirtyFields)
       const res = await fetch(`${ENV.VITE_BACKEND_BASE_URL}/tickets/${id}`, {
         method: 'PUT',
@@ -351,7 +317,7 @@ export default function UpdateDeals() {
 
   const formValues = watch()
 
-  const onSave = (values: UpdateDealFormValues) => {
+  const onSave = (values: UpdateTicketFormValues) => {
     updateMutation.mutate(values)
   }
 
@@ -440,7 +406,9 @@ export default function UpdateDeals() {
                 size='sm'
                 className='cursor-pointer'
                 disabled={!isDirty || updateMutation.isPending}
-                onClick={handleSubmit(onSave)}
+                onClick={handleSubmit(onSave, (errors) =>
+                  console.log('VALIDATION ERRORS:', errors),
+                )}
               >
                 {updateMutation.isPending ? (
                   <Spinner className='mr-2 h-4 w-4' />
@@ -714,9 +682,9 @@ export default function UpdateDeals() {
                   'Rejected',
                   'Not Interested',
                 ]}
-                value={formValues.caseStatus as string}
+                value={formValues.ticketStatus as string}
                 onChange={(value) =>
-                  setValue('caseStatus', value, {
+                  setValue('ticketStatus', value, {
                     shouldValidate: true,
                     shouldDirty: true,
                   })
@@ -749,9 +717,9 @@ export default function UpdateDeals() {
                   'Rejected',
                   'Not Interested',
                 ]}
-                value={formValues.caseStage as string}
+                value={formValues.ticketStage as string}
                 onChange={(value) =>
-                  setValue('caseStage', value, {
+                  setValue('ticketStage', value, {
                     shouldValidate: true,
                     shouldDirty: true,
                   })
