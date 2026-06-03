@@ -19,7 +19,6 @@ export const createDealSchema = z.object({
   approvedAmount: z.string().optional(),
   amountRequired: z.string().min(1, 'Amount is required'),
   processingFees: z.string().optional(),
-  dealExpectedClosing: z.string().optional(),
   dealStatusClosing: z.string().optional(),
   mmCharges: z.string().optional(),
   insuranceAmount: z.string().optional(),
@@ -28,6 +27,7 @@ export const createDealSchema = z.object({
   interestType: z.string().optional(),
 
   dealCallBackDatetime: z.string().optional(),
+  dealExpectedClosing: z.string().min(1, 'Expected closing date is required'),
   disbursementDate: z.string().optional(),
   lenderLoginDate: z.string().optional(),
   lenderLoginType: z.string().min(1, 'Lender login type is required'),
