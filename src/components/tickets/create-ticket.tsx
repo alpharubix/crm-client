@@ -162,13 +162,9 @@ export default function CreateTicket() {
   const accountName = dealData?.account_name || '—'
   const dealName = dealData?.deal_name || dealData?.account_name || '—'
 
-  // Sync initial account name from deal details when they load
-  useEffect(() => {
-    if (dealData?.account_name && !accountSearch) {
-      setAccountSearch(dealData.account_name)
-      setSelectedAccountId(String(dealData.account_id || ''))
-    }
-  }, [dealData])
+  // Note: Account on a ticket is separate from the deal's account.
+  // We intentionally do NOT pre-fill the account search from dealData —
+  // the user should select the ticket-specific account themselves.
 
   const createMutation = useMutation({
     mutationFn: async (values: CreateTicketFormValues) => {
