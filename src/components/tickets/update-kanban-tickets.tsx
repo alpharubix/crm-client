@@ -452,7 +452,9 @@ export default function UpdateKanbanTicket() {
           <h1 className='text-lg font-semibold'>
             Deal Owner Name:{' '}
             <span className='text-primary font-bold'>
-              {(users as Record<string, string>)[dealData.created_by] || 'NA'}
+              {/* {(users as Record<string, string>)[dealDetails.owner.full_name] ||
+                'NA'} */}
+              {dealDetails?.owner?.full_name}
             </span>
           </h1>
           <h1 className='text-lg font-semibold'>
