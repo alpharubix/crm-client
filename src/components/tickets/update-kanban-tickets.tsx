@@ -35,6 +35,15 @@ import {
   type UpdateTicketFormValues,
 } from '@/validators/updateTicket.schema'
 
+// Safely extract lender_rejection_reason regardless of whether DB returns
+// a string or a JSON object (e.g. { reason: "OGL" })
+function parseLenderRejectionReason(value: any): string {
+  if (!value) return ''
+  if (typeof value === 'string') return value
+  if (typeof value === 'object' && value.reason) return String(value.reason)
+  return ''
+}
+
 function mapTicketToForm(apiData: any): UpdateTicketFormValues {
   return {
     lenderName: apiData.lender_name || '',
@@ -45,6 +54,7 @@ function mapTicketToForm(apiData: any): UpdateTicketFormValues {
     lenderLoginDate: apiData.lender_login_date || '',
     ticketLogin: apiData.ticket_login || '',
     potential: apiData.potential ? String(apiData.potential) : '',
+
     approvedAmount: apiData.approved_amount
       ? String(apiData.approved_amount)
       : '',
@@ -71,10 +81,15 @@ function mapTicketToForm(apiData: any): UpdateTicketFormValues {
     targetedDisbursementDate: apiData.targeted_disbursement_date || '',
     disbursementDate: apiData.disbursement_date || '',
     loanAccountStatus: apiData.loan_account_status || '',
-    lenderRejectionReason: apiData.lender_rejection_reason || '',
+    lenderRejectionReason: parseLenderRejectionReason(
+      apiData.lender_rejection_reason,
+    ),
     lenderRejectionStatusExplanation:
       apiData.lender_rejection_status_explanation || '',
     partnerCode: apiData.partner_code || '',
+    customerRejectionReason: apiData.customer_rejection_reason || '',
+    customerRejectionStatusExplanation:
+      apiData.customer_rejection_status_explanation || '',
   }
 }
 
@@ -82,7 +97,8 @@ function mapFormToApi(
   formData: UpdateTicketFormValues,
   dirtyFields: Partial<Record<keyof UpdateTicketFormValues, boolean>>,
 ): any {
-  // Only ticket table columns — keyed exactly as the API expects
+  const numOrNull = (v?: string) => (v && v !== '' ? parseFloat(v) : null)
+
   const allFields: Record<
     string,
     { value: any; key: keyof UpdateTicketFormValues }
@@ -100,60 +116,33 @@ function mapFormToApi(
       key: 'lenderLoginDate',
     },
     ticket_login: { value: formData.ticketLogin, key: 'ticketLogin' },
-    potential: {
-      value:
-        formData.potential && formData.potential !== ''
-          ? parseFloat(formData.potential)
-          : null,
-      key: 'potential',
-    },
+    potential: { value: numOrNull(formData.potential), key: 'potential' },
     approved_amount: {
-      value:
-        formData.approvedAmount && formData.approvedAmount !== ''
-          ? parseFloat(formData.approvedAmount)
-          : null,
+      value: numOrNull(formData.approvedAmount),
       key: 'approvedAmount',
     },
     sanction_amount: {
-      value:
-        formData.sanctionAmount && formData.sanctionAmount !== ''
-          ? parseFloat(formData.sanctionAmount)
-          : null,
+      value: numOrNull(formData.sanctionAmount),
       key: 'sanctionAmount',
     },
     disbursed_amount: {
-      value:
-        formData.disbursedAmount && formData.disbursedAmount !== ''
-          ? parseFloat(formData.disbursedAmount)
-          : null,
+      value: numOrNull(formData.disbursedAmount),
       key: 'disbursedAmount',
     },
     processing_fees: {
-      value:
-        formData.processingFees && formData.processingFees !== ''
-          ? parseFloat(formData.processingFees)
-          : null,
+      value: numOrNull(formData.processingFees),
       key: 'processingFees',
     },
     pf_percentage: {
-      value:
-        formData.pfPercentage && formData.pfPercentage !== ''
-          ? parseFloat(formData.pfPercentage)
-          : null,
+      value: numOrNull(formData.pfPercentage),
       key: 'pfPercentage',
     },
     insurance_amount: {
-      value:
-        formData.insuranceAmount && formData.insuranceAmount !== ''
-          ? parseFloat(formData.insuranceAmount)
-          : null,
+      value: numOrNull(formData.insuranceAmount),
       key: 'insuranceAmount',
     },
     rate_of_interest: {
-      value:
-        formData.rateOfInterest && formData.rateOfInterest !== ''
-          ? parseFloat(formData.rateOfInterest)
-          : null,
+      value: numOrNull(formData.rateOfInterest),
       key: 'rateOfInterest',
     },
     interest_type: {
@@ -184,6 +173,7 @@ function mapFormToApi(
       value: formData.loanAccountStatus || null,
       key: 'loanAccountStatus',
     },
+    // lender_rejection_reason is jsonb in DB — send as string value directly
     lender_rejection_reason: {
       value: formData.lenderRejectionReason || null,
       key: 'lenderRejectionReason',
@@ -193,6 +183,14 @@ function mapFormToApi(
       key: 'lenderRejectionStatusExplanation',
     },
     partner_code: { value: formData.partnerCode || null, key: 'partnerCode' },
+    customer_rejection_reason: {
+      value: formData.customerRejectionReason || null,
+      key: 'customerRejectionReason',
+    },
+    customer_rejection_status_explanation: {
+      value: formData.customerRejectionStatusExplanation || null,
+      key: 'customerRejectionStatusExplanation',
+    },
   }
 
   const payload: any = {}
@@ -206,13 +204,21 @@ function mapFormToApi(
   return payload
 }
 
-export default function UpdateDeals() {
+// Shared setValue options for all select/date fields
+const DIRTY_OPTS = {
+  shouldValidate: true,
+  shouldDirty: true,
+  shouldTouch: true,
+} as const
+
+export default function UpdateKanbanTicket() {
   const { id } = useParams()
   const queryClient = useQueryClient()
   const navigate = useNavigate()
   const [isEdit, setIsEdit] = useState(false)
   const [openAllNotes, setOpenAllNotes] = useState(false)
   const { user } = useAuth()
+
   const allowedEmails = [
     'prathap@r1xchange.com',
     'pranay.kumar@r1xchange.com',
@@ -221,7 +227,8 @@ export default function UpdateDeals() {
     'subhasini.ts@r1xchange.com',
   ]
 
-  const isEmailAuthorized = allowedEmails.includes(user?.email!)
+  const isEmailAuthorized = allowedEmails.includes(user?.email ?? '')
+
   const {
     register,
     handleSubmit,
@@ -232,15 +239,31 @@ export default function UpdateDeals() {
   } = useForm<UpdateTicketFormValues>({
     resolver: zodResolver(updateTicketSchema),
   })
+
   const [lenderSearch, setLenderSearch] = useState('')
   const [lenderOpen, setLenderOpen] = useState(false)
+
+  // Account lookup state
+  const [accountSearch, setAccountSearch] = useState('')
+  const [debouncedAccountSearch, setDebouncedAccountSearch] = useState('')
+  const [isAccountOpen, setIsAccountOpen] = useState(false)
+  const [selectedAccountId, setSelectedAccountId] = useState<string>('')
 
   const filteredLenders =
     lenderSearch.length > 1
       ? LENDER_NAMES.filter((l: string) =>
           l.toLowerCase().includes(lenderSearch.toLowerCase()),
-        ).slice(0, 50) // cap at 50 results
+        ).slice(0, 50)
       : []
+
+  // Debounce account search
+  useEffect(() => {
+    const timer = setTimeout(
+      () => setDebouncedAccountSearch(accountSearch),
+      500,
+    )
+    return () => clearTimeout(timer)
+  }, [accountSearch])
 
   useBeforeUnload(
     useCallback(
@@ -254,6 +277,7 @@ export default function UpdateDeals() {
     ),
   )
 
+  // Ticket query
   const {
     data: dealData,
     isLoading,
@@ -269,16 +293,45 @@ export default function UpdateDeals() {
     },
     enabled: !!id,
   })
-
-  // const dealData: any = dealResponse?.data?.[0] || dealResponse?.data
+  console.log({ dealData })
+  // Deal details query — to get account_name / account_id linked to this ticket's deal
+  const { data: dealDetailsResponse } = useQuery({
+    queryKey: ['deal', dealData?.deal_id],
+    queryFn: async () => {
+      const res = await fetch(
+        `${ENV.VITE_BACKEND_BASE_URL}/deals?deal_id=${dealData.deal_id}`,
+        { credentials: 'include' },
+      )
+      if (!res.ok) throw new Error('Failed to fetch deal details')
+      return res.json()
+    },
+    enabled: !!dealData?.deal_id,
+  })
+  const dealDetails = dealDetailsResponse?.data?.[0]
+  console.log({ dealDetails })
+  // Fetch accounts for lookup dropdown
+  const { data: accountsData, isLoading: isLoadingAccounts } = useQuery({
+    queryKey: ['account-lookup', debouncedAccountSearch],
+    queryFn: async () => {
+      if (debouncedAccountSearch.trim()) {
+        const res = await fetch(
+          `${ENV.VITE_BACKEND_BASE_URL}/accounts/lookup?account_name=${debouncedAccountSearch}`,
+          { credentials: 'include' },
+        )
+        if (!res.ok) throw new Error('Failed to fetch accounts')
+        return res.json()
+      }
+      return { data: [] }
+    },
+  })
+  const accounts = Array.isArray(accountsData?.data) ? accountsData.data : []
 
   const notes = (dealData as any)?.notes || []
 
-  const sortedNotes = [...notes].sort((a: any, b: any) => {
-    return (
-      new Date(b.Created_Time).getTime() - new Date(a.Created_Time).getTime()
-    )
-  })
+  const sortedNotes = [...notes].sort(
+    (a: any, b: any) =>
+      new Date(b.Created_Time).getTime() - new Date(a.Created_Time).getTime(),
+  )
 
   useEffect(() => {
     if (dealData) {
@@ -287,9 +340,27 @@ export default function UpdateDeals() {
     }
   }, [dealData, reset])
 
+  // Sync initial account name from ticket details (fallback to deal details)
+  useEffect(() => {
+    const initialName = dealData?.account_name || dealDetails?.account_name
+    const initialId = dealData?.account_id || dealDetails?.account_id
+    if (initialName && !accountSearch) {
+      setAccountSearch(initialName)
+      setSelectedAccountId(String(initialId || ''))
+    }
+  }, [dealData, dealDetails])
+
   const updateMutation = useMutation({
     mutationFn: async (values: UpdateTicketFormValues) => {
-      const payload = mapFormToApi(values, dirtyFields)
+      const originalAccountId = String(
+        dealData?.account_id || dealDetails?.account_id || '',
+      )
+      const payload = {
+        ...mapFormToApi(values, dirtyFields),
+        ...(selectedAccountId && selectedAccountId !== originalAccountId
+          ? { account_id: selectedAccountId }
+          : {}),
+      }
       const res = await fetch(`${ENV.VITE_BACKEND_BASE_URL}/tickets/${id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
@@ -298,27 +369,24 @@ export default function UpdateDeals() {
       })
       if (!res.ok) {
         const errData = await res.json().catch(() => ({}))
-        throw new Error(errData.message || 'Failed to update deal')
+        throw new Error(errData.message || 'Failed to update ticket')
       }
       return res.json()
     },
-    onSuccess: (data, variables) => {
-      toast.success('Deal updated successfully')
+    onSuccess: () => {
+      toast.success('Ticket updated successfully')
       setIsEdit(false)
-      reset(variables)
+      // Re-fetch from server so form resets to the latest saved state
       queryClient.invalidateQueries({ queryKey: ['ticket', id] })
     },
     onError: (err) => {
-      toast.error(err.message || 'Failed to update deal')
+      toast.error(err.message || 'Failed to update ticket')
     },
   })
 
   const formValues = watch()
 
   const onSave: SubmitHandler<UpdateTicketFormValues> = (values) => {
-    const payload = mapFormToApi(values, dirtyFields)
-    console.log('[Ticket Save] dirtyFields:', dirtyFields)
-    console.log('[Ticket Save] payload:', payload)
     updateMutation.mutate(values)
   }
 
@@ -328,20 +396,15 @@ export default function UpdateDeals() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
-        body: JSON.stringify({
-          id: id,
-          note: note.description,
-          module: 'Tickets',
-        }),
+        body: JSON.stringify({ id, note: note.description, module: 'Tickets' }),
       })
-
       if (res.ok) {
         toast.success('Note added successfully')
         queryClient.invalidateQueries({ queryKey: ['ticket', id] })
       } else {
         toast.error('Failed to add note')
       }
-    } catch (err) {
+    } catch {
       toast.error('Network error')
     }
   }
@@ -357,7 +420,7 @@ export default function UpdateDeals() {
   if (error || !dealData) {
     return (
       <div className='flex items-center justify-center min-h-screen'>
-        <p className='text-muted-foreground'>Deal not found</p>
+        <p className='text-muted-foreground'>Ticket not found</p>
       </div>
     )
   }
@@ -368,6 +431,19 @@ export default function UpdateDeals() {
     ? sortedNotes.slice(0, MAX_NOTES_VISIBLE)
     : sortedNotes
 
+  // Guard: only show formatted amount if value is non-empty
+  const displayAmount = (val?: string) =>
+    val && val !== '' ? formatAmount(Number(val)) : '—'
+
+  // Check if account has been explicitly modified via our custom state
+  const originalAccountId = String(
+    dealData?.account_id || dealDetails?.account_id || '',
+  )
+  const isAccountDirty =
+    selectedAccountId &&
+    originalAccountId &&
+    selectedAccountId !== originalAccountId
+
   return (
     <div className='space-y-6 bg-background min-h-screen mb-10'>
       {/* HEADER */}
@@ -375,21 +451,26 @@ export default function UpdateDeals() {
         <div>
           <h1 className='text-lg font-semibold'>
             Deal Owner Name:{' '}
-            <span className='text-primary font-bold '>
-              {(users as Record<string, string>)[dealData.created_by] || `NA`}
+            <span className='text-primary font-bold'>
+              {(users as Record<string, string>)[dealData.created_by] || 'NA'}
             </span>
           </h1>
           <h1 className='text-lg font-semibold'>
             Deal Id:{' '}
-            <span className='text-primary font-bold '>#{dealData.deal_id}</span>
+            <span className='text-primary font-bold'>#{dealData.deal_id}</span>
+          </h1>
+          <h1 className='text-lg font-semibold'>
+            Deal Name:{' '}
+            <span className='text-primary font-bold'>
+              {dealDetails?.account_name}
+            </span>
           </h1>
           <h1 className='text-lg font-semibold'>
             Ticket Id:{' '}
-            <span className='text-primary font-bold '>#{dealData.id}</span>
+            <span className='text-primary font-bold'>#{dealData.id}</span>
           </h1>
         </div>
         <div className='flex items-center gap-2'>
-          {/* If not editing AND authorized, show Update */}
           {!isEdit && isEmailAuthorized && (
             <Button
               size='sm'
@@ -400,15 +481,16 @@ export default function UpdateDeals() {
             </Button>
           )}
 
-          {/* If editing, show Save and Cancel */}
           {isEdit && (
             <div className='flex gap-2'>
               <Button
                 size='sm'
                 className='cursor-pointer'
-                disabled={!isDirty || updateMutation.isPending}
-                onClick={handleSubmit(onSave, (errors) =>
-                  console.log('VALIDATION ERRORS:', errors),
+                disabled={
+                  (!isDirty && !isAccountDirty) || updateMutation.isPending
+                }
+                onClick={handleSubmit(onSave, (errs) =>
+                  console.log('VALIDATION ERRORS:', errs),
                 )}
               >
                 {updateMutation.isPending ? (
@@ -424,6 +506,14 @@ export default function UpdateDeals() {
                 onClick={() => {
                   reset()
                   setLenderSearch(dealData?.lender_name || '')
+                  setAccountSearch(
+                    dealData?.account_name || dealDetails?.account_name || '',
+                  )
+                  setSelectedAccountId(
+                    String(
+                      dealData?.account_id || dealDetails?.account_id || '',
+                    ),
+                  )
                   setIsEdit(false)
                 }}
               >
@@ -432,7 +522,6 @@ export default function UpdateDeals() {
             </div>
           )}
 
-          {/* Always show Go to Deal */}
           <Button
             variant='default'
             onClick={() => navigate(`/deals/${dealData.deal_id}`)}
@@ -448,6 +537,59 @@ export default function UpdateDeals() {
         <SectionHeader title='Loan Account Status' />
         <CardContent className='p-0 grid grid-cols-1 md:grid-cols-2 border-b'>
           <div className='md:border-r'>
+            <FieldRow label='Account Name'>
+              {isEdit ? (
+                <div className='relative'>
+                  <Input
+                    placeholder='Search Account...'
+                    className='h-8'
+                    value={accountSearch}
+                    onChange={(e) => {
+                      setAccountSearch(e.target.value)
+                      setIsAccountOpen(true)
+                      if (selectedAccountId) setSelectedAccountId('')
+                    }}
+                    onFocus={() => setIsAccountOpen(true)}
+                    onBlur={() => {
+                      // Delay hiding to allow click event on list items to process
+                      setTimeout(() => setIsAccountOpen(false), 200)
+                    }}
+                  />
+
+                  {isAccountOpen && (
+                    <div className='absolute z-10 w-full mt-1 bg-background border rounded-md shadow-lg max-h-60 overflow-auto'>
+                      {isLoadingAccounts ? (
+                        <div className='p-2 flex justify-center'>
+                          <Spinner className='h-4 w-4' />
+                        </div>
+                      ) : accounts.length > 0 ? (
+                        accounts.map((acc: any, idx: number) => (
+                          <div
+                            key={idx}
+                            className='p-2 hover:bg-muted cursor-pointer text-sm'
+                            onMouseDown={() => {
+                              // Using onMouseDown because it fires before onBlur
+                              setSelectedAccountId(String(acc.id))
+                              setAccountSearch(acc.account_name)
+                              setIsAccountOpen(false)
+                            }}
+                          >
+                            {acc.account_name}
+                          </div>
+                        ))
+                      ) : (
+                        <div className='p-2 text-sm text-muted-foreground'>
+                          No accounts found.
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <span>{accountSearch || '—'}</span>
+              )}
+            </FieldRow>
+
             <FieldRow
               label='Ticket Login *'
               error={errors.ticketLogin?.message}
@@ -456,14 +598,10 @@ export default function UpdateDeals() {
                 isEdit={isEdit}
                 options={['Approved', 'Disapproved']}
                 value={formValues.ticketLogin as string}
-                onChange={(value) =>
-                  setValue('ticketLogin', value, {
-                    shouldValidate: true,
-                    shouldDirty: true,
-                  })
-                }
+                onChange={(value) => setValue('ticketLogin', value, DIRTY_OPTS)}
               />
             </FieldRow>
+
             <FieldRow label='Potential' error={errors.potential?.message}>
               {isEdit ? (
                 <Input
@@ -477,6 +615,7 @@ export default function UpdateDeals() {
                 <span>{formValues.potential || '—'}</span>
               )}
             </FieldRow>
+
             <FieldRow
               label='Lender Login Date *'
               error={errors.lenderLoginDate?.message}
@@ -489,16 +628,13 @@ export default function UpdateDeals() {
                       ? new Date(formValues.lenderLoginDate)
                       : undefined
                   }
-                  onChange={(date) => {
+                  onChange={(date) =>
                     setValue(
                       'lenderLoginDate',
                       date ? format(date, 'yyyy-MM-dd') : '',
-                      {
-                        shouldValidate: true,
-                        shouldDirty: true,
-                      },
+                      DIRTY_OPTS,
                     )
-                  }}
+                  }
                 />
               ) : (
                 <span>
@@ -508,8 +644,9 @@ export default function UpdateDeals() {
                 </span>
               )}
             </FieldRow>
+
             <FieldRow
-              label='Targeted Disbursement date'
+              label='Targeted Disbursement Date'
               error={errors.targetedDisbursementDate?.message}
             >
               {isEdit ? (
@@ -520,16 +657,13 @@ export default function UpdateDeals() {
                       ? new Date(formValues.targetedDisbursementDate)
                       : undefined
                   }
-                  onChange={(date) => {
+                  onChange={(date) =>
                     setValue(
                       'targetedDisbursementDate',
                       date ? format(date, 'yyyy-MM-dd') : '',
-                      {
-                        shouldValidate: true,
-                        shouldDirty: true,
-                      },
+                      DIRTY_OPTS,
                     )
-                  }}
+                  }
                 />
               ) : (
                 <span>
@@ -542,6 +676,7 @@ export default function UpdateDeals() {
                 </span>
               )}
             </FieldRow>
+
             <FieldRow
               label='Disbursement Date'
               error={errors.disbursementDate?.message}
@@ -554,16 +689,13 @@ export default function UpdateDeals() {
                       ? new Date(formValues.disbursementDate)
                       : undefined
                   }
-                  onChange={(date) => {
+                  onChange={(date) =>
                     setValue(
                       'disbursementDate',
                       date ? format(date, 'yyyy-MM-dd') : '',
-                      {
-                        shouldValidate: true,
-                        shouldDirty: true,
-                      },
+                      DIRTY_OPTS,
                     )
-                  }}
+                  }
                 />
               ) : (
                 <span>
@@ -577,10 +709,10 @@ export default function UpdateDeals() {
               )}
             </FieldRow>
           </div>
+
           <div>
             <FieldRow label='Lender Name *' error={errors.lenderName?.message}>
               <div className='relative'>
-                {/* Input must be present */}
                 <Input
                   disabled={!isEdit}
                   value={lenderSearch}
@@ -592,7 +724,6 @@ export default function UpdateDeals() {
                   onBlur={() => setTimeout(() => setLenderOpen(false), 200)}
                   placeholder='Search Lender...'
                 />
-
                 {isEdit && lenderOpen && filteredLenders.length > 0 && (
                   <div className='absolute z-10 w-full mt-1 bg-background border rounded-md shadow-lg max-h-60 overflow-auto'>
                     {filteredLenders.map((name: string) => (
@@ -600,10 +731,7 @@ export default function UpdateDeals() {
                         key={name}
                         className='p-2 hover:bg-muted cursor-pointer text-sm'
                         onMouseDown={() => {
-                          setValue('lenderName', name, {
-                            shouldValidate: true,
-                            shouldDirty: true,
-                          })
+                          setValue('lenderName', name, DIRTY_OPTS)
                           setLenderSearch(name)
                           setLenderOpen(false)
                         }}
@@ -615,6 +743,7 @@ export default function UpdateDeals() {
                 )}
               </div>
             </FieldRow>
+
             <FieldRow
               label='Lender Login Type *'
               error={errors.lenderLoginType?.message}
@@ -624,27 +753,24 @@ export default function UpdateDeals() {
                 options={['Direct', 'Partner']}
                 value={formValues.lenderLoginType as string}
                 onChange={(value) =>
-                  setValue('lenderLoginType', value, {
-                    // Update lenderLoginType
-                    shouldValidate: true,
-                    shouldDirty: true,
-                  })
+                  setValue('lenderLoginType', value, DIRTY_OPTS)
                 }
               />
             </FieldRow>
+
             <FieldRow label='Partner Code' error={errors.partnerCode?.message}>
               {isEdit ? (
                 <Input
                   {...register('partnerCode')}
                   placeholder='Enter Partner Code'
                   className='h-8'
-                  // ENABLE only if 'Partner' is selected, otherwise DISABLE
                   disabled={formValues.lenderLoginType !== 'Partner'}
                 />
               ) : (
                 <span>{formValues.partnerCode || '—'}</span>
               )}
             </FieldRow>
+
             <FieldRow label='Type of Loan *' error={errors.loanType?.message}>
               <SelectField
                 isEdit={isEdit}
@@ -666,15 +792,10 @@ export default function UpdateDeals() {
                   'Vehicle Loan',
                 ]}
                 value={formValues.loanType as string}
-                onChange={(value) =>
-                  setValue('loanType', value, {
-                    shouldValidate: true,
-                    shouldDirty: true,
-                    shouldTouch: true,
-                  })
-                }
+                onChange={(value) => setValue('loanType', value, DIRTY_OPTS)}
               />
             </FieldRow>
+
             <FieldRow
               label='Ticket Status *'
               error={errors.ticketStatus?.message}
@@ -692,13 +813,11 @@ export default function UpdateDeals() {
                 ]}
                 value={formValues.ticketStatus as string}
                 onChange={(value) =>
-                  setValue('ticketStatus', value, {
-                    shouldValidate: true,
-                    shouldDirty: true,
-                  })
+                  setValue('ticketStatus', value, DIRTY_OPTS)
                 }
               />
             </FieldRow>
+
             <FieldRow
               label='Ticket Stage *'
               error={errors.ticketStage?.message}
@@ -729,12 +848,7 @@ export default function UpdateDeals() {
                   'Not Interested',
                 ]}
                 value={formValues.ticketStage as string}
-                onChange={(value) =>
-                  setValue('ticketStage', value, {
-                    shouldValidate: true,
-                    shouldDirty: true,
-                  })
-                }
+                onChange={(value) => setValue('ticketStage', value, DIRTY_OPTS)}
               />
             </FieldRow>
           </div>
@@ -757,11 +871,10 @@ export default function UpdateDeals() {
                   className='h-8'
                 />
               ) : (
-                <span>
-                  {formatAmount(Number(formValues.approvedAmount)) || '—'}
-                </span>
+                <span>{displayAmount(formValues.approvedAmount)}</span>
               )}
             </FieldRow>
+
             <FieldRow
               label='Processing Fees'
               error={errors.processingFees?.message}
@@ -775,13 +888,12 @@ export default function UpdateDeals() {
                   className='h-8'
                 />
               ) : (
-                <span>
-                  {formatAmount(Number(formValues.processingFees)) || '—'}
-                </span>
+                <span>{displayAmount(formValues.processingFees)}</span>
               )}
             </FieldRow>
+
             <FieldRow
-              label='PF percentage'
+              label='PF Percentage'
               error={errors.pfPercentage?.message}
             >
               {isEdit ? (
@@ -796,6 +908,7 @@ export default function UpdateDeals() {
                 <span>{formValues.pfPercentage || '—'}</span>
               )}
             </FieldRow>
+
             <FieldRow
               label='Insurance Amount'
               error={errors.insuranceAmount?.message}
@@ -809,11 +922,10 @@ export default function UpdateDeals() {
                   className='h-8'
                 />
               ) : (
-                <span>
-                  {formatAmount(Number(formValues.insuranceAmount)) || '—'}
-                </span>
+                <span>{displayAmount(formValues.insuranceAmount)}</span>
               )}
             </FieldRow>
+
             <FieldRow
               label='Rate of Interest'
               error={errors.rateOfInterest?.message}
@@ -821,7 +933,7 @@ export default function UpdateDeals() {
               {isEdit ? (
                 <Input
                   {...register('rateOfInterest')}
-                  placeholder='Rate Of Interest'
+                  placeholder='Rate of Interest'
                   type='number'
                   step='0.01'
                   className='h-8'
@@ -830,6 +942,7 @@ export default function UpdateDeals() {
                 <span>{formValues.rateOfInterest || '—'}</span>
               )}
             </FieldRow>
+
             <FieldRow
               label='Interest Type'
               error={errors.interestType?.message}
@@ -839,14 +952,12 @@ export default function UpdateDeals() {
                 options={['Reducing', 'Fixed', 'Floating']}
                 value={formValues.interestType as string}
                 onChange={(value) =>
-                  setValue('interestType', value, {
-                    shouldValidate: true,
-                    shouldDirty: true,
-                  })
+                  setValue('interestType', value, DIRTY_OPTS)
                 }
               />
             </FieldRow>
           </div>
+
           <div>
             <FieldRow
               label='Sanction Amount'
@@ -861,11 +972,10 @@ export default function UpdateDeals() {
                   className='h-8'
                 />
               ) : (
-                <span>
-                  {formatAmount(Number(formValues.sanctionAmount)) || '—'}
-                </span>
+                <span>{displayAmount(formValues.sanctionAmount)}</span>
               )}
             </FieldRow>
+
             <FieldRow
               label='Disbursed Amount'
               error={errors.disbursedAmount?.message}
@@ -879,16 +989,15 @@ export default function UpdateDeals() {
                   className='h-8'
                 />
               ) : (
-                <span>
-                  {formatAmount(Number(formValues.disbursedAmount)) || '—'}
-                </span>
+                <span>{displayAmount(formValues.disbursedAmount)}</span>
               )}
             </FieldRow>
+
             <FieldRow label='Tenure' error={errors.tenure?.message}>
               {isEdit ? (
                 <Input
                   {...register('tenure')}
-                  placeholder='Tenure'
+                  placeholder='Tenure (months)'
                   type='number'
                   className='h-8'
                 />
@@ -896,6 +1005,7 @@ export default function UpdateDeals() {
                 <span>{formValues.tenure || '—'}</span>
               )}
             </FieldRow>
+
             <FieldRow
               label='Loan Start Date'
               error={errors.loanStartDate?.message}
@@ -908,16 +1018,13 @@ export default function UpdateDeals() {
                       ? new Date(formValues.loanStartDate)
                       : undefined
                   }
-                  onChange={(date) => {
+                  onChange={(date) =>
                     setValue(
                       'loanStartDate',
                       date ? format(date, 'yyyy-MM-dd') : '',
-                      {
-                        shouldValidate: true,
-                        shouldDirty: true,
-                      },
+                      DIRTY_OPTS,
                     )
-                  }}
+                  }
                 />
               ) : (
                 <span>
@@ -927,6 +1034,7 @@ export default function UpdateDeals() {
                 </span>
               )}
             </FieldRow>
+
             <FieldRow label='Loan End Date' error={errors.loanEndDate?.message}>
               {isEdit ? (
                 <DateField
@@ -936,16 +1044,13 @@ export default function UpdateDeals() {
                       ? new Date(formValues.loanEndDate)
                       : undefined
                   }
-                  onChange={(date) => {
+                  onChange={(date) =>
                     setValue(
                       'loanEndDate',
                       date ? format(date, 'yyyy-MM-dd') : '',
-                      {
-                        shouldValidate: true,
-                        shouldDirty: true,
-                      },
+                      DIRTY_OPTS,
                     )
-                  }}
+                  }
                 />
               ) : (
                 <span>
@@ -977,10 +1082,20 @@ export default function UpdateDeals() {
                 ]}
                 value={formValues.lenderRejectionReason as string}
                 onChange={(value) =>
-                  setValue('lenderRejectionReason', value, {
-                    shouldValidate: true,
-                    shouldDirty: true,
-                  })
+                  setValue('lenderRejectionReason', value, DIRTY_OPTS)
+                }
+              />
+            </FieldRow>
+            <FieldRow
+              label='Customer Rejection Reason'
+              error={errors.customerRejectionReason?.message}
+            >
+              <SelectField
+                isEdit={isEdit}
+                options={['-None-', 'ROI', 'Limit', 'Charges', 'Other Terms']}
+                value={formValues.customerRejectionReason as string}
+                onChange={(value) =>
+                  setValue('customerRejectionReason', value, DIRTY_OPTS)
                 }
               />
             </FieldRow>
@@ -1002,12 +1117,27 @@ export default function UpdateDeals() {
                 </span>
               )}
             </FieldRow>
+            <FieldRow
+              label='Customer Rejection Status Explanation'
+              error={errors.customerRejectionStatusExplanation?.message}
+            >
+              {isEdit ? (
+                <Input
+                  {...register('customerRejectionStatusExplanation')}
+                  placeholder='Customer Rejection Explanation'
+                  className='h-8'
+                />
+              ) : (
+                <span>
+                  {formValues.customerRejectionStatusExplanation || '—'}
+                </span>
+              )}
+            </FieldRow>
           </div>
         </CardContent>
 
         {/* ================= Notes ================= */}
         <SectionHeader title='Notes' />
-
         <CardContent className='p-4 space-y-3'>
           <div className='flex items-center justify-between'>
             <p className='text-sm text-muted-foreground'>
@@ -1042,7 +1172,6 @@ export default function UpdateDeals() {
                           className='bg-muted/30 p-3 rounded-lg border'
                         >
                           <p className='text-sm'>{note.Note_Content}</p>
-
                           <div className='flex flex-wrap gap-3 text-[11px] text-muted-foreground uppercase mt-2'>
                             <span>
                               Created By: {note.Created_By?.name || '—'}
@@ -1054,9 +1183,9 @@ export default function UpdateDeals() {
                                 'dd MMM yyyy, hh:mm a',
                               ) || '—'}
                             </span>
-                            <div className='font-bold'>
-                              Module : {note.module}
-                            </div>
+                            <span className='font-bold'>
+                              Module: {note.module}
+                            </span>
                           </div>
                         </div>
                       ))}
@@ -1076,7 +1205,6 @@ export default function UpdateDeals() {
                 className='bg-muted/30 p-3 rounded-lg border'
               >
                 <p className='text-sm'>{note.Note_Content}</p>
-
                 <div className='flex flex-wrap gap-3 text-[11px] text-muted-foreground uppercase mt-2'>
                   <span>Created By: {note.Created_By?.name || '—'}</span>
                   <span>
@@ -1086,7 +1214,7 @@ export default function UpdateDeals() {
                       'dd MMM yyyy, hh:mm a',
                     ) || '—'}
                   </span>
-                  <div className='font-bold'>Module : {note.module}</div>
+                  <span className='font-bold'>Module: {note.module}</span>
                 </div>
               </div>
             ))

@@ -20,7 +20,7 @@ import {
   createTicketSchema,
   type CreateTicketFormValues,
 } from '@/validators/createTicket.schema'
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 
 const LOAN_TYPES = [
   'SCF',
@@ -111,6 +111,38 @@ export default function CreateTicket() {
 
   const formValues = watch()
 
+  // Account lookup state
+  const [accountSearch, setAccountSearch] = useState('')
+  const [debouncedAccountSearch, setDebouncedAccountSearch] = useState('')
+  const [isAccountOpen, setIsAccountOpen] = useState(false)
+  const [selectedAccountId, setSelectedAccountId] = useState<string>('')
+
+  // Debounce account search
+  useEffect(() => {
+    const timer = setTimeout(
+      () => setDebouncedAccountSearch(accountSearch),
+      500,
+    )
+    return () => clearTimeout(timer)
+  }, [accountSearch])
+
+  // Fetch accounts for lookup dropdown
+  const { data: accountsData, isLoading: isLoadingAccounts } = useQuery({
+    queryKey: ['account-lookup', debouncedAccountSearch],
+    queryFn: async () => {
+      if (debouncedAccountSearch.trim()) {
+        const res = await fetch(
+          `${ENV.VITE_BACKEND_BASE_URL}/accounts/lookup?account_name=${debouncedAccountSearch}`,
+          { credentials: 'include' },
+        )
+        if (!res.ok) throw new Error('Failed to fetch accounts')
+        return res.json()
+      }
+      return { data: [] }
+    },
+  })
+  const accounts = Array.isArray(accountsData?.data) ? accountsData.data : []
+
   // Inside CreateTicket component
   const { data: dealResponse, isLoading: isLoadingDeal } = useQuery({
     queryKey: ['deal', dealId],
@@ -128,7 +160,15 @@ export default function CreateTicket() {
   // Extract data from the response
   const dealData = dealResponse?.data?.[0]
   const accountName = dealData?.account_name || '—'
-  const dealName = dealData?.account_name || '—'
+  const dealName = dealData?.deal_name || dealData?.account_name || '—'
+
+  // Sync initial account name from deal details when they load
+  useEffect(() => {
+    if (dealData?.account_name && !accountSearch) {
+      setAccountSearch(dealData.account_name)
+      setSelectedAccountId(String(dealData.account_id || ''))
+    }
+  }, [dealData])
 
   const createMutation = useMutation({
     mutationFn: async (values: CreateTicketFormValues) => {
@@ -140,6 +180,11 @@ export default function CreateTicket() {
         ticket_stage: values.ticketStage,
         lender_login_type: values.lenderLoginType,
         lender_login_date: values.lenderLoginDate,
+      }
+
+      // Add selected account_id to payload
+      if (selectedAccountId) {
+        payload.account_id = selectedAccountId
       }
 
       // optional fields
@@ -170,6 +215,11 @@ export default function CreateTicket() {
       if (values.lenderRejectionStatusExplanation)
         payload.lender_rejection_status_explanation =
           values.lenderRejectionStatusExplanation
+      if (values.customerRejectionReason)
+        payload.customer_rejection_reason = values.customerRejectionReason
+      if (values.customerRejectionStatusExplanation)
+        payload.customer_rejection_status_explanation =
+          values.customerRejectionStatusExplanation
       if (values.partnerCode) payload.partner_code = values.partnerCode
 
       const res = await fetch(`${ENV.VITE_BACKEND_BASE_URL}/tickets`, {
@@ -246,6 +296,55 @@ export default function CreateTicket() {
         <SectionHeader title='Loan Account Status' />
         <CardContent className='p-0 grid grid-cols-1 md:grid-cols-2 border-b'>
           <div className='md:border-r'>
+            <FieldRow label='Account Name'>
+              <div className='relative'>
+                <Input
+                  placeholder='Search Account...'
+                  className='h-8'
+                  value={accountSearch}
+                  onChange={(e) => {
+                    setAccountSearch(e.target.value)
+                    setIsAccountOpen(true)
+                    if (selectedAccountId) setSelectedAccountId('')
+                  }}
+                  onFocus={() => setIsAccountOpen(true)}
+                  onBlur={() => {
+                    // Delay hiding to allow click event on list items to process
+                    setTimeout(() => setIsAccountOpen(false), 200)
+                  }}
+                />
+
+                {isAccountOpen && (
+                  <div className='absolute z-10 w-full mt-1 bg-background border rounded-md shadow-lg max-h-60 overflow-auto'>
+                    {isLoadingAccounts ? (
+                      <div className='p-2 flex justify-center'>
+                        <Spinner className='h-4 w-4' />
+                      </div>
+                    ) : accounts.length > 0 ? (
+                      accounts.map((acc: any, idx: number) => (
+                        <div
+                          key={idx}
+                          className='p-2 hover:bg-muted cursor-pointer text-sm'
+                          onMouseDown={() => {
+                            // Using onMouseDown because it fires before onBlur
+                            setSelectedAccountId(String(acc.id))
+                            setAccountSearch(acc.account_name)
+                            setIsAccountOpen(false)
+                          }}
+                        >
+                          {acc.account_name}
+                        </div>
+                      ))
+                    ) : (
+                      <div className='p-2 text-sm text-muted-foreground'>
+                        No accounts found.
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+            </FieldRow>
+
             <FieldRow
               label='Ticket Login *'
               error={errors.ticketLogin?.message}
@@ -260,7 +359,7 @@ export default function CreateTicket() {
               />
             </FieldRow>
 
-            <FieldRow label='Potential'>
+            <FieldRow label='Potential' error={errors.potential?.message}>
               <Input
                 {...register('potential')}
                 placeholder='Potential'
@@ -291,7 +390,10 @@ export default function CreateTicket() {
               />
             </FieldRow>
 
-            <FieldRow label='Targeted Disbursement Date'>
+            <FieldRow
+              label='Targeted Disbursement Date'
+              error={errors.targetedDisbursementDate?.message}
+            >
               <DateField
                 isEdit={true}
                 value={
@@ -308,7 +410,10 @@ export default function CreateTicket() {
               />
             </FieldRow>
 
-            <FieldRow label='Disbursement Date'>
+            <FieldRow
+              label='Disbursement Date'
+              error={errors.disbursementDate?.message}
+            >
               <DateField
                 isEdit={true}
                 value={
@@ -375,7 +480,7 @@ export default function CreateTicket() {
               />
             </FieldRow>
 
-            <FieldRow label='Partner Code'>
+            <FieldRow label='Partner Code' error={errors.partnerCode?.message}>
               <Input
                 {...register('partnerCode')}
                 placeholder='Enter Partner Code'
@@ -428,7 +533,10 @@ export default function CreateTicket() {
         <SectionHeader title='Funding & Commercials' />
         <CardContent className='p-0 grid grid-cols-1 md:grid-cols-2 border-b'>
           <div className='md:border-r'>
-            <FieldRow label='Approved Amount'>
+            <FieldRow
+              label='Approved Amount'
+              error={errors.approvedAmount?.message}
+            >
               <Input
                 {...register('approvedAmount')}
                 placeholder='Approved Amount'
@@ -438,7 +546,10 @@ export default function CreateTicket() {
               />
             </FieldRow>
 
-            <FieldRow label='Processing Fees'>
+            <FieldRow
+              label='Processing Fees'
+              error={errors.processingFees?.message}
+            >
               <Input
                 {...register('processingFees')}
                 placeholder='Processing Fees'
@@ -448,7 +559,10 @@ export default function CreateTicket() {
               />
             </FieldRow>
 
-            <FieldRow label='PF Percentage'>
+            <FieldRow
+              label='PF Percentage'
+              error={errors.pfPercentage?.message}
+            >
               <Input
                 {...register('pfPercentage')}
                 placeholder='PF Percentage'
@@ -458,7 +572,10 @@ export default function CreateTicket() {
               />
             </FieldRow>
 
-            <FieldRow label='Insurance Amount'>
+            <FieldRow
+              label='Insurance Amount'
+              error={errors.insuranceAmount?.message}
+            >
               <Input
                 {...register('insuranceAmount')}
                 placeholder='Insurance Amount'
@@ -468,7 +585,10 @@ export default function CreateTicket() {
               />
             </FieldRow>
 
-            <FieldRow label='Rate of Interest'>
+            <FieldRow
+              label='Rate of Interest'
+              error={errors.rateOfInterest?.message}
+            >
               <Input
                 {...register('rateOfInterest')}
                 placeholder='Rate of Interest'
@@ -478,7 +598,10 @@ export default function CreateTicket() {
               />
             </FieldRow>
 
-            <FieldRow label='Interest Type'>
+            <FieldRow
+              label='Interest Type'
+              error={errors.interestType?.message}
+            >
               <SelectField
                 isEdit={true}
                 options={['Reducing', 'Fixed', 'Floating']}
@@ -489,7 +612,10 @@ export default function CreateTicket() {
           </div>
 
           <div>
-            <FieldRow label='Sanction Amount'>
+            <FieldRow
+              label='Sanction Amount'
+              error={errors.sanctionAmount?.message}
+            >
               <Input
                 {...register('sanctionAmount')}
                 placeholder='Sanction Amount'
@@ -499,7 +625,10 @@ export default function CreateTicket() {
               />
             </FieldRow>
 
-            <FieldRow label='Disbursed Amount'>
+            <FieldRow
+              label='Disbursed Amount'
+              error={errors.disbursedAmount?.message}
+            >
               <Input
                 {...register('disbursedAmount')}
                 placeholder='Disbursed Amount'
@@ -509,7 +638,7 @@ export default function CreateTicket() {
               />
             </FieldRow>
 
-            <FieldRow label='Tenure'>
+            <FieldRow label='Tenure' error={errors.tenure?.message}>
               <Input
                 {...register('tenure')}
                 placeholder='Tenure (months)'
@@ -518,7 +647,10 @@ export default function CreateTicket() {
               />
             </FieldRow>
 
-            <FieldRow label='Loan Start Date'>
+            <FieldRow
+              label='Loan Start Date'
+              error={errors.loanStartDate?.message}
+            >
               <DateField
                 isEdit={true}
                 value={
@@ -535,7 +667,7 @@ export default function CreateTicket() {
               />
             </FieldRow>
 
-            <FieldRow label='Loan End Date'>
+            <FieldRow label='Loan End Date' error={errors.loanEndDate?.message}>
               <DateField
                 isEdit={true}
                 value={
@@ -557,7 +689,10 @@ export default function CreateTicket() {
         <SectionHeader title='Rejection Details' />
         <CardContent className='p-0 grid grid-cols-1 md:grid-cols-2'>
           <div className='md:border-r'>
-            <FieldRow label='Lender Rejection Reason'>
+            <FieldRow
+              label='Lender Rejection Reason'
+              error={errors.lenderRejectionReason?.message}
+            >
               <SelectField
                 isEdit={true}
                 options={[
@@ -571,12 +706,36 @@ export default function CreateTicket() {
                 onChange={(value) => setValue('lenderRejectionReason', value)}
               />
             </FieldRow>
+            <FieldRow
+              label='Customer Rejection Reason'
+              error={errors.customerRejectionReason?.message}
+            >
+              <SelectField
+                isEdit={true}
+                options={['-None-', 'ROI', 'Limit', 'Charges', 'Other Terms']}
+                value={formValues.customerRejectionReason ?? ''}
+                onChange={(value) => setValue('customerRejectionReason', value)}
+              />
+            </FieldRow>
           </div>
           <div>
-            <FieldRow label='Lender Rejection Explanation'>
+            <FieldRow
+              label='Lender Rejection Explanation'
+              error={errors.lenderRejectionStatusExplanation?.message}
+            >
               <Input
                 {...register('lenderRejectionStatusExplanation')}
                 placeholder='Explanation'
+                className='h-8'
+              />
+            </FieldRow>
+            <FieldRow
+              label='Customer Rejection Explanation'
+              error={errors.customerRejectionStatusExplanation?.message}
+            >
+              <Input
+                {...register('customerRejectionStatusExplanation')}
+                placeholder='Customer Rejection Explanation'
                 className='h-8'
               />
             </FieldRow>
