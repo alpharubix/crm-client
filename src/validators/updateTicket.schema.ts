@@ -11,14 +11,54 @@ export const updateTicketSchema = z.object({
   ticketLogin: z.string().min(1, 'Ticket login is required'),
 
   // Optional fields
-  potential: z.string().optional(),
-  approvedAmount: z.string().optional(),
-  sanctionAmount: z.string().optional(),
-  disbursedAmount: z.string().optional(),
-  processingFees: z.string().optional(),
-  pfPercentage: z.string().optional(),
-  insuranceAmount: z.string().optional(),
-  rateOfInterest: z.string().optional(),
+  potential: z
+    .string()
+    .optional()
+    .refine((v) => !v || parseFloat(v) <= 9_999_999_999_999, {
+      message: 'Value exceeds maximum allowed amount',
+    }),
+  approvedAmount: z
+    .string()
+    .optional()
+    .refine((v) => !v || parseFloat(v) <= 9_999_999_999_999, {
+      message: 'Value exceeds maximum allowed amount',
+    }),
+  sanctionAmount: z
+    .string()
+    .optional()
+    .refine((v) => !v || parseFloat(v) <= 9_999_999_999_999, {
+      message: 'Value exceeds maximum allowed amount',
+    }),
+  disbursedAmount: z
+    .string()
+    .optional()
+    .refine((v) => !v || parseFloat(v) <= 9_999_999_999_999, {
+      message: 'Value exceeds maximum allowed amount',
+    }),
+  processingFees: z
+    .string()
+    .optional()
+    .refine((v) => !v || parseFloat(v) <= 9_999_999_999_999, {
+      message: 'Value exceeds maximum allowed amount',
+    }),
+  pfPercentage: z
+    .string()
+    .optional()
+    .refine((v) => !v || parseFloat(v) <= 100, {
+      message: 'PF Percentage cannot exceed 100%',
+    }),
+  insuranceAmount: z
+    .string()
+    .optional()
+    .refine((v) => !v || parseFloat(v) <= 9_999_999_999_999, {
+      message: 'Value exceeds maximum allowed amount',
+    }),
+  rateOfInterest: z
+    .string()
+    .optional()
+    .refine((v) => !v || parseFloat(v) <= 999.99, {
+      message: 'Rate of Interest must be less than 1000',
+    }),
   interestType: z.string().optional(),
   tenure: z.string().optional(),
   loanStartDate: z.string().optional(),
@@ -29,6 +69,8 @@ export const updateTicketSchema = z.object({
   lenderRejectionReason: z.string().optional(),
   lenderRejectionStatusExplanation: z.string().optional(),
   partnerCode: z.string().optional(),
+  customerRejectionReason: z.string().optional(),
+  customerRejectionStatusExplanation: z.string().optional(),
 })
 
 export type UpdateTicketFormValues = z.infer<typeof updateTicketSchema>
