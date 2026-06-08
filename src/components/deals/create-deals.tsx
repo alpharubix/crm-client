@@ -32,7 +32,7 @@ export default function CreateDeal() {
     defaultValues: {
       accountId: prefilledData.accountId || '',
       accountName: prefilledData.accountName || '',
-      dealName: '',
+      dealName: prefilledData.accountName || '',
       dealType: '',
       dealCallBackDatetime: '',
       amountRequired: '',
@@ -78,6 +78,12 @@ export default function CreateDeal() {
     return () => clearTimeout(timer)
   }, [searchTerm])
 
+  useEffect(() => {
+    if (prefilledData.accountName) {
+      setValue('dealName', `${prefilledData.accountName}`)
+    }
+  }, [prefilledData.accountName, setValue])
+
   const { data: accountsData, isLoading: isLoadingAccounts } = useQuery({
     queryKey: [debouncedSearch],
     queryFn: async () => {
@@ -100,7 +106,7 @@ export default function CreateDeal() {
       const payload: any = {
         account_id: values.accountId ? String(values.accountId) : undefined,
         account_name: values.accountName || undefined,
-        deal_name: values.dealName || undefined,
+        deal_name: values.dealName,
         deal_type: values.dealType || undefined,
         deal_call_back_datetime: values.dealCallBackDatetime || undefined,
         amount_required: values.amountRequired || undefined,
@@ -347,6 +353,7 @@ export default function CreateDeal() {
                 {...register('dealName')}
                 placeholder='Deal Name'
                 className='h-8'
+                disabled={prefilledData.accountName}
               />
             </FieldRow>
 

@@ -19,12 +19,12 @@ import users from '@/utils/users.json'
 export interface KanbanFilters {
   account_name?: string
   ticket_status?: string
-  type_of_loan?: string
+  type_of_loan?: string | string[]
   created_from?: string
   created_to?: string
   lender_login_from?: string
   lender_login_to?: string
-  deal_owner_id?: string
+  deal_owner_id?: string | string[]
   targeted_disbursement_from: string
   targeted_disbursement_to: string
   disbursement_from: string
@@ -200,7 +200,11 @@ export default function TicketsKanbanView({
     queryFn: async () => {
       const params = new URLSearchParams({ kanban: 'true' })
       Object.entries(filters).forEach(([k, v]) => {
-        if (v) params.set(k, v)
+        if (Array.isArray(v)) {
+          v.forEach((val) => params.append(k, val))
+        } else if (v) {
+          params.set(k, v as string)
+        }
       })
       const res = await fetch(
         `${ENV.VITE_BACKEND_BASE_URL}/tickets?${params}`,
