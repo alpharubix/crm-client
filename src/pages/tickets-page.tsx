@@ -37,6 +37,7 @@ import users from '@/utils/users.json'
 import Pagination from '@/components/shared/pagination'
 import { formatExactDate } from '@/utils/date-formatter'
 import HighlightedText from '@/components/shared/highlighted-text'
+import { MultiSelect, type Option } from '@/components/ui/multi-select'
 
 const LOAN_TYPES = [
   'SCF',
@@ -66,6 +67,9 @@ const TICKET_STATUSES = [
   'Not Interested',
 ]
 
+const LOAN_TYPE_OPTIONS: Option[] = LOAN_TYPES.map((val) => ({ value: val, label: val }))
+const TICKET_STATUS_OPTIONS: Option[] = TICKET_STATUSES.map((val) => ({ value: val, label: val }))
+
 function getDefaultDates() {
   const to = new Date()
   const from = new Date()
@@ -85,9 +89,9 @@ const TicketsPage = () => {
     const defaultDates = getDefaultDates()
     return {
       accountName: searchParams.get('accountName') || '',
-      typeOfLoan: searchParams.get('typeOfLoan') || 'all',
-      ticketStatus: searchParams.get('ticketStatus') || 'all',
-      dealOwnerId: searchParams.get('dealOwnerId') || 'all',
+      typeOfLoan: [] as Option[],
+      ticketStatus: [] as Option[],
+      dealOwnerId: [] as Option[],
       // createdFrom: searchParams.get('createdFrom') || defaultDates.createdFrom,
       // createdTo: searchParams.get('createdTo') || defaultDates.createdTo,
       lenderLoginFrom: searchParams.get('lenderLoginFrom') || '',
@@ -150,6 +154,39 @@ const TicketsPage = () => {
   const showOwnerFilter = isSuccess && !ownerResponse?.forbidden
   const owners = ownerResponse?.data ?? []
 
+  useEffect(() => {
+    const loadedFilters: Partial<typeof filters> = {}
+
+    const ownerIds = searchParams.getAll('dealOwnerId')
+    if (ownerIds.length > 0 && isSuccess && owners.length > 0) {
+      loadedFilters.dealOwnerId = ownerIds.map((id) => {
+        const o = owners.find((owner: any) => owner.id.toString() === id)
+        return { value: id, label: o ? o.full_name : id }
+      })
+    }
+
+    const loans = searchParams.getAll('typeOfLoan')
+    if (loans.length > 0) {
+      loadedFilters.typeOfLoan = loans.map((val) => {
+        const matched = LOAN_TYPE_OPTIONS.find((o) => o.value === val)
+        return { value: val, label: matched ? matched.label : val }
+      })
+    }
+
+    const statuses = searchParams.getAll('ticketStatus')
+    if (statuses.length > 0) {
+      loadedFilters.ticketStatus = statuses.map((val) => {
+        const matched = TICKET_STATUS_OPTIONS.find((o) => o.value === val)
+        return { value: val, label: matched ? matched.label : val }
+      })
+    }
+
+    if (Object.keys(loadedFilters).length > 0) {
+      setFilters((prev) => ({ ...prev, ...loadedFilters }))
+      setAppliedFilters((prev) => ({ ...prev, ...loadedFilters }))
+    }
+  }, [isSuccess, owners, searchParams])
+
   const { data, isLoading, refetch } = useQuery({
     queryKey: ['tickets-list', currentPage, appliedFilters],
     queryFn: async () => {
@@ -158,12 +195,21 @@ const TicketsPage = () => {
 
       if (appliedFilters.accountName)
         params.set('account_name', appliedFilters.accountName)
-      if (appliedFilters.typeOfLoan && appliedFilters.typeOfLoan !== 'all')
-        params.set('type_of_loan', appliedFilters.typeOfLoan)
-      if (appliedFilters.ticketStatus && appliedFilters.ticketStatus !== 'all')
-        params.set('ticket_status', appliedFilters.ticketStatus)
-      if (appliedFilters.dealOwnerId && appliedFilters.dealOwnerId !== 'all')
-        params.set('deal_owner_id', appliedFilters.dealOwnerId)
+      if (appliedFilters.typeOfLoan && appliedFilters.typeOfLoan.length > 0) {
+        appliedFilters.typeOfLoan.forEach((o: Option) =>
+          params.append('type_of_loan', o.value),
+        )
+      }
+      if (appliedFilters.ticketStatus && appliedFilters.ticketStatus.length > 0) {
+        appliedFilters.ticketStatus.forEach((o: Option) =>
+          params.append('ticket_status', o.value),
+        )
+      }
+      if (appliedFilters.dealOwnerId && appliedFilters.dealOwnerId.length > 0) {
+        appliedFilters.dealOwnerId.forEach((o: Option) =>
+          params.append('deal_owner_id', o.value),
+        )
+      }
 
       // if (appliedFilters.createdFrom)
       //   params.set('created_from', appliedFilters.createdFrom)
@@ -209,7 +255,13 @@ const TicketsPage = () => {
     const params = new URLSearchParams()
     params.set('page', '1')
     Object.entries(filters).forEach(([key, value]) => {
-      if (value && value !== 'all') params.set(key, String(value))
+      if (Array.isArray(value)) {
+        value.forEach((item: Option) => {
+          params.append(key, item.value)
+        })
+      } else if (value && value !== 'all') {
+        params.set(key, String(value))
+      }
     })
     setSearchParams(params)
     setAppliedFilters(filters)
@@ -217,14 +269,11 @@ const TicketsPage = () => {
   }
 
   const handleClear = () => {
-    const defaultDates = getDefaultDates()
     const emptyFilters = {
       accountName: '',
-      typeOfLoan: 'all',
-      ticketStatus: 'all',
-      dealOwnerId: 'all',
-      // createdFrom: '',
-      // createdTo: '',
+      typeOfLoan: [] as Option[],
+      ticketStatus: [] as Option[],
+      dealOwnerId: [] as Option[],
       lenderLoginFrom: '',
       lenderLoginTo: '',
       targetedDisbursementFrom: '',
@@ -330,63 +379,36 @@ const TicketsPage = () => {
 
           <div className='space-y-2'>
             <Label>Type of Loan</Label>
-            <Select
+            <MultiSelect
+              options={LOAN_TYPE_OPTIONS}
               value={filters.typeOfLoan}
-              onValueChange={(val) => handleFilterChange('typeOfLoan', val)}
-            >
-              <SelectTrigger className='w-full'>
-                <SelectValue placeholder='Type of Loan' />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value='all'>All Types</SelectItem>
-                {LOAN_TYPES.map((type) => (
-                  <SelectItem key={type} value={type}>
-                    {type}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+              onChange={(val) => handleFilterChange('typeOfLoan', val)}
+              placeholder='Select Types...'
+            />
           </div>
 
           <div className='space-y-2'>
             <Label>Ticket Status</Label>
-            <Select
+            <MultiSelect
+              options={TICKET_STATUS_OPTIONS}
               value={filters.ticketStatus}
-              onValueChange={(val) => handleFilterChange('ticketStatus', val)}
-            >
-              <SelectTrigger className='w-full'>
-                <SelectValue placeholder='Ticket Status' />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value='all'>All Statuses</SelectItem>
-                {TICKET_STATUSES.map((status) => (
-                  <SelectItem key={status} value={status}>
-                    {status}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+              onChange={(val) => handleFilterChange('ticketStatus', val)}
+              placeholder='Select Statuses...'
+            />
           </div>
 
           {showOwnerFilter && (
             <div className='space-y-2'>
               <Label>Deal Owner</Label>
-              <Select
+              <MultiSelect
+                options={owners.map((owner: any) => ({
+                  label: owner.full_name,
+                  value: owner.id.toString(),
+                }))}
                 value={filters.dealOwnerId}
-                onValueChange={(val) => handleFilterChange('dealOwnerId', val)}
-              >
-                <SelectTrigger className='w-full'>
-                  <SelectValue placeholder='Deal Owner' />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value='all'>All Owners</SelectItem>
-                  {owners.map((owner: any) => (
-                    <SelectItem key={owner.id} value={owner.id.toString()}>
-                      {owner.full_name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+                onChange={(val) => handleFilterChange('dealOwnerId', val)}
+                placeholder='Select Owners...'
+              />
             </div>
           )}
 

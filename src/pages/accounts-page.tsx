@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { Label } from '@/components/ui/label'
 import Pagination from '@/components/shared/pagination'
@@ -35,6 +35,56 @@ import UploadCsv from '@/components/accounts/csv-upload'
 
 import users from '@/utils/users.json'
 import { useAuth } from '@/context/auth-context'
+import { MultiSelect, type Option } from '@/components/ui/multi-select'
+
+const ACCOUNT_STATUS_OPTIONS: Option[] = [
+  { value: 'Yet to be dialed', label: 'Yet to be dialed' },
+  { value: 'Wrong Number', label: 'Wrong Number' },
+  { value: 'Contact Established', label: 'Contact Established' },
+  { value: 'Contact Not Established', label: 'Contact Not Established' },
+  { value: 'Awareness', label: 'Awareness' },
+  { value: 'Attention', label: 'Attention' },
+  { value: 'Assessment', label: 'Assessment' },
+  { value: 'Lender Review', label: 'Lender Review' },
+  { value: 'Not Interested', label: 'Not Interested' },
+  { value: 'Location Unserviceable', label: 'Location Unserviceable' },
+]
+
+const SOURCE_OPTIONS: Option[] = [
+  { value: 'Himalaya', label: 'Himalaya' },
+  { value: 'CavinKare', label: 'CavinKare' },
+  { value: 'ALL INDIA CHEMISTS AND DRUGGISTS ASSOCIATION OF INDIA', label: 'ALL INDIA CHEMISTS AND DRUGGISTS ASSOCIATION OF INDIA' },
+  { value: 'All India Hardware Association (Based in Mumbai Charni Road)', label: 'All India Hardware Association (Based in Mumbai Charni Road)' },
+  { value: 'Alpharubix', label: 'Alpharubix' },
+  { value: 'Condor Footwear', label: 'Condor Footwear' },
+  { value: 'DVG Dist Petroleum', label: 'DVG Dist Petroleum' },
+  { value: 'Federation of Hotel and Restaurant Association of India (Based in New Delhi)', label: 'Federation of Hotel and Restaurant Association of India (Based in New Delhi)' },
+  { value: 'Havells', label: 'Havells' },
+  { value: 'Liberty', label: 'Liberty' },
+  { value: 'Marico', label: 'Marico' },
+  { value: 'Reference', label: 'Reference' },
+  { value: 'Retail Association of India', label: 'Retail Association of India' },
+  { value: 'SME CHAMBER', label: 'SME CHAMBER' },
+  { value: 'Swastik', label: 'Swastik' },
+  { value: 'Unicharm', label: 'Unicharm' },
+  { value: 'Vibhava Marketing', label: 'Vibhava Marketing' },
+  { value: 'R1X Website', label: 'R1X Website' },
+  { value: '5pointcredit', label: '5pointcredit' },
+]
+
+const INDUSTRY_OPTIONS: Option[] = [
+  { value: 'Pharma', label: 'Pharma' },
+  { value: 'AHP', label: 'AHP' },
+  { value: 'CPD', label: 'CPD' },
+  { value: 'FMCG', label: 'FMCG' },
+  { value: 'OTX', label: 'OTX' },
+  { value: 'Footwear', label: 'Footwear' },
+  { value: 'OTC', label: 'OTC' },
+  { value: 'RAAGA', label: 'RAAGA' },
+  { value: 'Hardware', label: 'Hardware' },
+  { value: 'Electronics', label: 'Electronics' },
+  { value: 'DVG Dist Petroleum', label: 'DVG Dist Petroleum' },
+]
 
 export default function AccountsPage() {
   const navigate = useNavigate()
@@ -43,17 +93,13 @@ export default function AccountsPage() {
 
   const [filters, setFilters] = useState({
     accountName: searchParams.get('accountName') || '',
-    accountStatus: searchParams.get('accountStatus') || '',
-    source: searchParams.get('source') || '',
-    industry: searchParams.get('industry') || '',
+    accountStatus: [] as Option[],
+    source: [] as Option[],
+    industry: [] as Option[],
     phone: searchParams.get('phone') || '',
     city: searchParams.get('city') || '',
     state: searchParams.get('state') || '',
-    accountOwnerId: searchParams.get('accountOwnerId') || '',
-    // businessType: searchParams.get('businessType') || '',
-    // pincode: searchParams.get('pincode') || '',
-    // businessStatus: searchParams.get('businessStatus') || '',
-    // callBackDate: undefined as Date | undefined,
+    accountOwnerId: [] as Option[],
   })
 
   const [appliedFilters, setAppliedFilters] = useState(filters)
@@ -89,6 +135,47 @@ export default function AccountsPage() {
 
   const owners = ownerResponse?.data ?? []
 
+  useEffect(() => {
+    const loadedFilters: Partial<typeof filters> = {}
+
+    const ownerIds = searchParams.getAll('accountOwnerId')
+    if (ownerIds.length > 0 && isSuccess && owners.length > 0) {
+      loadedFilters.accountOwnerId = ownerIds.map((id) => {
+        const o = owners.find((owner: any) => owner.id.toString() === id)
+        return { value: id, label: o ? o.full_name : id }
+      })
+    }
+
+    const statuses = searchParams.getAll('accountStatus')
+    if (statuses.length > 0) {
+      loadedFilters.accountStatus = statuses.map((val) => {
+        const matched = ACCOUNT_STATUS_OPTIONS.find((o) => o.value === val)
+        return { value: val, label: matched ? matched.label : val }
+      })
+    }
+
+    const srcs = searchParams.getAll('source')
+    if (srcs.length > 0) {
+      loadedFilters.source = srcs.map((val) => {
+        const matched = SOURCE_OPTIONS.find((o) => o.value === val)
+        return { value: val, label: matched ? matched.label : val }
+      })
+    }
+
+    const inds = searchParams.getAll('industry')
+    if (inds.length > 0) {
+      loadedFilters.industry = inds.map((val) => {
+        const matched = INDUSTRY_OPTIONS.find((o) => o.value === val)
+        return { value: val, label: matched ? matched.label : val }
+      })
+    }
+
+    if (Object.keys(loadedFilters).length > 0) {
+      setFilters((prev) => ({ ...prev, ...loadedFilters }))
+      setAppliedFilters((prev) => ({ ...prev, ...loadedFilters }))
+    }
+  }, [isSuccess, owners, searchParams])
+
   const { data, isLoading, refetch } = useQuery({
     queryKey: ['accounts', currentPage, appliedFilters],
     queryFn: async () => {
@@ -97,16 +184,29 @@ export default function AccountsPage() {
 
       if (appliedFilters.accountName)
         params.set('account_name', appliedFilters.accountName)
-      if (appliedFilters.accountStatus)
-        params.set('account_status', appliedFilters.accountStatus)
-      if (appliedFilters.source) params.set('source', appliedFilters.source)
-      if (appliedFilters.industry)
-        params.set('industry', appliedFilters.industry)
+      if (appliedFilters.accountStatus && appliedFilters.accountStatus.length > 0) {
+        appliedFilters.accountStatus.forEach((o: Option) =>
+          params.append('account_status', o.value),
+        )
+      }
+      if (appliedFilters.source && appliedFilters.source.length > 0) {
+        appliedFilters.source.forEach((o: Option) =>
+          params.append('source', o.value),
+        )
+      }
+      if (appliedFilters.industry && appliedFilters.industry.length > 0) {
+        appliedFilters.industry.forEach((o: Option) =>
+          params.append('industry', o.value),
+        )
+      }
       if (appliedFilters.phone) params.set('phone', appliedFilters.phone)
       if (appliedFilters.city) params.set('city', appliedFilters.city)
       if (appliedFilters.state) params.set('state', appliedFilters.state)
-      if (appliedFilters.accountOwnerId)
-        params.set('account_owner_id', appliedFilters.accountOwnerId)
+      if (appliedFilters.accountOwnerId && appliedFilters.accountOwnerId.length > 0) {
+        appliedFilters.accountOwnerId.forEach((o: Option) =>
+          params.append('account_owner_id', o.value),
+        )
+      }
 
       const res = await fetch(
         `${ENV.VITE_BACKEND_BASE_URL}/accounts?${params.toString()}`,
@@ -131,7 +231,13 @@ export default function AccountsPage() {
     params.set('page', '1')
 
     Object.entries(filters).forEach(([key, value]) => {
-      if (value) params.set(key, String(value))
+      if (Array.isArray(value)) {
+        value.forEach((item: Option) => {
+          params.append(key, item.value)
+        })
+      } else if (value) {
+        params.set(key, String(value))
+      }
     })
 
     setSearchParams(params)
@@ -142,27 +248,40 @@ export default function AccountsPage() {
   const exportParams = new URLSearchParams()
   if (appliedFilters.accountName)
     exportParams.set('account_name', appliedFilters.accountName)
-  if (appliedFilters.accountStatus)
-    exportParams.set('account_status', appliedFilters.accountStatus)
-  if (appliedFilters.source) exportParams.set('source', appliedFilters.source)
-  if (appliedFilters.industry)
-    exportParams.set('industry', appliedFilters.industry)
+  if (appliedFilters.accountStatus && appliedFilters.accountStatus.length > 0) {
+    appliedFilters.accountStatus.forEach((o: Option) =>
+      exportParams.append('account_status', o.value),
+    )
+  }
+  if (appliedFilters.source && appliedFilters.source.length > 0) {
+    appliedFilters.source.forEach((o: Option) =>
+      exportParams.append('source', o.value),
+    )
+  }
+  if (appliedFilters.industry && appliedFilters.industry.length > 0) {
+    appliedFilters.industry.forEach((o: Option) =>
+      exportParams.append('industry', o.value),
+    )
+  }
   if (appliedFilters.phone) exportParams.set('phone', appliedFilters.phone)
   if (appliedFilters.city) exportParams.set('city', appliedFilters.city)
   if (appliedFilters.state) exportParams.set('state', appliedFilters.state)
-  if (appliedFilters.accountOwnerId)
-    exportParams.set('account_owner_id', appliedFilters.accountOwnerId)
+  if (appliedFilters.accountOwnerId && appliedFilters.accountOwnerId.length > 0) {
+    appliedFilters.accountOwnerId.forEach((o: Option) =>
+      exportParams.append('account_owner_id', o.value),
+    )
+  }
 
   const handleClear = () => {
     const emptyFilters = {
       accountName: '',
-      accountStatus: '',
-      source: '',
-      industry: '',
+      accountStatus: [] as Option[],
+      source: [] as Option[],
+      industry: [] as Option[],
       phone: '',
       city: '',
       state: '',
-      accountOwnerId: '',
+      accountOwnerId: [] as Option[],
     }
 
     setFilters(emptyFilters)
@@ -245,23 +364,15 @@ export default function AccountsPage() {
           {showOwnerFilter && (
             <div className='space-y-2'>
               <Label>Account Owner</Label>
-              <Select
+              <MultiSelect
+                options={owners.map((owner: any) => ({
+                  label: owner.full_name,
+                  value: owner.id.toString(),
+                }))}
                 value={filters.accountOwnerId}
-                onValueChange={(val) =>
-                  handleFilterChange('accountOwnerId', val)
-                }
-              >
-                <SelectTrigger className='w-full'>
-                  <SelectValue placeholder='Account Owner' />
-                </SelectTrigger>
-                <SelectContent>
-                  {owners.map((owner: any) => (
-                    <SelectItem key={owner.id} value={owner.id}>
-                      {owner.full_name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+                onChange={(val) => handleFilterChange('accountOwnerId', val)}
+                placeholder='Select Owners...'
+              />
             </div>
           )}
 
@@ -278,34 +389,12 @@ export default function AccountsPage() {
 
           <div className='space-y-2'>
             <Label>Account Status</Label>
-            <Select
+            <MultiSelect
+              options={ACCOUNT_STATUS_OPTIONS}
               value={filters.accountStatus}
-              onValueChange={(val) => handleFilterChange('accountStatus', val)}
-            >
-              <SelectTrigger className='w-full'>
-                <SelectValue placeholder='Account Status' />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value='Yet to be dialed'>
-                  Yet to be dialed
-                </SelectItem>
-                <SelectItem value='Wrong Number'>Wrong Number</SelectItem>
-                <SelectItem value='Contact Established'>
-                  Contact Established
-                </SelectItem>
-                <SelectItem value='Contact Not Established'>
-                  Contact Not Established
-                </SelectItem>
-                <SelectItem value='Awareness'>Awareness</SelectItem>
-                <SelectItem value='Attention'>Attention</SelectItem>
-                <SelectItem value='Assessment'>Assessment</SelectItem>
-                <SelectItem value='Lender Review'>Lender Review</SelectItem>
-                <SelectItem value='Not Interested'>Not Interested</SelectItem>
-                <SelectItem value='Location Unserviceable'>
-                  Location Unserviceable
-                </SelectItem>
-              </SelectContent>
-            </Select>
+              onChange={(val) => handleFilterChange('accountStatus', val)}
+              placeholder='Select Status...'
+            />
           </div>
 
           <div className='space-y-2'>
@@ -319,75 +408,22 @@ export default function AccountsPage() {
 
           <div className='space-y-2'>
             <Label>Source</Label>
-            <Select
+            <MultiSelect
+              options={SOURCE_OPTIONS}
               value={filters.source}
-              onValueChange={(val) => handleFilterChange('source', val)}
-            >
-              <SelectTrigger className='w-full'>
-                <SelectValue placeholder='Source' />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value='Himalaya'>Himalaya</SelectItem>
-                <SelectItem value='CavinKare'>CavinKare</SelectItem>
-                <SelectItem value='ALL INDIA CHEMISTS AND DRUGGISTS ASSOCIATION OF INDIA'>
-                  ALL INDIA CHEMISTS AND DRUGGISTS ASSOCIATION OF INDIA
-                </SelectItem>
-                <SelectItem value='All India Hardware Association (Based in Mumbai Charni Road)'>
-                  All India Hardware Association (Based in Mumbai Charni Road)
-                </SelectItem>
-                <SelectItem value='Alpharubix'>Alpharubix</SelectItem>
-                <SelectItem value='Condor Footwear'>Condor Footwear</SelectItem>
-                <SelectItem value='DVG Dist Petroleum'>
-                  DVG Dist Petroleum
-                </SelectItem>
-                <SelectItem value='Federation of Hotel and Restaurant Association of India (Based in New Delhi)'>
-                  Federation of Hotel and Restaurant Association of India (Based
-                  in New Delhi)
-                </SelectItem>
-                <SelectItem value='Havells'>Havells</SelectItem>
-                <SelectItem value='Liberty'>Liberty</SelectItem>
-                <SelectItem value='Marico'>Marico</SelectItem>
-                <SelectItem value='Reference'>Reference</SelectItem>
-                <SelectItem value='Retail Association of India'>
-                  Retail Association of India
-                </SelectItem>
-                <SelectItem value='SME CHAMBER'>SME CHAMBER</SelectItem>
-                <SelectItem value='Swastik'>Swastik</SelectItem>
-                <SelectItem value='Unicharm'>Unicharm</SelectItem>
-                <SelectItem value='Vibhava Marketing'>
-                  Vibhava Marketing
-                </SelectItem>
-                <SelectItem value='R1X Website'>R1X Website</SelectItem>
-                <SelectItem value='5pointcredit'>5pointcredit</SelectItem>
-              </SelectContent>
-            </Select>
+              onChange={(val) => handleFilterChange('source', val)}
+              placeholder='Select Source...'
+            />
           </div>
 
           <div className='space-y-2'>
             <Label>Industry</Label>
-            <Select
+            <MultiSelect
+              options={INDUSTRY_OPTIONS}
               value={filters.industry}
-              onValueChange={(val) => handleFilterChange('industry', val)}
-            >
-              <SelectTrigger className='w-full'>
-                <SelectValue placeholder='Industry' />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value='Pharma'>Pharma</SelectItem>
-                <SelectItem value='AHP'>AHP</SelectItem>
-                <SelectItem value='CPD'>CPD</SelectItem>
-                <SelectItem value='FMCG'>FMCG</SelectItem>
-                <SelectItem value='OTX'>OTX</SelectItem>
-                <SelectItem value='Footwear'>Footwear</SelectItem>
-                <SelectItem value='OTC'>OTC</SelectItem>
-                <SelectItem value='RAAGA'>RAAGA</SelectItem>
-                <SelectItem value='Hardware'>Hardware</SelectItem>
-                <SelectItem value='Electronics'>Electronics</SelectItem>
-                <SelectItem value='DVG Dist Petroleum'>
-                  DVG Dist Petroleum
-                </SelectItem>
-              </SelectContent>
-            </Select>
+              onChange={(val) => handleFilterChange('industry', val)}
+              placeholder='Select Industry...'
+            />
           </div>
 
           <div className='space-y-2'>
