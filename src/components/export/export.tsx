@@ -23,34 +23,35 @@ import { useQuery } from '@tanstack/react-query'
 import { ENV } from '@/conf'
 import { toast } from 'sonner'
 import { Spinner } from '../ui/spinner'
+import { MultiSelect, type Option } from '@/components/ui/multi-select'
 
 const ExportCenter = () => {
   const [activeTab, setActiveTab] = useState('accounts')
   const [isExporting, setIsExporting] = useState(false)
-  const [filters, setFilters] = useState<Record<string, string>>({
+  const [filters, setFilters] = useState({
     account_name: '',
-    account_status: '',
-    account_stage: '',
-    source: '',
-    industry: '',
+    account_status: [] as Option[],
+    account_stage: [] as Option[],
+    source: [] as Option[],
+    industry: [] as Option[],
     city: '',
     state: '',
     phone: '',
-    account_owner_id: '',
+    account_owner_id: [] as Option[],
     callback_from: '',
     callback_to: '',
-    lender_name: '',
-    case_status: '',
-    ticket_login: '',
-    loan_type: '',
-    type_of_case_login: '',
-    deal_owner_id: '',
+    lender_name: [] as Option[],
+    case_status: [] as Option[],
+    ticket_login: [] as Option[],
+    loan_type: [] as Option[],
+    type_of_case_login: [] as Option[],
+    deal_owner_id: [] as Option[],
     mobile: '',
     email: '',
     full_name: '',
-    module: '',
+    module: [] as Option[],
     parent_id: '',
-    owner_id: '',
+    owner_id: [] as Option[],
     created_from: '',
     created_to: '',
   })
@@ -62,28 +63,28 @@ const ExportCenter = () => {
   const clearFilters = () => {
     setFilters({
       account_name: '',
-      account_status: '',
-      account_stage: '',
-      source: '',
-      industry: '',
+      account_status: [] as Option[],
+      account_stage: [] as Option[],
+      source: [] as Option[],
+      industry: [] as Option[],
       city: '',
       state: '',
       phone: '',
-      account_owner_id: '',
+      account_owner_id: [] as Option[],
       callback_from: '',
       callback_to: '',
-      lender_name: '',
-      case_status: '',
-      ticket_login: '',
-      loan_type: '',
-      type_of_case_login: '',
-      deal_owner_id: '',
+      lender_name: [] as Option[],
+      case_status: [] as Option[],
+      ticket_login: [] as Option[],
+      loan_type: [] as Option[],
+      type_of_case_login: [] as Option[],
+      deal_owner_id: [] as Option[],
       mobile: '',
       email: '',
       full_name: '',
-      module: '',
+      module: [] as Option[],
       parent_id: '',
-      owner_id: '',
+      owner_id: [] as Option[],
       created_from: '',
       created_to: '',
     })
@@ -201,6 +202,60 @@ const ExportCenter = () => {
     'Vehicle Loan',
   ]
 
+  const MODULE_NAMES = ['Accounts', 'Contacts', 'Deals']
+
+  const typeOfCaseLogins = ['Fresh', 'Spillover']
+
+  const ACCOUNT_STATUS_OPTIONS = accountStatuses.map((v) => ({
+    value: v,
+    label: v,
+  }))
+
+  const ACCOUNT_STAGE_OPTIONS = accountStages.map((v) => ({
+    value: v,
+    label: v,
+  }))
+
+  const SOURCE_OPTIONS = sources.map((v) => ({
+    value: v,
+    label: v,
+  }))
+
+  const INDUSTRY_OPTIONS = industries.map((v) => ({
+    value: v,
+    label: v,
+  }))
+
+  const TICKET_LOGIN_OPTIONS = ticketLogins.map((v) => ({
+    value: v,
+    label: v,
+  }))
+
+  const DEAL_STATUS_OPTIONS = dealStatuses.map((v) => ({
+    value: v,
+    label: v,
+  }))
+
+  const LENDER_NAME_OPTIONS = lenderNames.map((v) => ({
+    value: v,
+    label: v,
+  }))
+
+  const LOAN_TYPE_OPTIONS = LOAN_TYPES.map((v) => ({
+    value: v,
+    label: v,
+  }))
+
+  const TYPE_OF_CASE_LOGIN_OPTIONS = typeOfCaseLogins.map((v) => ({
+    value: v,
+    label: v,
+  }))
+
+  const MODULE_NAMES_OPTIONS = MODULE_NAMES.map((v) => ({
+    value: v,
+    label: v,
+  }))
+
   const {
     data: ownerResponse,
     isSuccess,
@@ -225,14 +280,18 @@ const ExportCenter = () => {
 
   const owners = ownerResponse?.data ?? []
 
-  console.log(owners)
-
   const handleExport = async () => {
     setIsExporting(true)
     try {
       const params = new URLSearchParams()
       Object.entries(filters).forEach(([key, value]) => {
-        if (value && value !== 'all') params.append(key, value)
+        if (Array.isArray(value)) {
+          value.forEach((item) => {
+            params.append(key, item.value)
+          })
+        } else if (value) {
+          params.append(key, value)
+        }
       })
 
       const url = `${ENV.VITE_BACKEND_BASE_URL}/export/${activeTab}?${params.toString()}`
@@ -316,82 +375,62 @@ const ExportCenter = () => {
 
                   <div className='space-y-2'>
                     <Label className=''>Status</Label>
-                    <Select
-                      onValueChange={(v) =>
-                        handleInputChange('account_status', v)
-                      }
+                    <MultiSelect
+                      options={ACCOUNT_STATUS_OPTIONS}
                       value={filters.account_status}
-                    >
-                      <SelectTrigger>
-                        <SelectValue placeholder='Select status' />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {accountStatuses.map((status, i) => (
-                          <SelectItem key={i} value={status}>
-                            {status}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                      onChange={(val) =>
+                        setFilters((prev) => ({
+                          ...prev,
+                          account_status: val,
+                        }))
+                      }
+                      placeholder='Select Status...'
+                    />
                   </div>
 
                   <div className='space-y-2'>
                     <Label className=''>Stage</Label>
-                    <Select
-                      onValueChange={(v) =>
-                        handleInputChange('account_stage', v)
-                      }
+                    <MultiSelect
+                      options={ACCOUNT_STAGE_OPTIONS}
                       value={filters.account_stage}
-                    >
-                      <SelectTrigger>
-                        <SelectValue placeholder='Select stage' />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {accountStages.map((stage, i) => (
-                          <SelectItem key={i} value={stage}>
-                            {stage}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                      onChange={(val) =>
+                        setFilters((prev) => ({
+                          ...prev,
+                          account_stage: val,
+                        }))
+                      }
+                      placeholder='Select Stage...'
+                    />
                   </div>
 
                   <div className='space-y-2'>
                     <Label className=''>Source</Label>
-                    <Select
-                      onValueChange={(v) => handleInputChange('source', v)}
+                    <MultiSelect
+                      options={SOURCE_OPTIONS}
                       value={filters.source}
-                    >
-                      <SelectTrigger>
-                        <SelectValue placeholder='Select source' />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {sources.map((source, i) => (
-                          <SelectItem key={i} value={source}>
-                            {source}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                      onChange={(val) =>
+                        setFilters((prev) => ({
+                          ...prev,
+                          source: val,
+                        }))
+                      }
+                      placeholder='Select Source...'
+                    />
                   </div>
 
                   <div className='space-y-2'>
                     <Label className=''>Industry</Label>
-                    <Select
-                      onValueChange={(v) => handleInputChange('industry', v)}
+                    <MultiSelect
+                      options={INDUSTRY_OPTIONS}
                       value={filters.industry}
-                    >
-                      <SelectTrigger>
-                        <SelectValue placeholder='Select industry' />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {industries.map((industry, i) => (
-                          <SelectItem key={i} value={industry}>
-                            {industry}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                      onChange={(val) =>
+                        setFilters((prev) => ({
+                          ...prev,
+                          industry: val,
+                        }))
+                      }
+                      placeholder='Select Industry...'
+                    />
                   </div>
 
                   <div className='space-y-2'>
@@ -429,24 +468,20 @@ const ExportCenter = () => {
 
                   <div className='space-y-2'>
                     <Label className=''>Owner</Label>
-                    <Select
-                      onValueChange={(v) =>
-                        handleInputChange('account_owner_id', v)
-                      }
+                    <MultiSelect
+                      options={owners.map((owner: any) => ({
+                        label: owner.full_name,
+                        value: owner.id.toString(),
+                      }))}
                       value={filters.account_owner_id}
-                    >
-                      <SelectTrigger>
-                        <SelectValue placeholder='Select User' />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value='all'>All Users</SelectItem>
-                        {owners.map((owner: any) => (
-                          <SelectItem key={owner.id} value={owner.id}>
-                            {owner.full_name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                      onChange={(val) =>
+                        setFilters((prev) => ({
+                          ...prev,
+                          account_owner_id: val,
+                        }))
+                      }
+                      placeholder='Select Owners...'
+                    />
                   </div>
 
                   {/* Date Ranges [cite: 22, 53] */}
@@ -496,122 +531,90 @@ const ExportCenter = () => {
                   </div>
                   <div className='space-y-2'>
                     <Label>Lender Name</Label>
-                    <Select
-                      onValueChange={(v) => handleInputChange('lender_name', v)}
+                    <MultiSelect
+                      options={LENDER_NAME_OPTIONS}
                       value={filters.lender_name}
-                    >
-                      <SelectTrigger>
-                        <SelectValue placeholder='Select Lender Name' />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value='all'>All Lender Names</SelectItem>
-                        {lenderNames.map((lenderName: any) => (
-                          <SelectItem key={lenderName} value={lenderName}>
-                            {lenderName}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                      onChange={(val) =>
+                        setFilters((prev) => ({
+                          ...prev,
+                          lender_name: val,
+                        }))
+                      }
+                      placeholder='Select Lender...'
+                    />
                   </div>
                   <div className='space-y-2'>
                     <Label>Case Status</Label>
-                    <Select
-                      onValueChange={(v) => handleInputChange('case_status', v)}
+                    <MultiSelect
+                      options={DEAL_STATUS_OPTIONS}
                       value={filters.case_status}
-                    >
-                      <SelectTrigger>
-                        <SelectValue placeholder='Select Case Status' />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value='all'>All Case Statuses</SelectItem>
-                        {dealStatuses.map((dealStatus: any) => (
-                          <SelectItem key={dealStatus} value={dealStatus}>
-                            {dealStatus}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                      onChange={(val) =>
+                        setFilters((prev) => ({
+                          ...prev,
+                          case_status: val,
+                        }))
+                      }
+                      placeholder='Select Case Status...'
+                    />
                   </div>
                   <div className='space-y-2'>
                     <Label>Ticket Login</Label>
-                    <Select
-                      onValueChange={(v) =>
-                        handleInputChange('ticket_login', v)
-                      }
+                    <MultiSelect
+                      options={TICKET_LOGIN_OPTIONS}
                       value={filters.ticket_login}
-                    >
-                      <SelectTrigger>
-                        <SelectValue placeholder='Select Ticket Login' />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value='all'>All Ticket Logins</SelectItem>
-                        {ticketLogins.map((ticketLogin: any) => (
-                          <SelectItem key={ticketLogin} value={ticketLogin}>
-                            {ticketLogin}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                      onChange={(val) =>
+                        setFilters((prev) => ({
+                          ...prev,
+                          ticket_login: val,
+                        }))
+                      }
+                      placeholder='Select Ticket Login...'
+                    />
                   </div>
                   <div className='space-y-2'>
                     <Label>Loan Type</Label>
-                    <Select
-                      onValueChange={(v) => handleInputChange('loan_type', v)}
+                    <MultiSelect
+                      options={LOAN_TYPE_OPTIONS}
                       value={filters.loan_type}
-                    >
-                      <SelectTrigger>
-                        <SelectValue placeholder='Select Loan Type' />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value='all'>All Loan Types</SelectItem>
-                        {LOAN_TYPES.map((loanType: any) => (
-                          <SelectItem key={loanType} value={loanType}>
-                            {loanType}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                      onChange={(val) =>
+                        setFilters((prev) => ({
+                          ...prev,
+                          loan_type: val,
+                        }))
+                      }
+                      placeholder='Select Status...'
+                    />
                   </div>
                   <div className='space-y-2'>
                     <Label>Type of Case Login</Label>
-                    <Select
-                      onValueChange={(v) =>
-                        handleInputChange('type_of_case_login', v)
-                      }
+                    <MultiSelect
+                      options={TYPE_OF_CASE_LOGIN_OPTIONS}
                       value={filters.type_of_case_login}
-                    >
-                      <SelectTrigger>
-                        <SelectValue placeholder='Select Type of Case Login' />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value='all'>
-                          All Type of Case Logins
-                        </SelectItem>
-                        <SelectItem value='Fresh'>Fresh</SelectItem>
-                        <SelectItem value='Spillover'>Spillover</SelectItem>
-                      </SelectContent>
-                    </Select>
+                      onChange={(val) =>
+                        setFilters((prev) => ({
+                          ...prev,
+                          type_of_case_login: val,
+                        }))
+                      }
+                      placeholder='Select Type of Case Login...'
+                    />
                   </div>
                   <div className='space-y-2'>
                     <Label>Owner</Label>
-                    <Select
-                      onValueChange={(v) =>
-                        handleInputChange('deal_owner_id', v)
-                      }
+                    <MultiSelect
+                      options={owners.map((owner: any) => ({
+                        label: owner.full_name,
+                        value: owner.id.toString(),
+                      }))}
                       value={filters.deal_owner_id}
-                    >
-                      <SelectTrigger>
-                        <SelectValue placeholder='Select User' />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value='all'>All Users</SelectItem>
-                        {owners.map((owner: any) => (
-                          <SelectItem key={owner.id} value={owner.id}>
-                            {owner.full_name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                      onChange={(val) =>
+                        setFilters((prev) => ({
+                          ...prev,
+                          deal_owner_id: val,
+                        }))
+                      }
+                      placeholder='Select Owners...'
+                    />
                   </div>
                 </>
               )}
@@ -675,20 +678,17 @@ const ExportCenter = () => {
                 <>
                   <div className='space-y-2'>
                     <Label>Module</Label>
-                    <Select
-                      onValueChange={(v) => handleInputChange('module', v)}
+                    <MultiSelect
+                      options={MODULE_NAMES_OPTIONS}
                       value={filters.module}
-                    >
-                      <SelectTrigger>
-                        <SelectValue placeholder='Select Module' />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value='all'>All Modules</SelectItem>
-                        <SelectItem value='Accounts'>Accounts</SelectItem>
-                        <SelectItem value='Deals'>Deals</SelectItem>
-                        <SelectItem value='Contacts'>Contacts</SelectItem>
-                      </SelectContent>
-                    </Select>
+                      onChange={(val) =>
+                        setFilters((prev) => ({
+                          ...prev,
+                          module: val,
+                        }))
+                      }
+                      placeholder='Select Modules...'
+                    />
                   </div>
                   <div className='space-y-2'>
                     <Label>Parent ID</Label>
@@ -702,22 +702,20 @@ const ExportCenter = () => {
                   </div>
                   <div className='space-y-2'>
                     <Label>Owner</Label>
-                    <Select
-                      onValueChange={(v) => handleInputChange('owner_id', v)}
+                    <MultiSelect
+                      options={owners.map((owner: any) => ({
+                        label: owner.full_name,
+                        value: owner.id.toString(),
+                      }))}
                       value={filters.owner_id}
-                    >
-                      <SelectTrigger>
-                        <SelectValue placeholder='Select User' />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value='all'>All Users</SelectItem>
-                        {owners.map((owner: any) => (
-                          <SelectItem key={owner.id} value={owner.id}>
-                            {owner.full_name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                      onChange={(val) =>
+                        setFilters((prev) => ({
+                          ...prev,
+                          owner_id: val,
+                        }))
+                      }
+                      placeholder='Select Owners...'
+                    />
                   </div>
                   <div className='space-y-2'>
                     <Label>Created From</Label>
