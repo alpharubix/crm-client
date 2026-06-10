@@ -154,7 +154,7 @@ export default function DealsKanban() {
             </div>
 
             <div className="space-y-1 md:col-span-2">
-              <Label>Loan Type</Label>
+              <Label className="text-[11px] font-bold tracking-wider text-zinc-400 uppercase">Loan Type</Label>
               <MultiSelect
                 options={LOAN_TYPE_OPTIONS}
                 value={localFilters.project_type}

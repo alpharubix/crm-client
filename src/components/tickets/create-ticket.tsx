@@ -1,6 +1,6 @@
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
-import { useNavigate, useParams } from 'react-router-dom'
+import { useLocation, useNavigate, useParams } from 'react-router-dom'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
 import { format } from 'date-fns'
@@ -88,6 +88,9 @@ const TICKET_LOGIN = [
 export default function CreateTicket() {
   const { dealId } = useParams()
   const navigate = useNavigate()
+  const location = useLocation()
+  const prefilledData = location.state || {}
+
   const queryClient = useQueryClient()
   const [lenderSearch, setLenderSearch] = useState('')
   const [lenderOpen, setLenderOpen] = useState(false)
@@ -107,15 +110,32 @@ export default function CreateTicket() {
     formState: { errors },
   } = useForm<CreateTicketFormValues>({
     resolver: zodResolver(createTicketSchema),
+    defaultValues: {
+      accountId: prefilledData.accountId ? String(prefilledData.accountId) : '',
+    },
   })
 
   const formValues = watch()
 
   // Account lookup state
-  const [accountSearch, setAccountSearch] = useState('')
-  const [debouncedAccountSearch, setDebouncedAccountSearch] = useState('')
+  const [accountSearch, setAccountSearch] = useState(
+    prefilledData.accountName || '',
+  )
+  const [debouncedAccountSearch, setDebouncedAccountSearch] = useState(
+    prefilledData.accountName || '',
+  )
   const [isAccountOpen, setIsAccountOpen] = useState(false)
-  const [selectedAccountId, setSelectedAccountId] = useState<string>('')
+  const [selectedAccountId, setSelectedAccountId] = useState<string>(
+    prefilledData.accountId ? String(prefilledData.accountId) : '',
+  )
+
+  useEffect(() => {
+    register('accountId')
+  }, [register])
+
+  useEffect(() => {
+    setValue('accountId', selectedAccountId, { shouldValidate: true })
+  }, [selectedAccountId, setValue])
 
   // Debounce account search
   useEffect(() => {
@@ -159,8 +179,22 @@ export default function CreateTicket() {
 
   // Extract data from the response
   const dealData = dealResponse?.data?.[0]
+
   const accountName = dealData?.account_name || '—'
   const dealName = dealData?.deal_name || dealData?.account_name || '—'
+
+  useEffect(() => {
+    if (dealData) {
+      const accId = String(dealData.account_id || '')
+      const accName = dealData.account_name || ''
+      if (!selectedAccountId && accId) {
+        setSelectedAccountId(accId)
+      }
+      if (!accountSearch && accName) {
+        setAccountSearch(accName)
+      }
+    }
+  }, [dealData, selectedAccountId, accountSearch])
 
   // Note: Account on a ticket is separate from the deal's account.
   // We intentionally do NOT pre-fill the account search from dealData —
@@ -176,11 +210,7 @@ export default function CreateTicket() {
         ticket_stage: values.ticketStage,
         lender_login_type: values.lenderLoginType,
         lender_login_date: values.lenderLoginDate,
-      }
-
-      // Add selected account_id to payload
-      if (selectedAccountId) {
-        payload.account_id = selectedAccountId
+        account_id: values.accountId,
       }
 
       // optional fields
@@ -276,7 +306,9 @@ export default function CreateTicket() {
           </Button>
           <Button
             className='cursor-pointer'
-            onClick={handleSubmit(onSubmit)}
+            onClick={handleSubmit(onSubmit, (errs) => {
+              console.log('Validation Errors:', errs)
+            })}
             disabled={createMutation.isPending}
           >
             {createMutation.isPending ? (
@@ -292,12 +324,17 @@ export default function CreateTicket() {
         <SectionHeader title='Loan Account Status' />
         <CardContent className='p-0 grid grid-cols-1 md:grid-cols-2 border-b'>
           <div className='md:border-r'>
-            <FieldRow label='Account Name'>
+            <FieldRow label='Account Name *' error={errors.accountId?.message}>
               <div className='relative'>
                 <Input
                   placeholder='Search Account...'
+                  disabled={true}
                   className='h-8'
-                  value={accountSearch}
+                  value={
+                    dealData
+                      ? `${accountSearch}`
+                      : accountSearch
+                  }
                   onChange={(e) => {
                     setAccountSearch(e.target.value)
                     setIsAccountOpen(true)

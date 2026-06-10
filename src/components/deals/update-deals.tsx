@@ -307,11 +307,9 @@ export default function UpdateDeals() {
   })
 
   const dealData: Deal = dealResponse?.data?.[0] || dealResponse?.data
-
   const notes = (dealData as any)?.notes || []
 
   const revenues = (dealData as any)?.revenue || []
-  console.log(revenues, 'revenues')
 
   const sortedNotes = [...notes].sort((a: any, b: any) => {
     return (
@@ -747,7 +745,10 @@ export default function UpdateDeals() {
                   : 'No change recorded'}
               </span>
             </FieldRow>
-            <FieldRow label='Expected Closing Date *' error={errors.dealExpectedClosing?.message}>
+            <FieldRow
+              label='Expected Closing Date *'
+              error={errors.dealExpectedClosing?.message}
+            >
               <DateField
                 isEdit={isEdit}
                 showTime={false}
@@ -876,7 +877,14 @@ export default function UpdateDeals() {
                 size='sm'
                 variant='outline'
                 className='cursor-pointer'
-                onClick={() => navigate(`/deals/${id}/tickets/create`)}
+                onClick={() =>
+                  navigate(`/deals/${id}/tickets/create`, {
+                    state: {
+                      accountId: dealData?.account_id,
+                      accountName: dealData?.account_name,
+                    },
+                  })
+                }
               >
                 <Plus className='h-4 w-4 mr-1' /> Add Ticket
               </Button>

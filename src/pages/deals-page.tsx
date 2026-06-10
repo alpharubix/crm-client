@@ -1,5 +1,5 @@
 import { Plus, RefreshCw } from 'lucide-react'
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useSearchParams } from 'react-router-dom'
 
 import { Button } from '@/components/ui/button'
@@ -37,6 +37,7 @@ import HighlightedText from '@/components/shared/highlighted-text'
 import ExportCsvButton from '@/components/shared/export-csv-button'
 import LENDER_NAMES from '@/utils/lenders.json'
 import { SearchableSelect } from '@/components/searchable-select'
+import { MultiSelect, type Option } from '@/components/ui/multi-select'
 
 const LOAN_TYPES = [
   'SCF',
@@ -77,6 +78,12 @@ const TICKET_LOGIN = [
   'Rejected',
 ]
 
+const LOAN_TYPE_OPTIONS: Option[] = LOAN_TYPES.map((val) => ({ value: val, label: val }))
+const CASE_STATUS_OPTIONS: Option[] = CASE_STATUSES.map((val) => ({ value: val, label: val }))
+const TYPE_OF_CASE_LOGIN_OPTIONS: Option[] = TYPE_OF_CASE_LOGIN.map((val) => ({ value: val, label: val }))
+const TICKET_LOGIN_OPTIONS: Option[] = TICKET_LOGIN.map((val) => ({ value: val, label: val }))
+const LENDER_OPTIONS: Option[] = LENDER_NAMES.map((val) => ({ value: val, label: val }))
+
 const DealsPage = () => {
   const navigate = useNavigate()
   const queryClient = useQueryClient()
@@ -85,12 +92,12 @@ const DealsPage = () => {
   // 1. Added explicit tracking keys into local state hook from URL params
   const [filters, setFilters] = useState({
     accountName: searchParams.get('accountName') || '',
-    lenderName: searchParams.get('lenderName') || '',
-    caseStatus: searchParams.get('caseStatus') || '',
-    ticketLogin: searchParams.get('ticketLogin') || '',
-    loanType: searchParams.get('loanType') || '',
-    typeOfCaseLogin: searchParams.get('typeOfCaseLogin') || '',
-    dealOwnerId: searchParams.get('dealOwnerId') || '',
+    lenderName: [] as Option[],
+    caseStatus: [] as Option[],
+    ticketLogin: [] as Option[],
+    loanType: [] as Option[],
+    typeOfCaseLogin: [] as Option[],
+    dealOwnerId: [] as Option[],
     createdFrom: searchParams.get('createdFrom') || '',
     createdTo: searchParams.get('createdTo') || '',
     expectedClosingFrom: searchParams.get('expectedClosingFrom') || '',
@@ -98,18 +105,6 @@ const DealsPage = () => {
     statusClosingFrom: searchParams.get('statusClosingFrom') || '',
     statusClosingTo: searchParams.get('statusClosingTo') || '',
   })
-
-  const [lenderSearch, setLenderSearch] = useState(
-    searchParams.get('lenderName') || '',
-  )
-  const [lenderOpen, setLenderOpen] = useState(false)
-
-  const filteredLenders =
-    lenderSearch.length > 1
-      ? LENDER_NAMES.filter((l: string) =>
-          l.toLowerCase().includes(lenderSearch.toLowerCase()),
-        ).slice(0, 50)
-      : []
 
   const [appliedFilters, setAppliedFilters] = useState(filters)
 
@@ -134,6 +129,63 @@ const DealsPage = () => {
   const showOwnerFilter = isSuccess && !ownerResponse?.forbidden
   const owners = ownerResponse?.data ?? []
 
+  useEffect(() => {
+    const loadedFilters: Partial<typeof filters> = {}
+
+    const ownerIds = searchParams.getAll('dealOwnerId')
+    if (ownerIds.length > 0 && isSuccess && owners.length > 0) {
+      loadedFilters.dealOwnerId = ownerIds.map((id) => {
+        const o = owners.find((owner: any) => owner.id.toString() === id)
+        return { value: id, label: o ? o.full_name : id }
+      })
+    }
+
+    const statuses = searchParams.getAll('caseStatus')
+    if (statuses.length > 0) {
+      loadedFilters.caseStatus = statuses.map((val) => {
+        const matched = CASE_STATUS_OPTIONS.find((o) => o.value === val)
+        return { value: val, label: matched ? matched.label : val }
+      })
+    }
+
+    const logins = searchParams.getAll('ticketLogin')
+    if (logins.length > 0) {
+      loadedFilters.ticketLogin = logins.map((val) => {
+        const matched = TICKET_LOGIN_OPTIONS.find((o) => o.value === val)
+        return { value: val, label: matched ? matched.label : val }
+      })
+    }
+
+    const loans = searchParams.getAll('loanType')
+    if (loans.length > 0) {
+      loadedFilters.loanType = loans.map((val) => {
+        const matched = LOAN_TYPE_OPTIONS.find((o) => o.value === val)
+        return { value: val, label: matched ? matched.label : val }
+      })
+    }
+
+    const cases = searchParams.getAll('typeOfCaseLogin')
+    if (cases.length > 0) {
+      loadedFilters.typeOfCaseLogin = cases.map((val) => {
+        const matched = TYPE_OF_CASE_LOGIN_OPTIONS.find((o) => o.value === val)
+        return { value: val, label: matched ? matched.label : val }
+      })
+    }
+
+    const lenders = searchParams.getAll('lenderName')
+    if (lenders.length > 0) {
+      loadedFilters.lenderName = lenders.map((val) => {
+        const matched = LENDER_OPTIONS.find((o) => o.value === val)
+        return { value: val, label: matched ? matched.label : val }
+      })
+    }
+
+    if (Object.keys(loadedFilters).length > 0) {
+      setFilters((prev) => ({ ...prev, ...loadedFilters }))
+      setAppliedFilters((prev) => ({ ...prev, ...loadedFilters }))
+    }
+  }, [isSuccess, owners, searchParams])
+
   const { data, isLoading, refetch } = useQuery({
     queryKey: ['deals', currentPage, appliedFilters],
     queryFn: async () => {
@@ -142,18 +194,36 @@ const DealsPage = () => {
 
       if (appliedFilters.accountName)
         params.set('account_name', appliedFilters.accountName)
-      if (appliedFilters.lenderName)
-        params.set('lender_name', appliedFilters.lenderName)
-      if (appliedFilters.caseStatus)
-        params.set('case_status', appliedFilters.caseStatus)
-      if (appliedFilters.ticketLogin)
-        params.set('ticket_login', appliedFilters.ticketLogin)
-      if (appliedFilters.loanType)
-        params.set('loan_type', appliedFilters.loanType)
-      if (appliedFilters.typeOfCaseLogin)
-        params.set('type_of_case_login', appliedFilters.typeOfCaseLogin)
-      if (appliedFilters.dealOwnerId)
-        params.set('deal_owner_id', appliedFilters.dealOwnerId)
+      if (appliedFilters.lenderName && appliedFilters.lenderName.length > 0) {
+        appliedFilters.lenderName.forEach((o: Option) =>
+          params.append('lender_name', o.value),
+        )
+      }
+      if (appliedFilters.caseStatus && appliedFilters.caseStatus.length > 0) {
+        appliedFilters.caseStatus.forEach((o: Option) =>
+          params.append('case_status', o.value),
+        )
+      }
+      if (appliedFilters.ticketLogin && appliedFilters.ticketLogin.length > 0) {
+        appliedFilters.ticketLogin.forEach((o: Option) =>
+          params.append('ticket_login', o.value),
+        )
+      }
+      if (appliedFilters.loanType && appliedFilters.loanType.length > 0) {
+        appliedFilters.loanType.forEach((o: Option) =>
+          params.append('loan_type', o.value),
+        )
+      }
+      if (appliedFilters.typeOfCaseLogin && appliedFilters.typeOfCaseLogin.length > 0) {
+        appliedFilters.typeOfCaseLogin.forEach((o: Option) =>
+          params.append('type_of_case_login', o.value),
+        )
+      }
+      if (appliedFilters.dealOwnerId && appliedFilters.dealOwnerId.length > 0) {
+        appliedFilters.dealOwnerId.forEach((o: Option) =>
+          params.append('deal_owner_id', o.value),
+        )
+      }
 
       // 2. Map local hooks to match exact native backend endpoint keys
       if (appliedFilters.createdFrom)
@@ -190,7 +260,13 @@ const DealsPage = () => {
     const params = new URLSearchParams()
     params.set('page', '1')
     Object.entries(filters).forEach(([key, value]) => {
-      if (value) params.set(key, String(value))
+      if (Array.isArray(value)) {
+        value.forEach((item: Option) => {
+          params.append(key, item.value)
+        })
+      } else if (value) {
+        params.set(key, String(value))
+      }
     })
     setSearchParams(params)
     setAppliedFilters(filters)
@@ -200,12 +276,12 @@ const DealsPage = () => {
   const handleClear = () => {
     const emptyFilters = {
       accountName: '',
-      lenderName: '',
-      caseStatus: '',
-      ticketLogin: '',
-      loanType: '',
-      typeOfCaseLogin: '',
-      dealOwnerId: '',
+      lenderName: [] as Option[],
+      caseStatus: [] as Option[],
+      ticketLogin: [] as Option[],
+      loanType: [] as Option[],
+      typeOfCaseLogin: [] as Option[],
+      dealOwnerId: [] as Option[],
       createdFrom: '',
       createdTo: '',
       expectedClosingFrom: '',
@@ -213,7 +289,6 @@ const DealsPage = () => {
       statusClosingFrom: '',
       statusClosingTo: '',
     }
-    setLenderSearch('')
     setFilters(emptyFilters)
     setAppliedFilters(emptyFilters)
     setSearchParams(new URLSearchParams())
@@ -310,135 +385,66 @@ const DealsPage = () => {
           {showOwnerFilter && (
             <div className='space-y-2'>
               <Label>Deal Owner</Label>
-              <Select
+              <MultiSelect
+                options={owners.map((owner: any) => ({
+                  label: owner.full_name,
+                  value: owner.id.toString(),
+                }))}
                 value={filters.dealOwnerId}
-                onValueChange={(val) => handleFilterChange('dealOwnerId', val)}
-              >
-                <SelectTrigger className='w-full'>
-                  <SelectValue placeholder='Deal Owner' />
-                </SelectTrigger>
-                <SelectContent>
-                  {owners.map((owner: any) => (
-                    <SelectItem key={owner.id} value={owner.id}>
-                      {owner.full_name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+                onChange={(val) => handleFilterChange('dealOwnerId', val)}
+                placeholder='Select Owners...'
+              />
             </div>
           )}
 
           <div className='space-y-2'>
             <Label>Lender Name</Label>
-            <div className='relative'>
-              <Input
-                value={lenderSearch}
-                onChange={(e) => {
-                  setLenderSearch(e.target.value)
-                  setLenderOpen(true)
-                  handleFilterChange('lenderName', e.target.value)
-                }}
-                onFocus={() => setLenderOpen(true)}
-                onBlur={() => setTimeout(() => setLenderOpen(false), 200)}
-                placeholder='Search Lender...'
-              />
-
-              {lenderOpen && filteredLenders.length > 0 && (
-                <div className='absolute z-10 w-full mt-1 bg-background border rounded-md shadow-lg max-h-60 overflow-auto'>
-                  {filteredLenders.map((name: string) => (
-                    <div
-                      key={name}
-                      className='p-2 hover:bg-muted cursor-pointer text-sm'
-                      onMouseDown={() => {
-                        handleFilterChange('lenderName', name)
-                        setLenderSearch(name)
-                        setLenderOpen(false)
-                      }}
-                    >
-                      {name}
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
+            <MultiSelect
+              options={LENDER_OPTIONS}
+              value={filters.lenderName}
+              onChange={(val) => handleFilterChange('lenderName', val)}
+              placeholder='Select Lenders...'
+            />
           </div>
 
           <div className='space-y-2'>
             <Label>Case Status</Label>
-            <Select
+            <MultiSelect
+              options={CASE_STATUS_OPTIONS}
               value={filters.caseStatus}
-              onValueChange={(val) => handleFilterChange('caseStatus', val)}
-            >
-              <SelectTrigger className='w-full'>
-                <SelectValue placeholder='Case Status' />
-              </SelectTrigger>
-              <SelectContent>
-                {CASE_STATUSES.map((status) => (
-                  <SelectItem key={status} value={status}>
-                    {status}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+              onChange={(val) => handleFilterChange('caseStatus', val)}
+              placeholder='Select Case Status...'
+            />
           </div>
 
           <div className='space-y-2'>
             <Label>Ticket Login</Label>
-            <Select
+            <MultiSelect
+              options={TICKET_LOGIN_OPTIONS}
               value={filters.ticketLogin}
-              onValueChange={(val) => handleFilterChange('ticketLogin', val)}
-            >
-              <SelectTrigger className='w-full'>
-                <SelectValue placeholder='Ticket Login' />
-              </SelectTrigger>
-              <SelectContent>
-                {TICKET_LOGIN.map((val) => (
-                  <SelectItem key={val} value={val}>
-                    {val}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+              onChange={(val) => handleFilterChange('ticketLogin', val)}
+              placeholder='Select Ticket Login...'
+            />
           </div>
 
           <div className='space-y-2'>
             <Label>Type of Loan</Label>
-            <Select
+            <MultiSelect
+              options={LOAN_TYPE_OPTIONS}
               value={filters.loanType}
-              onValueChange={(val) => handleFilterChange('loanType', val)}
-            >
-              <SelectTrigger className='w-full'>
-                <SelectValue placeholder='Type of Loan' />
-              </SelectTrigger>
-              <SelectContent>
-                {LOAN_TYPES.map((type) => (
-                  <SelectItem key={type} value={type}>
-                    {type}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+              onChange={(val) => handleFilterChange('loanType', val)}
+              placeholder='Select Type of Loan...'
+            />
           </div>
 
           <div className='space-y-2'>
             <Label>Type of Case Login</Label>
-            <Select
+            <MultiSelect
+              options={TYPE_OF_CASE_LOGIN_OPTIONS}
               value={filters.typeOfCaseLogin}
-              onValueChange={(val) =>
-                handleFilterChange('typeOfCaseLogin', val)
-              }
-            >
-              <SelectTrigger className='w-full'>
-                <SelectValue placeholder='Type of Case Login' />
-              </SelectTrigger>
-              <SelectContent>
-                {TYPE_OF_CASE_LOGIN.map((type) => (
-                  <SelectItem key={type} value={type}>
-                    {type}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+              onChange={(val) => handleFilterChange('typeOfCaseLogin', val)}
+              placeholder='Select Type of Case Login...'
+            />
           </div>
 
           <div className='border-t border-dashed border-zinc-400 pt-3 space-y-3'>
