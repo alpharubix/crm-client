@@ -411,6 +411,7 @@ export default function CreateAccount() {
                     'R1X Website',
                     '5Pointcredit',
                     'Other',
+                    'Event',
                   ]}
                   onChange={(v) => setValue('source', v)}
                 />

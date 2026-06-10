@@ -24,11 +24,16 @@ const LOAN_TYPE_OPTIONS: Option[] = [
     label: 'SCF (Renewal & Enhancement)',
   },
   { value: 'Open SCF', label: 'Open SCF' },
+  { value: 'Open SCF Renewal', label: 'Open SCF Renewal' },
+  { value: 'Open SCF Enhancement', label: 'Open SCF Enhancement' },
+  { value: 'Open SCF (Renewal and Enhancement)', label: 'Open SCF (Renewal and Enhancement)' },
   { value: 'BT-SCF', label: 'BT-SCF' },
+  { value: 'BT-Open SCF', label: 'BT-Open SCF' },
   { value: 'Unsecured OD', label: 'Unsecured OD' },
   { value: 'Unsecured Term Loan', label: 'Unsecured Term Loan' },
   { value: 'Secured Loan', label: 'Secured Loan' },
   { value: 'Vehicle Loan', label: 'Vehicle Loan' },
+  { value: 'Secured BT', label: 'Secured BT' }
 ]
 
 interface LocalFilters {
