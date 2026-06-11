@@ -46,6 +46,7 @@ interface Candidate {
   work_experience?: string
   industry?: string
   resume?: string
+  assessment?: string
   educational_qualification_ug?: string
   year_of_passing_ug?: string
   educational_qualification_pg?: string
@@ -55,6 +56,7 @@ interface Candidate {
   rating?: number
   feedback_status?: string
   feedback_form_link?: string
+  approved_salary?: string
 }
 
 // ── Draggable Candidate Card Component ───────────────────────────────────────────
