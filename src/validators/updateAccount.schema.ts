@@ -8,6 +8,8 @@ export const updateAccountSchema = z.object({
   source: z.string().optional(),
   sourceType: z.string().optional(),
   sourceOther: z.string().optional(),
+  sourceDate: z.date().optional(),
+  sourceDescription: z.string().optional(),
   distributorCode: z.string().optional(),
 
   wabaInterested: z.boolean().optional(),

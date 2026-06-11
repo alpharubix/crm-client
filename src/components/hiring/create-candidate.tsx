@@ -338,6 +338,26 @@ export default function CreateCandidate() {
                 placeholder='Attachment /Link'
               />
             </FieldRow>
+            <FieldRow label='Assessment'>
+              {!canModifyCandidateDetails && getVal('assessment') ? (
+                <a
+                  href={getVal('assessment')}
+                  target='_blank'
+                  rel='noopener noreferrer'
+                  className='text-blue-600 hover:underline text-sm h-8 flex items-center px-3 border border-transparent truncate'
+                >
+                  {getVal('assessment')}
+                </a>
+              ) : (
+                <Input
+                  value={getVal('assessment')}
+                  disabled={!canModifyCandidateDetails}
+                  onChange={(e) => set('assessment', e.target.value)}
+                  className='h-8'
+                  placeholder='Assessment Link'
+                />
+              )}
+            </FieldRow>
           </div>
           {/* Right Column */}
           <div>
@@ -478,6 +498,23 @@ export default function CreateCandidate() {
                 onChange={(e) => set('year_of_passing_pg', e.target.value)}
                 className='h-8'
                 placeholder='YYYY'
+              />
+            </FieldRow>
+          </div>
+        </CardContent>
+
+        {/* --- COMPENSATION --- */}
+        <SectionHeader title='Compensation' />
+        <CardContent className='p-0 grid grid-cols-1 md:grid-cols-2'>
+          <div className='md:border-r'>
+            <FieldRow label='Approved Salary'>
+              <Input
+                value={getVal('approved_salary')}
+                disabled={!canModifyCandidateDetails}
+                onChange={(e) => set('approved_salary', e.target.value)}
+                className='h-8'
+                type='number'
+                placeholder='Approved Salary'
               />
             </FieldRow>
           </div>

@@ -150,6 +150,8 @@ export default function CreateAccount() {
       coApplicantCountry: 'India',
       accountOwnerId: '',
       accountStage: 'Initial Pitch',
+      sourceDate: undefined,
+      sourceDescription: '',
     },
   })
 
@@ -185,6 +187,8 @@ export default function CreateAccount() {
       source: formData.source,
       source_type: formData.sourceType,
       source_other: formData.sourceOther,
+      source_date: formData.sourceDate,
+      source_description: formData.sourceDescription,
       distributor_code: formData.distributorCode,
       waba_interested: formData.wabaInterested,
       call_back_date_time: formData.callBackDate,
@@ -437,6 +441,21 @@ export default function CreateAccount() {
                   <Input {...register('sourceOther')} className='h-8' />
                 </FieldRow>
               )}
+
+              <FieldRow label='Source Date' error={errors.sourceDate?.message}>
+                <DateField
+                  value={data.sourceDate}
+                  isEdit={true}
+                  onChange={(d) => setValue('sourceDate', d)}
+                />
+              </FieldRow>
+
+              <FieldRow label='Source Description' error={errors.sourceDescription?.message}>
+                <textarea
+                  {...register('sourceDescription')}
+                  className='w-full h-20 px-2 border rounded-md text-sm'
+                />
+              </FieldRow>
 
               <FieldRow
                 label='Distributor Code'
