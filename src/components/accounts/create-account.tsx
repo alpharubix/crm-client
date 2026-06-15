@@ -187,7 +187,9 @@ export default function CreateAccount() {
       source: formData.source,
       source_type: formData.sourceType,
       source_other: formData.sourceOther,
-      source_date: formData.sourceDate,
+      source_date: formData.sourceDate
+        ? formData.sourceDate.toISOString().split('T')[0]
+        : undefined,
       source_description: formData.sourceDescription,
       distributor_code: formData.distributorCode,
       waba_interested: formData.wabaInterested,

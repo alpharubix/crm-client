@@ -335,7 +335,7 @@ export default function UpdateDeals() {
       })
       if (!res.ok) {
         const errData = await res.json().catch(() => ({}))
-        throw new Error(errData.message || 'Failed to update deal')
+        throw new Error(errData.detail || errData.message || 'Failed to update deal')
       }
       return res.json()
     },
@@ -612,7 +612,7 @@ export default function UpdateDeals() {
               <span>{dealData.account_name || '—'}</span>
             </FieldRow>
             <FieldRow label='Deal Name'>
-              <span>{dealData.account_name || '—'}</span>
+              <span className='font-medium'>{(dealData as any).deal_name || dealData.account_name || '—'}</span>
             </FieldRow>
             <FieldRow label='Deal Status' error={errors.dealStatus?.message}>
               <SelectField

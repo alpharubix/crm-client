@@ -287,7 +287,10 @@ function mapFormToApi(
   if (dirtyFields.accountName) payload.account_name = formData.accountName
   if (dirtyFields.sourceType) payload.source_type = formData.sourceType
   if (dirtyFields.sourceOther) payload.source_other = formData.sourceOther
-  if (dirtyFields.sourceDate) payload.source_date = formData.sourceDate
+  if (dirtyFields.sourceDate)
+    payload.source_date = formData.sourceDate
+      ? formData.sourceDate.toISOString().split('T')[0]
+      : null
   if (dirtyFields.sourceDescription)
     payload.source_description = formData.sourceDescription
   if (dirtyFields.accountOwnerId)

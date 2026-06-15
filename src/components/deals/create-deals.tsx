@@ -136,7 +136,7 @@ export default function CreateDeal() {
 
       if (!res.ok) {
         const errorData = await res.json().catch(() => ({}))
-        throw new Error(errorData.message || 'Failed to create deal')
+        throw new Error(errorData.detail || errorData.message || 'Failed to create deal')
       }
       return res.json()
     },
@@ -348,13 +348,10 @@ export default function CreateDeal() {
           </div>
 
           <div>
-            <FieldRow label='Deal Name' error={errors.dealName?.message}>
-              <Input
-                {...register('dealName')}
-                placeholder='Deal Name'
-                className='h-8'
-                disabled={prefilledData.accountName}
-              />
+            <FieldRow label='Deal Name'>
+              <span className='text-sm text-muted-foreground italic'>
+                Auto-generated on save (e.g. AccountName/ID/D01)
+              </span>
             </FieldRow>
 
             <FieldRow label='Deal Status *' error={errors.dealStatus?.message}>

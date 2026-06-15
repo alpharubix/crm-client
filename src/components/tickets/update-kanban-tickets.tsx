@@ -369,7 +369,7 @@ export default function UpdateKanbanTicket() {
       })
       if (!res.ok) {
         const errData = await res.json().catch(() => ({}))
-        throw new Error(errData.message || 'Failed to update ticket')
+        throw new Error(errData.detail || errData.message || 'Failed to update ticket')
       }
       return res.json()
     },
@@ -713,6 +713,11 @@ export default function UpdateKanbanTicket() {
           </div>
 
           <div>
+            <FieldRow label='Ticket Name'>
+              <span className='font-medium'>
+                {(dealData as any).ticket_name || dealData.deal_name || '—'}
+              </span>
+            </FieldRow>
             <FieldRow label='Lender Name *' error={errors.lenderName?.message}>
               <div className='relative'>
                 <Input
