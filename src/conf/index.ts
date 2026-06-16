@@ -78,6 +78,7 @@ export const USERS_MAP: Record<string, string> = {
 export const HR_USER_IDS = [
   '3899927000000318361', // Namrata
   '3899927000000221552', // Sarada
+  '3899927000000527649', // Ambika
 ]
 
 // Manager Registry mapped directly from your MANAGER_EXECUTIVES_MAP keys

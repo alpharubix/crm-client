@@ -128,6 +128,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
 
   // Isolate user identity signatures
   const isSarada = currentUserId === '3899927000000221552'
+  const isAmbika = currentUserId === '3899927000000527649'
   const isManager = MANAGER_USER_IDS.includes(currentUserId)
 
   const navUser = {
@@ -144,9 +145,9 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
       <SidebarContent>
         <NavMain
           items={data.navMain.filter((item) => {
-            // ── 1. ABSOLUTE STRIP DOWN FOR SARADA ──
-            // Sarada can ONLY see Hiring. No other tabs (Modules, Projects, etc.) are allowed.
-            if (isSarada) {
+            // ── 1. ABSOLUTE STRIP DOWN FOR SARADA & AMBIKA ──
+            // Sarada & Ambika can ONLY see Hiring. No other tabs (Modules, Projects, etc.) are allowed.
+            if (isSarada || isAmbika) {
               return item.title === 'Hiring'
             }
 

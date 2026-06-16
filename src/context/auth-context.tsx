@@ -11,7 +11,7 @@ import { ENV } from '@/conf'
 interface AuthContextType {
   user: User | null
   isLoading: boolean
-  checkAuth: () => Promise<void>
+  checkAuth: () => Promise<User | null>
   logout: () => Promise<void>
 }
 
@@ -29,14 +29,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
       if (!res.ok) {
         setUser(null)
-        return
+        return null
       }
 
       const data = await res.json()
-      setUser(data.user ?? data)
+      const userData = data.user ?? data
+      setUser(userData)
+      return userData
     } catch (err) {
       console.error('Auth check failed', err)
       setUser(null)
+      return null
     } finally {
       setIsLoading(false)
     }
