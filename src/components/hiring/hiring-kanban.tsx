@@ -33,6 +33,7 @@ interface JR {
   no_of_vacancies?: number
   hiring_location_city?: string
   approver_id?: string
+  language_proficiency?: string[]
 }
 
 // ── JR Card Component with Inline Workflow Actions ─────────────────
@@ -86,6 +87,10 @@ function JRCard({
           <span className='text-muted-foreground'>Vacancies</span>
           <span className='font-bold text-zinc-800'>
             {jr.no_of_vacancies ?? '—'}
+          </span>
+          <span className='text-muted-foreground'>Languages</span>
+          <span className='font-bold text-zinc-800'>
+            {jr.language_proficiency?.join(', ') ?? '—'}
           </span>
         </div>
 

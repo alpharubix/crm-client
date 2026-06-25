@@ -330,9 +330,11 @@ export default function CandidateKanban() {
             <h1 className='text-2xl font-black text-zinc-900'>
               {jrInfo?.hiring_position || 'Pipeline'}
             </h1>
-            <p className='text-sm text-zinc-500'>
-              {jrInfo?.department ? `${jrInfo.department} • ` : ''}
-              {jrInfo?.hiring_location_city || 'Recruitment Pipeline'}
+            <p className='text-sm text-zinc-700'>
+              {jrInfo?.department ? `${jrInfo.department}` : ''}
+              {' • '}
+              {jrInfo?.hiring_location_city || 'Recruitment Pipeline'} {' • '}
+              {jrInfo?.language_proficiency?.join(', ') || ''}
             </p>
           </div>
         </div>
