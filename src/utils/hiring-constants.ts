@@ -52,12 +52,16 @@ export const REPORTING_MANAGERS = [
   'Cluster Manager',
 ]
 export const LANGUAGE_OPTIONS = [
+  'English',
   'Hindi',
-  'Kanada',
   'Tamil',
   'Telugu',
-  'Bengali',
+  'Kannada',
+  'Malayalam',
   'Marathi',
+  'Gujarati',
+  'Bengali',
+  'Punjabi',
 ]
 export const LOCATIONS = [
   'Bangalore',
