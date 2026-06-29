@@ -277,7 +277,9 @@ export default function CreateProjectForm({
                   .filter(
                     (u) =>
                       String(u.id) === '3899927000000201013' ||
-                      u.name === 'Anslem Prathap',
+                      String(u.id) === '3899927000005965002' ||
+                      u.name === 'Anslem Prathap' ||
+                      u.name === 'Subhasini T S',
                   )
                   .map((s) => (
                     <SelectItem key={s.id} value={s.id} className='text-sm'>
