@@ -12,7 +12,7 @@ import {
   useDroppable,
   useDraggable,
 } from '@dnd-kit/core'
-import { ENV, USERS_MAP } from '@/conf'
+import { ENV, SUPER_APPROVER_IDS, USERS_MAP } from '@/conf'
 import { useQuery } from '@tanstack/react-query'
 import CreateTaskModal from './create-task'
 import { Button } from '../ui/button'
@@ -263,7 +263,8 @@ export default function Task() {
   const isApprover = !!(
     user &&
     project &&
-    String(user.user_id) === String(project.approver_id)
+    (String(user.user_id) === String(project.approver_id) ||
+      SUPER_APPROVER_IDS.includes(String(user.user_id)))
   )
   const isAssigneeOnly = !isOwner && !isApprover
 

@@ -1,4 +1,4 @@
-import { ENV, USERS_MAP } from '@/conf'
+import { ENV, SUPER_APPROVER_IDS, USERS_MAP } from '@/conf'
 import type { Project } from '@/types/project-types'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useEffect, useState } from 'react'
@@ -131,7 +131,8 @@ function DraggableProjectCard({
   const isApprover =
     user &&
     project &&
-    String(user.user_id) === String((project as any).approver_id)
+    (String(user.user_id) === String((project as any).approver_id) ||
+      SUPER_APPROVER_IDS.includes(String(user.user_id)))
   const isAssigneeOnly = !isOwner && !isApprover
   const isPending =
     project.status === 'pending_for_approve' ||

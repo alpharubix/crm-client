@@ -26,6 +26,7 @@ import {
   PRIORITIES,
   PROJECT_TYPES,
   STATUSES,
+  SUPER_APPROVER_IDS,
   USERS_MAP,
 } from '@/conf'
 import type {
@@ -64,7 +65,8 @@ export default function EditProjectModal({
   const isApprover =
     authUser &&
     project &&
-    String(authUser.user_id) === String((project as any).approver_id)
+    (String(authUser.user_id) === String((project as any).approver_id) ||
+      SUPER_APPROVER_IDS.includes(String(authUser.user_id)))
 
   const [form, setForm] = useState({
     name: '',
@@ -588,7 +590,9 @@ export default function EditProjectModal({
                         .filter(
                           (u) =>
                             u.name === 'Anslem Prathap' ||
-                            u.id === '3899927000000201013',
+                            u.name === 'Subhasini T S' ||
+                            u.id === '3899927000000201013' ||
+                            u.id === '3899927000005965002',
                         )
                         .map((u) => (
                           <SelectItem
