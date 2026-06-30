@@ -98,4 +98,5 @@ export const MANAGER_USER_IDS = [
   '3899927000000851906', // Prathap
   '3899927000000488938', // Nagaraj
   '3899927000000979220', // Nandini
+  '3899927000000350987', // Anushree
 ]
