@@ -505,7 +505,10 @@ export default function UpdateAccounts() {
   const [businessPincodeOpen, setBusinessPincodeOpen] = useState(false)
   const { user } = useAuth()
 
-  const isAllow = user?.role === 'super_admin' || user?.role === 'admin'
+  const isAllow =
+    user?.role === 'super_admin' ||
+    user?.role === 'admin' ||
+    user?.role === 'manager'
 
   const form = useForm<UpdateAccountFormValues>({
     resolver: zodResolver(updateAccountSchema),

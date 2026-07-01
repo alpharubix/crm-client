@@ -35,6 +35,7 @@ import { useNavigate } from 'react-router-dom'
 import { formatExactDate } from '@/utils/date-formatter'
 import HighlightedText from '@/components/shared/highlighted-text'
 import ExportCsvButton from '@/components/shared/export-csv-button'
+import UploadCsv from '@/components/deals/csv-upload'
 import LENDER_NAMES from '@/utils/lenders.json'
 import { SearchableSelect } from '@/components/searchable-select'
 import { MultiSelect, type Option } from '@/components/ui/multi-select'
@@ -342,27 +343,16 @@ const DealsPage = () => {
           </div>
         )}
 
-        <div className='flex gap-2'>
+        <div className='flex gap-2 items-center'>
           <Button
             variant='outline'
             className='cursor-pointer'
             onClick={() => navigate('/deals-create')}
           >
-            <Plus className='h-4 w-4' />
+            <Plus className='h-4 w-4 mr-2' />
             Create Deal
           </Button>
-          <Button
-            variant='outline'
-            size='icon'
-            className='cursor-pointer'
-            onClick={() => refetch()}
-          >
-            {isLoading ? (
-              <Spinner className='h-4 w-4' />
-            ) : (
-              <RefreshCw className='h-4 w-4' />
-            )}
-          </Button>
+          <UploadCsv isLoading={isLoading} refetch={refetch} />
         </div>
       </div>
 

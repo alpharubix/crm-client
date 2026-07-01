@@ -323,7 +323,8 @@ export default function AccountsPage() {
 
   const isAllowToCreate =
     user?.role?.toLowerCase().includes('admin') ||
-    user?.role?.toLowerCase().includes('super_admin')
+    user?.role?.toLowerCase().includes('super_admin') ||
+    user?.role?.toLowerCase().includes('manager')
 
   return (
     <div className='p-4 space-y-4'>
