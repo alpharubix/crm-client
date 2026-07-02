@@ -1,4 +1,5 @@
-import { Plus, RefreshCw } from 'lucide-react'
+import { Plus } from 'lucide-react'
+import UploadCsv from '@/components/tickets/csv-upload'
 import { useState, useEffect } from 'react'
 import { useSearchParams, useNavigate } from 'react-router-dom'
 
@@ -345,18 +346,7 @@ const TicketsPage = () => {
             <Plus className='h-4 w-4 mr-2' />
             Create Ticket
           </Button>
-          <Button
-            variant='outline'
-            size='icon'
-            className='cursor-pointer'
-            onClick={() => refetch()}
-          >
-            {isLoading ? (
-              <Spinner className='h-4 w-4' />
-            ) : (
-              <RefreshCw className='h-4 w-4' />
-            )}
-          </Button>
+          <UploadCsv isLoading={isLoading} refetch={refetch} />
         </div>
       </div>
 

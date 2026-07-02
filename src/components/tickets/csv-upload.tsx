@@ -40,7 +40,7 @@ const UploadCsv = ({
                 ) : (
                   <>
                     <Upload className='h-4 w-4 mr-2' />
-                    Deals CSV Upload
+                    Tickets CSV Upload
                   </>
                 )}
               </Button>
@@ -54,14 +54,12 @@ const UploadCsv = ({
                 }}
                 onDrop={(acceptedFiles, fileRejections) => {
                   if (fileRejections.length) {
-                    // console.log('Rejected:', fileRejections)
                     return
                   }
 
                   const file = acceptedFiles[0]
 
                   if (!file.name.toLowerCase().endsWith('.csv')) {
-                    // console.log('Not a CSV file')
                     return
                   }
 
@@ -72,7 +70,7 @@ const UploadCsv = ({
                       formData.append('file', file)
 
                       const res = await fetch(
-                        `${ENV.VITE_BACKEND_BASE_URL}/deals/deals-update-csv-upload`,
+                        `${ENV.VITE_BACKEND_BASE_URL}/tickets/tickets-update-csv-upload`,
                         {
                           method: 'POST',
                           body: formData,
@@ -94,7 +92,7 @@ const UploadCsv = ({
                       data.row_errors.length > 0 &&
                         toast.error(`Total errors ${data.row_errors.length}`)
                       toast.success(
-                        `Total inserted ${data.total_inserted} and total updated ${data.total_updated} deals`,
+                        `Total inserted ${data.total_inserted} and total updated ${data.total_updated} tickets`,
                       )
                     } catch (error: any) {
                       toast.error(error.message || 'Upload failed')

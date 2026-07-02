@@ -24,7 +24,9 @@ const UploadCsv = ({
   const [uploadLoading, setUploadLoading] = useState(false)
   const { user } = useAuth()
 
-  const canUpload = user?.role?.toLowerCase().includes('admin')
+  const canUpload =
+    user?.role?.toLowerCase().includes('admin') ||
+    user?.role?.toLowerCase() === 'manager'
 
   return (
     <>
@@ -78,7 +80,14 @@ const UploadCsv = ({
                         },
                       )
 
-                      if (!res.ok) throw new Error('Upload failed')
+                       if (!res.ok) {
+                        const errData = await res.json().catch(() => ({}))
+                        const errMsg =
+                          typeof errData?.detail === 'string'
+                            ? errData.detail
+                            : errData?.detail?.message || 'Upload failed'
+                        throw new Error(errMsg)
+                      }
 
                       const data = await res.json()
 
@@ -87,8 +96,8 @@ const UploadCsv = ({
                       toast.success(
                         `Total inserted ${data.total_inserted} and total updated ${data.total_updated} accounts`,
                       )
-                    } catch (error) {
-                      toast.error('Upload failed')
+                    } catch (error: any) {
+                      toast.error(error.message || 'Upload failed')
                     } finally {
                       setUploadLoading(false)
                     }
