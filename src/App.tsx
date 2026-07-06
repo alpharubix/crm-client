@@ -45,6 +45,11 @@ const CreateAccount = lazy(() => import('./components/accounts/create-account'))
 const Revenue = lazy(() => import('./pages/revenue'))
 const CreateRevenue = lazy(() => import('./components/revenue/create-revenue'))
 const UpdateRevenue = lazy(() => import('./components/revenue/update-revenue'))
+const BsaAnalysisPage = lazy(() =>
+  import('./components/bsa/BsaAnalysisPage').then((module) => ({
+    default: module.BsaAnalysisPage,
+  })),
+)
 
 export default function App() {
   return (
@@ -73,6 +78,7 @@ export default function App() {
             >
               <Route path='/accounts' element={<AccountPage />} />
               <Route path='/accounts/:id' element={<UpdateAccounts />} />
+              <Route path='/accounts/:id/bsa' element={<BsaAnalysisPage />} />
               <Route path='/accounts/create' element={<CreateAccount />} />
               <Route path='/contacts' element={<ContactPage />} />
               <Route path='/contacts/:id' element={<UpdateContacts />} />
@@ -95,7 +101,10 @@ export default function App() {
               <Route path='/revenue/:id' element={<UpdateRevenue />} />
               <Route path='/hiring' element={<HiringKanban />} />
               <Route path='/hiring-create' element={<CreateJobRequirement />} />
-              <Route path='/hiring/:id/edit' element={<CreateJobRequirement />} />
+              <Route
+                path='/hiring/:id/edit'
+                element={<CreateJobRequirement />}
+              />
               <Route path='/candidate-create' element={<CreateCandidate />} />
               <Route path='/candidate/:id/edit' element={<CreateCandidate />} />
               <Route path='/jr/:jrId' element={<CandidateKanban />} />

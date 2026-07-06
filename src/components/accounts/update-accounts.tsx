@@ -171,9 +171,7 @@ function mapAccountToForm(apiData: any): UpdateAccountFormValues {
       : '',
     sourceType: apiData.source_type ?? '',
     sourceOther: apiData.source_other ?? '',
-    sourceDate: apiData.source_date
-      ? new Date(apiData.source_date)
-      : undefined,
+    sourceDate: apiData.source_date ? new Date(apiData.source_date) : undefined,
     sourceDescription: apiData.source_description ?? '',
     distributorCode: apiData.distributor_code ?? '',
     wabaInterested: apiData.waba_interested ?? false,
@@ -495,8 +493,32 @@ export default function UpdateAccounts() {
   const [openAllNotes, setOpenAllNotes] = useState(false)
   const [openAllContacts, setOpenAllContacts] = useState(false)
   const [openAllDeals, setOpenAllDeals] = useState(false)
-
+  const [isBsaLoading, setIsBsaLoading] = useState(false)
   const navigate = useNavigate()
+
+  const handleViewAnalysis = async () => {
+    try {
+      setIsBsaLoading(true)
+      const res = await fetch(
+        `${ENV.VITE_BACKEND_BASE_URL}/accounts/r1xcrm-report-date-range/${id}`,
+        { credentials: 'include' }
+      )
+      if (!res.ok) {
+        toast('Data not found , pls upload the file')
+        return
+      }
+      const data = await res.json()
+      if (data.data?.from_date && data.data?.to_date) {
+        navigate(`/accounts/${id}/bsa`)
+      } else {
+        toast('Please upload the data')
+      }
+    } catch (error) {
+      toast('Please upload the data')
+    } finally {
+      setIsBsaLoading(false)
+    }
+  }
   const [businessStateSearch, setBusinessStateSearch] = useState('')
   const [businessStateOpen, setBusinessStateOpen] = useState(false)
   const [businessCitySearch, setBusinessCitySearch] = useState('')
@@ -727,9 +749,20 @@ export default function UpdateAccounts() {
         </div>
 
         {!isEdit ? (
-          <Button size='sm' onClick={() => setIsEdit(true)}>
-            Update
-          </Button>
+          <div className='flex gap-2'>
+            <Button size='sm' onClick={() => setIsEdit(true)}>
+              Update
+            </Button>
+            <Button
+              size='sm'
+              variant='outline'
+              onClick={handleViewAnalysis}
+              disabled={isBsaLoading}
+            >
+              {isBsaLoading ? <Spinner className='mr-2 h-4 w-4' /> : null}
+              View Analysis
+            </Button>
+          </div>
         ) : (
           <div className='flex gap-2'>
             <Button
@@ -849,7 +882,10 @@ export default function UpdateAccounts() {
               />
             </FieldRow>
 
-            <FieldRow label='Source Description' error={errors.sourceDescription?.message}>
+            <FieldRow
+              label='Source Description'
+              error={errors.sourceDescription?.message}
+            >
               {isEdit ? (
                 <textarea
                   {...register('sourceDescription')}
@@ -1422,22 +1458,25 @@ export default function UpdateAccounts() {
 
           <div>
             {/* <FieldRow label='Pincode'> */}
-              <Controller
-                control={control}
-                name='applicantPincode'
-                render={({ field }) => (
-                  <PincodeSelector
-                    label='Pincode'
-                    value={field.value}
-                    onChange={field.onChange}
-                    isEdit={isEdit}
-                  />
-                )}
-              />
+            <Controller
+              control={control}
+              name='applicantPincode'
+              render={({ field }) => (
+                <PincodeSelector
+                  label='Pincode'
+                  value={field.value}
+                  onChange={field.onChange}
+                  isEdit={isEdit}
+                />
+              )}
+            />
             {/* </FieldRow> */}
             <FieldRow label='No of Years residing in current residence'>
               {isEdit ? (
-                <Input {...register('applicantYearsResiding')} className='h-8' />
+                <Input
+                  {...register('applicantYearsResiding')}
+                  className='h-8'
+                />
               ) : (
                 <span>{display(data.applicantYearsResiding)}</span>
               )}
@@ -1543,7 +1582,10 @@ export default function UpdateAccounts() {
             {/* </FieldRow> */}
             <FieldRow label='No of Years residing in current residence'>
               {isEdit ? (
-                <Input {...register('coApplicantYearsResiding')} className='h-8' />
+                <Input
+                  {...register('coApplicantYearsResiding')}
+                  className='h-8'
+                />
               ) : (
                 <span>{display(data.coApplicantYearsResiding)}</span>
               )}
