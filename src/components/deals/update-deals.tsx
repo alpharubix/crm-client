@@ -250,6 +250,7 @@ export default function UpdateDeals() {
     'sutapa.roy@r1xchange.com',
     'namrata.srivastava@r1xchange.com',
     'subhasini.ts@r1xchange.com',
+    'raj.nandini@r1xchange.com'
   ]
 
   const isEmailAuthorized = allowedEmails.includes(user?.email!)
