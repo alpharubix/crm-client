@@ -13,8 +13,7 @@ import CreateJobRequirement from './components/hiring/create-job-requirement'
 import CreateCandidate from './components/hiring/create-candidate'
 import GstHistoryPage from './pages/gst-page'
 import ItrAnalysisPage from './pages/itr-page'
-import GstOverviewTab from './components/gst-reports/GstOverviewTab'
-import GstReportPage from './components/gst-reports/gstReportPage'
+import GstReportPage from './components/gst-reports/GstReportPage'
 
 // Lazy loaded pages and heavy route components
 const AccountPage = lazy(() => import('./pages/accounts-page'))
