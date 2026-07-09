@@ -11,6 +11,10 @@ import HiringKanban from './components/hiring/hiring-kanban'
 import CandidateKanban from './components/hiring/candidate-kanban'
 import CreateJobRequirement from './components/hiring/create-job-requirement'
 import CreateCandidate from './components/hiring/create-candidate'
+import GstHistoryPage from './pages/gst-page'
+import ItrAnalysisPage from './pages/itr-page'
+import GstOverviewTab from './components/gst-reports/GstOverviewTab'
+import GstReportPage from './components/gst-reports/gstReportPage'
 
 // Lazy loaded pages and heavy route components
 const AccountPage = lazy(() => import('./pages/accounts-page'))
@@ -45,11 +49,8 @@ const CreateAccount = lazy(() => import('./components/accounts/create-account'))
 const Revenue = lazy(() => import('./pages/revenue'))
 const CreateRevenue = lazy(() => import('./components/revenue/create-revenue'))
 const UpdateRevenue = lazy(() => import('./components/revenue/update-revenue'))
-const BsaAnalysisPage = lazy(() =>
-  import('./components/bsa/BsaAnalysisPage').then((module) => ({
-    default: module.BsaAnalysisPage,
-  })),
-)
+const BsaAnalysisPage = lazy(() => import('./pages/bsa-analysis-page'))
+const GstAnalysisPage = lazy(() => import('./pages/gst-page'))
 
 export default function App() {
   return (
@@ -79,6 +80,12 @@ export default function App() {
               <Route path='/accounts' element={<AccountPage />} />
               <Route path='/accounts/:id' element={<UpdateAccounts />} />
               <Route path='/accounts/:id/bsa' element={<BsaAnalysisPage />} />
+              <Route path='/accounts/:id/itr' element={<ItrAnalysisPage />} />
+              <Route path='/accounts/:id/gst' element={<GstHistoryPage />} />
+              <Route
+                path='/accounts/:id/gst/:gstReferenceId/reports'
+                element={<GstReportPage />}
+              />
               <Route path='/accounts/create' element={<CreateAccount />} />
               <Route path='/contacts' element={<ContactPage />} />
               <Route path='/contacts/:id' element={<UpdateContacts />} />
