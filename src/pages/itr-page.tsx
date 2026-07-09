@@ -26,9 +26,7 @@ export default function ItrAnalysisPage() {
         <Button variant='ghost' size='icon' onClick={() => navigate(-1)}>
           <ArrowLeft className='h-5 w-5' />
         </Button>
-        <h1 className='text-2xl font-bold tracking-tight'>
-          Bank Statement Analysis
-        </h1>
+        <h1 className='text-2xl font-bold tracking-tight'>ITR Analysis</h1>
       </div>
 
       <div className='flex gap-2 border-b pb-2 mb-6 overflow-x-auto'>
