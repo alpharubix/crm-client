@@ -13,6 +13,8 @@ import DealsKanbanView, { type KanbanFilters } from "./deals-kanban-view";
 import { Label } from "../ui/label";
 import { MultiSelect, type Option } from "../ui/multi-select";
 import users from "../../utils/users.json";
+import { useQuery } from "@tanstack/react-query";
+import { ENV } from "@/conf";
 
 const LOAN_TYPE_OPTIONS: Option[] = [
   { value: "SCF", label: "SCF" },
@@ -66,6 +68,8 @@ function getDefaultDates() {
   };
 }
 
+
+
 export default function DealsKanban() {
   const [defaultDates] = useState(getDefaultDates);
   const [localFilters, setLocalFilters] = useState<LocalFilters>({
@@ -83,6 +87,18 @@ export default function DealsKanban() {
   ) {
     setLocalFilters((prev) => ({ ...prev, [key]: value }));
   }
+
+  const { data: ownerResponse } = useQuery({
+    queryKey: ['deal-owners'],
+    queryFn: async () => {
+      const res = await fetch(`${ENV.VITE_BACKEND_BASE_URL}/user/filter`, {
+        credentials: 'include',
+      })
+      return res.json()
+    },
+  })
+
+  const owners = ownerResponse?.data ?? []
 
   function applyFilters() {
     const f: KanbanFilters = {};
@@ -168,13 +184,13 @@ export default function DealsKanban() {
                 Deal Owner
               </Label>
               <MultiSelect
-                options={Object.entries(users).map(([key, value]) => ({
-                  label: value,
-                  value: key,
+                options={owners.map((owner: any) => ({
+                  label: owner.full_name,
+                  value: owner.id.toString(),
                 }))}
                 value={localFilters.deal_owner_id || []}
-                onChange={(val) => setFilter("deal_owner_id", val)}
-                placeholder="Select Owners..."
+                onChange={(val) => setFilter('deal_owner_id', val)}
+                placeholder='Select Owners...'
               />
             </div>
           </div>
