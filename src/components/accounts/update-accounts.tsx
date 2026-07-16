@@ -496,6 +496,7 @@ export default function UpdateAccounts() {
   const [isBsaLoading, setIsBsaLoading] = useState(false)
   const [isItrLoading, setIsItrLoading] = useState(false)
   const [isGstLoading, setIsGstLoading] = useState(false)
+  const [isCibilLoading, setIsCibilLoading] = useState(false)
   const navigate = useNavigate()
 
   const handleViewBsaAnalysis = async () => {
@@ -525,7 +526,7 @@ export default function UpdateAccounts() {
     try {
       setIsItrLoading(true)
       const res = await fetch(
-        `${ENV.VITE_BACKEND_BASE_URL}/accounts/r1xcrm-report-date-range/${id}`,
+        `${ENV.VITE_BACKEND_BASE_URL}/accounts/check-r1xchange-account/${id}`,
         { credentials: 'include' },
       )
       if (!res.ok) {
@@ -533,7 +534,7 @@ export default function UpdateAccounts() {
         return
       }
       const data = await res.json()
-      if (data.data?.from_date && data.data?.to_date) {
+      if (data.data) {
         navigate(`/accounts/${id}/itr`)
       } else {
         toast('Please upload the data')
@@ -548,7 +549,7 @@ export default function UpdateAccounts() {
     try {
       setIsGstLoading(true)
       const res = await fetch(
-        `${ENV.VITE_BACKEND_BASE_URL}/accounts/r1xcrm-report-date-range/${id}`,
+        `${ENV.VITE_BACKEND_BASE_URL}/accounts/check-r1xchange-account/${id}`,
         { credentials: 'include' },
       )
       if (!res.ok) {
@@ -556,7 +557,7 @@ export default function UpdateAccounts() {
         return
       }
       const data = await res.json()
-      if (data.data?.from_date && data.data?.to_date) {
+      if (data.data) {
         navigate(`/accounts/${id}/gst`)
       } else {
         toast('Please upload the data')
@@ -567,6 +568,30 @@ export default function UpdateAccounts() {
       setIsGstLoading(false)
     }
   }
+  const handleViewCibilAnalysis = async () => {
+    try {
+      setIsCibilLoading(true)
+      const res = await fetch(
+        `${ENV.VITE_BACKEND_BASE_URL}/accounts/check-r1xchange-account/${id}`,
+        { credentials: 'include' },
+      )
+      if (!res.ok) {
+        toast('Data not found , pls upload the file')
+        return
+      }
+      const data = await res.json()
+      if (data.data) {
+        navigate(`/accounts/${id}/cibil`)
+      } else {
+        toast('Please upload the data')
+      }
+    } catch (error) {
+      toast('Please upload the data')
+    } finally {
+      setIsCibilLoading(false)
+    }
+  }
+
   const [businessStateSearch, setBusinessStateSearch] = useState('')
   const [businessStateOpen, setBusinessStateOpen] = useState(false)
   const [businessCitySearch, setBusinessCitySearch] = useState('')
@@ -1859,6 +1884,16 @@ export default function UpdateAccounts() {
           >
             {isGstLoading ? <Spinner className='mr-2 h-4 w-4' /> : null}
             GST Analysis
+          </Button>
+          <Button
+            size='lg'
+            variant='outline'
+            onClick={handleViewCibilAnalysis}
+            className='cursor-pointer border-green-500'
+            disabled={isCibilLoading}
+          >
+            {isCibilLoading ? <Spinner className='mr-2 h-4 w-4' /> : null}
+            Cibil Analysis
           </Button>
         </div>
 
