@@ -203,10 +203,6 @@ export default function CreateAccount() {
       preferred_languages: formData.preferredLanguages,
       priority_account: formData.priorityAccount,
       profile_type: formData.profileType,
-      employment_type: formData.employmentType,
-      employer_name: formData.employerName,
-      employment_vintage: formData.employmentVintage,
-      annual_income: formData.annualIncome,
 
       // Business Details
       business_details: {
@@ -276,6 +272,12 @@ export default function CreateAccount() {
           relationship: formData.ref2Relationship,
           address: formData.ref2Address,
         },
+      },
+      customer_salary_details: {
+        employment_type: formData.employmentType,
+        employer_name: formData.employerName,
+        employment_vintage: formData.employmentVintage,
+        annual_income: formData.annualIncome,
       },
     }
   }

@@ -197,10 +197,10 @@ function mapAccountToForm(apiData: any): UpdateAccountFormValues {
 
     priorityAccount: apiData.priority_account ?? '',
     profileType: apiData.profile_type ?? '',
-    employmentType: apiData.employment_type ?? '',
-    employerName: apiData.employer_name ?? '',
-    employmentVintage: apiData.employment_vintage?.toString() ?? '',
-    annualIncome: apiData.annual_income?.toString() ?? '',
+    employmentType: apiData.customer_salary_details?.employment_type ?? '',
+    employerName: apiData.customer_salary_details?.employer_name ?? '',
+    employmentVintage: apiData.customer_salary_details?.employment_vintage?.toString() ?? '',
+    annualIncome: apiData.customer_salary_details?.annual_income?.toString() ?? '',
 
     businessVintage: apiData.business_details?.vintage_years?.toString() ?? '',
     businessRegistrationType: apiData.business_details?.registration_type ?? '',
@@ -325,12 +325,6 @@ function mapFormToApi(
   if (dirtyFields.priorityAccount)
     payload.priority_account = formData.priorityAccount
   if (dirtyFields.profileType) payload.profile_type = formData.profileType
-  if (dirtyFields.employmentType)
-    payload.employment_type = formData.employmentType
-  if (dirtyFields.employerName) payload.employer_name = formData.employerName
-  if (dirtyFields.employmentVintage)
-    payload.employment_vintage = formData.employmentVintage
-  if (dirtyFields.annualIncome) payload.annual_income = formData.annualIncome
 
   // 2. Business Details Object Block
   if (
@@ -443,6 +437,20 @@ function mapFormToApi(
         ) || 0,
       gps_location: formData.coApplicantGpsLocation || null,
       ownership_type: formData.coApplicantOwnership || null,
+    }
+  }
+
+  if (
+    dirtyFields.employmentType ||
+    dirtyFields.employerName ||
+    dirtyFields.employmentVintage ||
+    dirtyFields.annualIncome
+  ) {
+    payload.customer_salary_details = {
+      employment_type: formData.employmentType || null,
+      employer_name: formData.employerName || null,
+      employment_vintage: formData.employmentVintage || null,
+      annual_income: formData.annualIncome || null,
     }
   }
 
