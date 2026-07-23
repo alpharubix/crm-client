@@ -40,6 +40,17 @@ import LENDER_NAMES from '@/utils/lenders.json'
 import { SearchableSelect } from '@/components/searchable-select'
 import { MultiSelect, type Option } from '@/components/ui/multi-select'
 
+const DEFAULT_COLUMNS = [
+  { id: 'deal_name', label: 'Deal Name' },
+  { id: 'deal_owner', label: 'Deal Owner' },
+  { id: 'lender_name', label: 'Lender Name' },
+  { id: 'case_status', label: 'Case Status' },
+  { id: 'ticket_login', label: 'Ticket Login' },
+  { id: 'type_of_loan', label: 'Type of Loan' },
+  { id: 'type_of_case_login', label: 'Type of Case Login' },
+  { id: 'call_back_date', label: 'Call Back Date/Time' },
+]
+
 const LOAN_TYPES = [
   'SCF',
   'SCF Renewal',
@@ -90,7 +101,32 @@ const DealsPage = () => {
   const queryClient = useQueryClient()
   const [searchParams, setSearchParams] = useSearchParams()
 
-  // 1. Added explicit tracking keys into local state hook from URL params
+  const [columns, setColumns] = useState(() => {
+    const saved = localStorage.getItem('deals_table_columns')
+    return saved ? JSON.parse(saved) : DEFAULT_COLUMNS
+  })
+
+  useEffect(() => {
+    localStorage.setItem('deals_table_columns', JSON.stringify(columns))
+  }, [columns])
+
+  const handleDragStart = (e: React.DragEvent, index: number) => {
+    e.dataTransfer.setData('colIndex', index.toString())
+  }
+
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault()
+  }
+
+  const handleDrop = (e: React.DragEvent, dropIndex: number) => {
+    const dragIndex = parseInt(e.dataTransfer.getData('colIndex'))
+    if (dragIndex === dropIndex) return
+    const newCols = [...columns]
+    const [draggedCol] = newCols.splice(dragIndex, 1)
+    newCols.splice(dropIndex, 0, draggedCol)
+    setColumns(newCols)
+  }
+
   const [filters, setFilters] = useState({
     accountName: searchParams.get('accountName') || '',
     lenderName: [] as Option[],
@@ -537,14 +573,18 @@ const DealsPage = () => {
                 <table className='w-full caption-bottom text-sm'>
                   <TableHeader>
                     <TableRow className='sticky top-0 z-10 bg-background hover:bg-accent'>
-                      <TableHead>Deal Name</TableHead>
-                      <TableHead>Deal Owner</TableHead>
-                      <TableHead>Lender Name</TableHead>
-                      <TableHead>Case Status</TableHead>
-                      <TableHead>Ticket Login</TableHead>
-                      <TableHead>Type of Loan</TableHead>
-                      <TableHead>Type of Case Login</TableHead>
-                      <TableHead>Call Back Date/Time</TableHead>
+                      {columns.map((col: any, index: number) => (
+                        <TableHead
+                          key={col.id}
+                          draggable
+                          onDragStart={(e) => handleDragStart(e, index)}
+                          onDragOver={handleDragOver}
+                          onDrop={(e) => handleDrop(e, index)}
+                          className='cursor-move'
+                        >
+                          {col.label}
+                        </TableHead>
+                      ))}
                     </TableRow>
                   </TableHeader>
 
@@ -562,37 +602,45 @@ const DealsPage = () => {
                           className='cursor-pointer hover:bg-accent'
                           onClick={() => handleRowClick(deal.id)}
                         >
-                          <TableCell className='font-medium'>
-                            <HighlightedText
-                              text={deal.account_name}
-                              highlight={appliedFilters.accountName}
-                            />
-                          </TableCell>
-
-                          <TableCell>
-                            {(users as Record<string, string>)[
-                              deal.deal_owner_id
-                            ] || '-'}
-                          </TableCell>
-
-                          <TableCell className=''>
-                            {deal.lender_name || '-'}
-                          </TableCell>
-                          <TableCell>{deal.case_status || '-'}</TableCell>
-                          <TableCell>{deal.ticket_login || '-'}</TableCell>
-                          <TableCell>{deal.loan_type || '-'}</TableCell>
-                          <TableCell>
-                            {deal.type_of_case_login || '-'}
-                          </TableCell>
-
-                          <TableCell>
-                            {deal.deal_call_back_datetime
-                              ? formatExactDate(
-                                  deal.deal_call_back_datetime,
-                                  'dd MMM yyyy, hh:mm a',
+                          {columns.map((col: any) => {
+                            switch (col.id) {
+                              case 'deal_name':
+                                return (
+                                  <TableCell key={col.id} className='font-medium'>
+                                    <HighlightedText
+                                      text={deal.account_name}
+                                      highlight={appliedFilters.accountName}
+                                    />
+                                  </TableCell>
                                 )
-                              : '—'}
-                          </TableCell>
+                              case 'deal_owner':
+                                return (
+                                  <TableCell key={col.id}>
+                                    {(users as Record<string, string>)[deal.deal_owner_id] || '-'}
+                                  </TableCell>
+                                )
+                              case 'lender_name':
+                                return <TableCell key={col.id}>{deal.lender_name || '-'}</TableCell>
+                              case 'case_status':
+                                return <TableCell key={col.id}>{deal.case_status || '-'}</TableCell>
+                              case 'ticket_login':
+                                return <TableCell key={col.id}>{deal.ticket_login || '-'}</TableCell>
+                              case 'type_of_loan':
+                                return <TableCell key={col.id}>{deal.loan_type || '-'}</TableCell>
+                              case 'type_of_case_login':
+                                return <TableCell key={col.id}>{deal.type_of_case_login || '-'}</TableCell>
+                              case 'call_back_date':
+                                return (
+                                  <TableCell key={col.id}>
+                                    {deal.deal_call_back_datetime
+                                      ? formatExactDate(deal.deal_call_back_datetime, 'dd MMM yyyy, hh:mm a')
+                                      : '—'}
+                                  </TableCell>
+                                )
+                              default:
+                                return <TableCell key={col.id} />
+                            }
+                          })}
                         </TableRow>
                       ))
                     )}

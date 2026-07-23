@@ -33,6 +33,7 @@ export default function CreateContact() {
 
   const form = useForm<CreateContactFormValues>({
     resolver: zodResolver(createContactSchema),
+    mode: 'onChange',
     defaultValues: {
       firstName: '',
       lastName: '',
@@ -56,7 +57,7 @@ export default function CreateContact() {
     handleSubmit,
     setValue,
     watch,
-    formState: { errors, isSubmitting },
+    formState: { errors, isSubmitting, isValid },
   } = form
 
   const formValues = watch()
@@ -159,7 +160,7 @@ export default function CreateContact() {
           <Button
             className='cursor-pointer'
             onClick={handleSubmit(onSubmit)}
-            disabled={isSubmitting || createMutation.isPending}
+            disabled={!isValid || isSubmitting || createMutation.isPending}
           >
             {createMutation.isPending ? (
               <Spinner className='mr-2 h-4 w-4' />
@@ -182,7 +183,7 @@ export default function CreateContact() {
               />
             </FieldRow>
 
-            <FieldRow label='Account Name' error={errors.accountId?.message}>
+            <FieldRow label='Account Name *' error={errors.accountId?.message}>
               <div className='relative'>
                 <Input
                   placeholder='Search Account...'
@@ -238,7 +239,7 @@ export default function CreateContact() {
               </div>
             </FieldRow>
 
-            <FieldRow label='Lead Source' error={errors.leadSource?.message}>
+            <FieldRow label='Lead Source *' error={errors.leadSource?.message}>
               {prefilledData.leadSource ? (
                 <Input
                   value={prefilledData.leadSource}
@@ -295,7 +296,7 @@ export default function CreateContact() {
           </div>
 
           <div>
-            <FieldRow label='Last Name' error={errors.lastName?.message}>
+            <FieldRow label='Last Name *' error={errors.lastName?.message}>
               <Input
                 {...register('lastName')}
                 placeholder='Last Name'
@@ -315,14 +316,14 @@ export default function CreateContact() {
         <SectionHeader title='Contact Details' />
         <CardContent className='p-0 grid grid-cols-1 md:grid-cols-2 border-b'>
           <div className='md:border-r'>
-            <FieldRow label='Email' error={errors.email?.message}>
+            <FieldRow label='Email *' error={errors.email?.message}>
               <Input
                 {...register('email')}
                 placeholder='Email'
                 className='h-8'
               />
             </FieldRow>
-            <FieldRow label='Mobile' error={errors.mobile?.message}>
+            <FieldRow label='Mobile *' error={errors.mobile?.message}>
               <Input
                 {...register('mobile')}
                 placeholder='Mobile'

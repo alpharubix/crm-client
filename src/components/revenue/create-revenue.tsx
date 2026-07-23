@@ -15,7 +15,6 @@ import SectionHeader from '@/components/shared/section-header'
 import FieldRow from '@/components/shared/field-row'
 import LENDER_NAMES from '@/utils/lenders.json'
 
-
 import {
   revenueSchema,
   type RevenueFormValues,
@@ -34,11 +33,12 @@ export default function CreateRevenue() {
   const navigate = useNavigate()
 
   const location = useLocation()
-  
+
   const prefillData = location.state || {}
 
   const form = useForm<RevenueFormValues>({
     resolver: zodResolver(revenueSchema),
+    mode: 'onChange',
     defaultValues: {
       dealId: prefillData.dealId || '',
       accountName: prefillData.accountName || '',
@@ -56,12 +56,11 @@ export default function CreateRevenue() {
     handleSubmit,
     setValue,
     watch,
-    formState: { errors, isSubmitting },
+    formState: { errors, isSubmitting, isValid },
   } = form
 
   const formValues = watch()
-  console.log(formValues.incomeBookingDate);
-
+  console.log(formValues.incomeBookingDate)
 
   const [lenderSearch, setLenderSearch] = useState(prefillData.lenderName || '')
   const [lenderOpen, setLenderOpen] = useState(false)
@@ -69,15 +68,17 @@ export default function CreateRevenue() {
   const filteredLenders =
     lenderSearch.length > 1
       ? LENDER_NAMES.filter((l: string) =>
-        l.toLowerCase().includes(lenderSearch.toLowerCase()),
-      ).slice(0, 50)
+          l.toLowerCase().includes(lenderSearch.toLowerCase()),
+        ).slice(0, 50)
       : []
 
   const [searchTerm, setSearchTerm] = useState(prefillData.accountName || '')
   const [debouncedSearch, setDebouncedSearch] = useState('')
   const [isOpen, setIsOpen] = useState(false)
 
-  const [accountSearch, setAccountSearch] = useState(prefillData.accountName || '')
+  const [accountSearch, setAccountSearch] = useState(
+    prefillData.accountName || '',
+  )
   const [debouncedAccountSearch, setDebouncedAccountSearch] = useState('')
   const [isAccountOpen, setIsAccountOpen] = useState(false)
 
@@ -87,7 +88,10 @@ export default function CreateRevenue() {
   }, [searchTerm])
 
   useEffect(() => {
-    const timer = setTimeout(() => setDebouncedAccountSearch(accountSearch), 1000)
+    const timer = setTimeout(
+      () => setDebouncedAccountSearch(accountSearch),
+      1000,
+    )
     return () => clearTimeout(timer)
   }, [accountSearch])
 
@@ -97,7 +101,7 @@ export default function CreateRevenue() {
       if (debouncedSearch) {
         const res = await fetch(
           `${ENV.VITE_BACKEND_BASE_URL}/deals/hot-lookup?deal_name=${debouncedSearch}`,
-          { credentials: 'include' }
+          { credentials: 'include' },
         )
         if (!res.ok) throw new Error('Failed to fetch deals')
         return res.json()
@@ -114,7 +118,7 @@ export default function CreateRevenue() {
       if (debouncedAccountSearch) {
         const res = await fetch(
           `${ENV.VITE_BACKEND_BASE_URL}/accounts/lookup?account_name=${debouncedAccountSearch}`,
-          { credentials: 'include' }
+          { credentials: 'include' },
         )
         if (!res.ok) throw new Error('Failed to fetch accounts')
         return res.json()
@@ -135,11 +139,12 @@ export default function CreateRevenue() {
         income_booking_date: values.incomeBookingDate || undefined,
         type_of_revenue: values.typeOfRevenue || undefined,
         amount: values.amount !== undefined ? Number(values.amount) : undefined,
-        gst_amount: values.gstAmount !== undefined ? Number(values.gstAmount) : undefined,
+        gst_amount:
+          values.gstAmount !== undefined ? Number(values.gstAmount) : undefined,
       }
 
       Object.keys(payload).forEach(
-        (key) => payload[key] === undefined && delete payload[key]
+        (key) => payload[key] === undefined && delete payload[key],
       )
 
       const res = await fetch(`${ENV.VITE_BACKEND_BASE_URL}/revenue`, {
@@ -178,7 +183,7 @@ export default function CreateRevenue() {
           </Button>
           <Button
             onClick={handleSubmit(onSubmit)}
-            disabled={isSubmitting || createMutation.isPending}
+            disabled={!isValid || isSubmitting || createMutation.isPending}
           >
             {createMutation.isPending ? (
               <Spinner className='mr-2 h-4 w-4' />
@@ -193,7 +198,7 @@ export default function CreateRevenue() {
         <SectionHeader title='Revenue Details' />
         <CardContent className='p-0 grid grid-cols-1 md:grid-cols-2 border-b'>
           <div className='md:border-r'>
-            <FieldRow label='Deal Name' error={errors.dealId?.message}>
+            <FieldRow label='Deal Name *' error={errors.dealId?.message}>
               <div className='relative'>
                 <Input
                   placeholder='Search Deal Name...'
@@ -234,7 +239,9 @@ export default function CreateRevenue() {
                       ))
                     ) : (
                       <div className='p-2 text-sm text-muted-foreground'>
-                        {debouncedSearch ? 'No deals found.' : 'Type to search...'}
+                        {debouncedSearch
+                          ? 'No deals found.'
+                          : 'Type to search...'}
                       </div>
                     )}
                   </div>
@@ -242,7 +249,7 @@ export default function CreateRevenue() {
               </div>
             </FieldRow>
 
-            <FieldRow label='Account Name' error={errors.accountName?.message}>
+            <FieldRow label='Account Name *' error={errors.accountName?.message}>
               <div className='relative'>
                 <Input
                   placeholder='Search Account Name...'
@@ -279,7 +286,9 @@ export default function CreateRevenue() {
                       ))
                     ) : (
                       <div className='p-2 text-sm text-muted-foreground'>
-                        {debouncedAccountSearch ? 'No accounts found.' : 'Type to search...'}
+                        {debouncedAccountSearch
+                          ? 'No accounts found.'
+                          : 'Type to search...'}
                       </div>
                     )}
                   </div>
@@ -287,7 +296,7 @@ export default function CreateRevenue() {
               </div>
             </FieldRow>
 
-            <FieldRow label='Lender Name' error={errors.lenderName?.message}>
+            <FieldRow label='Lender Name *' error={errors.lenderName?.message}>
               <div className='relative'>
                 <Input
                   value={lenderSearch}
@@ -320,7 +329,7 @@ export default function CreateRevenue() {
             </FieldRow>
 
             <FieldRow
-              label='Reference Number'
+              label='Reference Number *'
               error={errors.referenceNumber?.message}
             >
               <Input
@@ -333,7 +342,7 @@ export default function CreateRevenue() {
 
           <div>
             <FieldRow
-              label='Income Booking Date'
+              label='Income Booking Date *'
               error={errors.incomeBookingDate?.message}
             >
               <DateField
@@ -346,24 +355,22 @@ export default function CreateRevenue() {
                 }
                 onChange={(date) => {
                   if (date) {
-                    setValue(
-                      'incomeBookingDate',
-                      format(date, 'yyyy-MM-dd'),
-                      { shouldValidate: true, shouldDirty: true }
-                    )
+                    setValue('incomeBookingDate', format(date, 'yyyy-MM-dd'), {
+                      shouldValidate: true,
+                      shouldDirty: true,
+                    })
                   } else {
-                    setValue(
-                      'incomeBookingDate',
-                      '',
-                      { shouldValidate: true, shouldDirty: true }
-                    )
+                    setValue('incomeBookingDate', '', {
+                      shouldValidate: true,
+                      shouldDirty: true,
+                    })
                   }
                 }}
               />
             </FieldRow>
 
             <FieldRow
-              label='Type of Revenue'
+              label='Type of Revenue *'
               error={errors.typeOfRevenue?.message}
             >
               <Select
@@ -371,16 +378,18 @@ export default function CreateRevenue() {
                 onValueChange={(val) => setValue('typeOfRevenue', val)}
               >
                 <SelectTrigger>
-                  <SelectValue placeholder="Select Type of Revenue" />
+                  <SelectValue placeholder='Select Type of Revenue' />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="Processing Fees">Processing Fees</SelectItem>
-                  <SelectItem value="Interest Fees">Interest Fees</SelectItem>
+                  <SelectItem value='Processing Fees'>
+                    Processing Fees
+                  </SelectItem>
+                  <SelectItem value='Interest Fees'>Interest Fees</SelectItem>
                 </SelectContent>
               </Select>
             </FieldRow>
 
-            <FieldRow label='Amount' error={errors.amount?.message}>
+            <FieldRow label='Amount *' error={errors.amount?.message}>
               <Input
                 {...register('amount')}
                 placeholder='Amount'
@@ -390,7 +399,7 @@ export default function CreateRevenue() {
               />
             </FieldRow>
 
-            <FieldRow label='GST Amount' error={errors.gstAmount?.message}>
+            <FieldRow label='GST Amount *' error={errors.gstAmount?.message}>
               <Input
                 {...register('gstAmount')}
                 placeholder='GST Amount'

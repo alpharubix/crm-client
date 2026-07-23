@@ -1,4 +1,11 @@
 import { z } from 'zod'
+import citiesData from '@/utils/cities.json'
+import statesData from '@/utils/states.json'
+
+const validCities = new Set(citiesData as string[])
+const validStates = new Set(statesData as string[])
+const validCountries = new Set(['India'])
+
 
 export const updateAccountSchema = z.object({
   // ================= Account Status Section =================
@@ -18,7 +25,10 @@ export const updateAccountSchema = z.object({
   accountStage: z.string().min(1, 'Account stage is required'),
   businessStatus: z.string().optional(),
   accountOwnerId: z.string().min(1, 'Account owner is required'),
+  priorityAccount: z.string().optional(),
+  partnerName: z.string().optional(),
   // ================= Customer Basic Details =================
+  profileType: z.string().optional(),
   firstName: z.string().min(1, 'Account name is required'),
   lastName: z.string().optional(),
   accountName: z.string().min(1, 'Account name is required'),
@@ -32,6 +42,19 @@ export const updateAccountSchema = z.object({
   preferredLanguages: z.array(z.string()).optional(),
 
   createdBy: z.string().optional(),
+  createdAt: z.string().optional(),
+  modifiedBy: z.string().optional(),
+  modifiedAt: z.string().optional(),
+
+  // ================= Customer Salary Details =================
+  employmentType: z.string().optional(),
+  employerName: z.string().optional(),
+  employmentVintage: z.preprocess(
+    (val) =>
+      val === '' || val === null || val === undefined ? undefined : Number(val),
+    z.number().min(0, 'Must be positive').optional(),
+  ),
+  annualIncome: z.string().optional(),
 
   // ================= Customer Business Details =================
   businessVintage: z.preprocess(
@@ -54,10 +77,10 @@ export const updateAccountSchema = z.object({
 
   // ================= Address - Business Premise =================
   businessStreet: z.string().optional(),
-  businessCity: z.string().optional(),
-  businessState: z.string().optional(),
-  businessCountry: z.string().optional(),
-  businessPincode: z.string().optional(),
+  businessCity: z.string().optional().refine(val => !val || validCities.has(val), 'Please select a valid predefined city'),
+  businessState: z.string().optional().refine(val => !val || validStates.has(val), 'Please select a valid predefined state'),
+  businessCountry: z.string().optional().refine(val => !val || validCountries.has(val), 'Please select a valid predefined country'),
+  businessPincode: z.string().regex(/^\d{6}$/, 'Pincode must be a 6-digit number').optional().or(z.literal('')),
   businessYearsResiding: z.preprocess(
     (val) =>
       val === '' || val === null || val === undefined ? undefined : Number(val),
@@ -68,10 +91,10 @@ export const updateAccountSchema = z.object({
 
   // ================= Address - Applicant Residence =================
   applicantStreet: z.string().optional(),
-  applicantCity: z.string().optional(),
-  applicantState: z.string().optional(),
-  applicantCountry: z.string().optional(),
-  applicantPincode: z.string().optional(),
+  applicantCity: z.string().optional().refine(val => !val || validCities.has(val), 'Please select a valid predefined city'),
+  applicantState: z.string().optional().refine(val => !val || validStates.has(val), 'Please select a valid predefined state'),
+  applicantCountry: z.string().optional().refine(val => !val || validCountries.has(val), 'Please select a valid predefined country'),
+  applicantPincode: z.string().regex(/^\d{6}$/, 'Pincode must be a 6-digit number').optional().or(z.literal('')),
   applicantYearsResiding: z.preprocess(
     (val) =>
       val === '' || val === null || val === undefined ? undefined : Number(val),
@@ -94,10 +117,10 @@ export const updateAccountSchema = z.object({
     .optional()
     .or(z.literal('')),
   coApplicantStreet: z.string().optional(),
-  coApplicantCity: z.string().optional(),
-  coApplicantState: z.string().optional(),
-  coApplicantCountry: z.string().optional(),
-  coApplicantPincode: z.string().optional(),
+  coApplicantCity: z.string().optional().refine(val => !val || validCities.has(val), 'Please select a valid predefined city'),
+  coApplicantState: z.string().optional().refine(val => !val || validStates.has(val), 'Please select a valid predefined state'),
+  coApplicantCountry: z.string().optional().refine(val => !val || validCountries.has(val), 'Please select a valid predefined country'),
+  coApplicantPincode: z.string().regex(/^\d{6}$/, 'Pincode must be a 6-digit number').optional().or(z.literal('')),
   coApplicantYearsResiding: z.preprocess(
     (val) =>
       val === '' || val === null || val === undefined ? undefined : Number(val),

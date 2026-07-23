@@ -107,6 +107,7 @@ function mapDealToForm(apiData: any): UpdateDealFormValues {
         : '',
     lenderCode: apiData.lender_code || '',
     lenderName: apiData.lender_name || '',
+    partnerName: apiData.partner_name || '',
     customerRejectionReason: apiData.customer_rejection_reason || '',
     customerRejectionStatusExplanation:
       apiData.customer_rejection_status_explanation || '',
@@ -119,6 +120,7 @@ function mapDealToForm(apiData: any): UpdateDealFormValues {
     createdBy: apiData.created_by || 'System Driven Field',
     createdAt: apiData.created_at || 'System Driven Field',
     modifiedBy: apiData.modified_by || 'System Driven Field',
+    modifiedAt: apiData.updated_at || 'System Driven Field',
   }
 }
 
@@ -203,6 +205,7 @@ function mapFormToApi(
     },
     lender_code: { value: formData.lenderCode, key: 'lenderCode' },
     lender_name: { value: formData.lenderName, key: 'lenderName' },
+    partner_name: { value: formData.partnerName, key: 'partnerName' },
     customer_rejection_reason: {
       value: formData.customerRejectionReason,
       key: 'customerRejectionReason',
@@ -250,7 +253,7 @@ export default function UpdateDeals() {
     'sutapa.roy@r1xchange.com',
     'namrata.srivastava@r1xchange.com',
     'subhasini.ts@r1xchange.com',
-    'raj.nandini@r1xchange.com'
+    'raj.nandini@r1xchange.com',
   ]
 
   const isEmailAuthorized = allowedEmails.includes(user?.email!)
@@ -336,7 +339,9 @@ export default function UpdateDeals() {
       })
       if (!res.ok) {
         const errData = await res.json().catch(() => ({}))
-        throw new Error(errData.detail || errData.message || 'Failed to update deal')
+        throw new Error(
+          errData.detail || errData.message || 'Failed to update deal',
+        )
       }
       return res.json()
     },
@@ -607,13 +612,25 @@ export default function UpdateDeals() {
                   : '—'}
               </span>
             </FieldRow>
+            <FieldRow label='Modified At'>
+              <span>
+                {formValues.modifiedAt
+                  ? formatExactDate(
+                      formValues.modifiedAt,
+                      'dd MMM yyyy, hh:mm a',
+                    )
+                  : '—'}
+              </span>
+            </FieldRow>
           </div>
           <div>
             <FieldRow label='Account Name'>
               <span>{dealData.account_name || '—'}</span>
             </FieldRow>
             <FieldRow label='Deal Name'>
-              <span className='font-medium'>{(dealData as any).deal_name || dealData.account_name || '—'}</span>
+              <span className='font-medium'>
+                {(dealData as any).deal_name || dealData.account_name || '—'}
+              </span>
             </FieldRow>
             <FieldRow label='Deal Status' error={errors.dealStatus?.message}>
               <SelectField
@@ -707,6 +724,25 @@ export default function UpdateDeals() {
                   </div>
                 )}
               </div>
+            </FieldRow>
+            <FieldRow label='Partner Name' error={errors.partnerName?.message}>
+              <SelectField
+                isEdit={isEdit}
+                options={[
+                  'Rupifi Private Ltd',
+                  'FlexiLoans Technologies Private Ltd',
+                  'Recur Club Technologies Private Ltd',
+                  'Rupeeboss Financial Services Pvt Ltd',
+                  'Others',
+                ]}
+                value={(formValues.partnerName as string) || '—'}
+                onChange={(value) =>
+                  setValue('partnerName', value, {
+                    shouldValidate: true,
+                    shouldDirty: true,
+                  })
+                }
+              />
             </FieldRow>
             <FieldRow
               label='Lender Login Type'

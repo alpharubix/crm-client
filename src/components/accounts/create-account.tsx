@@ -141,6 +141,7 @@ export default function CreateAccount() {
 
   const form = useForm<UpdateAccountFormValues>({
     resolver: zodResolver(updateAccountSchema),
+    mode: 'onChange',
     defaultValues: {
       preferredLanguages: [],
       wabaInterested: false,
@@ -160,7 +161,7 @@ export default function CreateAccount() {
     handleSubmit,
     setValue,
     watch,
-    formState: { errors, isSubmitting },
+    formState: { errors, isSubmitting, isValid },
   } = form
 
   const { data: usersData } = useQuery({
@@ -200,6 +201,12 @@ export default function CreateAccount() {
       business_status: formData.businessStatus,
       mothers_name: formData.mothersName,
       preferred_languages: formData.preferredLanguages,
+      priority_account: formData.priorityAccount,
+      profile_type: formData.profileType,
+      employment_type: formData.employmentType,
+      employer_name: formData.employerName,
+      employment_vintage: formData.employmentVintage,
+      annual_income: formData.annualIncome,
 
       // Business Details
       business_details: {
@@ -274,6 +281,7 @@ export default function CreateAccount() {
   }
 
   const data = watch()
+  console.log({ data })
 
   const filteredBusinessStates =
     businessStateSearch.length > 1
@@ -344,7 +352,7 @@ export default function CreateAccount() {
             size='sm'
             type='submit'
             form='create-account-form'
-            disabled={isSubmitting || createMutation.isPending}
+            disabled={!isValid || isSubmitting || createMutation.isPending}
           >
             {createMutation.isPending ? (
               <Spinner className='mr-2 h-4 w-4' />
@@ -452,7 +460,10 @@ export default function CreateAccount() {
                 />
               </FieldRow>
 
-              <FieldRow label='Source Description' error={errors.sourceDescription?.message}>
+              <FieldRow
+                label='Source Description'
+                error={errors.sourceDescription?.message}
+              >
                 <textarea
                   {...register('sourceDescription')}
                   className='w-full h-20 px-2 border rounded-md text-sm'
@@ -541,8 +552,20 @@ export default function CreateAccount() {
                 <SelectField
                   value={data.businessStatus}
                   isEdit={true}
-                  options={['Active', 'Inactive', 'Not Sure']}
+                  options={['Active', 'Inactive', 'Not Sure', 'NA']}
                   onChange={(v) => setValue('businessStatus', v)}
+                />
+              </FieldRow>
+
+              <FieldRow
+                label='Priority Account'
+                error={errors.priorityAccount?.message}
+              >
+                <SelectField
+                  value={data.priorityAccount}
+                  isEdit={true}
+                  options={['Yes', 'No']}
+                  onChange={(v) => setValue('priorityAccount', v)}
                 />
               </FieldRow>
             </div>
@@ -575,6 +598,17 @@ export default function CreateAccount() {
                   options={LANGUAGE_OPTIONS}
                   onChange={(v) => setValue('preferredLanguages', v)}
                   placeholder='Select languages...'
+                />
+              </FieldRow>
+              <FieldRow
+                label='Profile Type'
+                error={errors.profileType?.message}
+              >
+                <SelectField
+                  value={data.profileType}
+                  isEdit={true}
+                  options={['Salaried', 'Self Employed']}
+                  onChange={(v) => setValue('profileType', v)}
                 />
               </FieldRow>
             </div>
@@ -660,6 +694,61 @@ export default function CreateAccount() {
             </div>
           </CardContent>
 
+          {/* ================= Customer Salary Details ================= */}
+          {data.profileType == 'Salaried' && (
+            <>
+              <SectionHeader title='Customer Salary Details' />
+              <CardContent className='p-0 grid grid-cols-1 md:grid-cols-2'>
+                <div className='md:border-r'>
+                  <FieldRow
+                    label='Employment Type'
+                    error={errors.employmentType?.message}
+                  >
+                    <SelectField
+                      value={data.employmentType}
+                      isEdit={true}
+                      options={[
+                        'Private Employee',
+                        'Government Employee',
+                        'Retired',
+                        'Others',
+                      ]}
+                      onChange={(v) => setValue('employmentType', v)}
+                    />
+                  </FieldRow>
+                  <FieldRow
+                    label='Employment Vintage'
+                    error={errors.employmentVintage?.message}
+                  >
+                    <Input
+                      {...register('employmentVintage')}
+                      className='h-8'
+                      type='number'
+                    />
+                  </FieldRow>
+                </div>
+                <div>
+                  <FieldRow
+                    label='Employer / Company Name'
+                    error={errors.employerName?.message}
+                  >
+                    <Input {...register('employerName')} className='h-8' />
+                  </FieldRow>
+                  <FieldRow
+                    label='Annual Income'
+                    error={errors.annualIncome?.message}
+                  >
+                    <Input
+                      {...register('annualIncome')}
+                      className='h-8'
+                      type='number'
+                    />
+                  </FieldRow>
+                </div>
+              </CardContent>
+            </>
+          )}
+
           {/* ================= Address Information of Business Premise ================= */}
           <SectionHeader title='Address Information of Business Premise' />
           <CardContent className='p-0 grid grid-cols-1 md:grid-cols-2'>
@@ -667,7 +756,7 @@ export default function CreateAccount() {
               <FieldRow label='Street'>
                 <Input {...register('businessStreet')} className='h-8' />
               </FieldRow>
-              <FieldRow label='State'>
+              <FieldRow label='State' error={errors.businessState?.message}>
                 <div className='relative'>
                   <Input
                     value={businessStateSearch}
@@ -702,7 +791,7 @@ export default function CreateAccount() {
                   )}
                 </div>
               </FieldRow>
-              <FieldRow label='Pincode'>
+              <FieldRow label='Pincode' error={errors.businessPincode?.message}>
                 <div className='relative'>
                   <Input
                     value={businessPincodeSearch}
@@ -743,7 +832,7 @@ export default function CreateAccount() {
               </FieldRow>
             </div>
             <div>
-              <FieldRow label='City'>
+              <FieldRow label='City' error={errors.businessCity?.message}>
                 <div className='relative'>
                   <Input
                     value={businessCitySearch}
@@ -778,7 +867,7 @@ export default function CreateAccount() {
                   )}
                 </div>
               </FieldRow>
-              <FieldRow label='Country'>
+              <FieldRow label='Country' error={errors.businessCountry?.message}>
                 <Input
                   {...register('businessCountry')}
                   className='h-8'
@@ -823,14 +912,19 @@ export default function CreateAccount() {
                 value={data.applicantState}
                 onChange={(val) => setValue('applicantState', val)}
                 isEdit={true}
+                error={errors.applicantState?.message}
               />
               <CitySelector
                 label='City'
                 value={data.applicantCity}
                 onChange={(val) => setValue('applicantCity', val)}
                 isEdit={true}
+                error={errors.applicantCity?.message}
               />
-              <FieldRow label='Country'>
+              <FieldRow
+                label='Country'
+                error={errors.applicantCountry?.message}
+              >
                 <Input
                   {...register('applicantCountry')}
                   className='h-8'
@@ -844,6 +938,7 @@ export default function CreateAccount() {
                 value={data.applicantPincode}
                 onChange={(val) => setValue('applicantPincode', val)}
                 isEdit={true}
+                error={errors.applicantPincode?.message}
               />
               <FieldRow label='No of Years residing in current residence'>
                 <Input
@@ -913,6 +1008,7 @@ export default function CreateAccount() {
                 value={data.coApplicantState}
                 onChange={(val) => setValue('coApplicantState', val)}
                 isEdit={true}
+                error={errors.coApplicantState?.message}
               />
             </div>
             <div>
@@ -921,8 +1017,12 @@ export default function CreateAccount() {
                 value={data.coApplicantCity}
                 onChange={(val) => setValue('coApplicantCity', val)}
                 isEdit={true}
+                error={errors.coApplicantCity?.message}
               />
-              <FieldRow label='Country'>
+              <FieldRow
+                label='Country'
+                error={errors.coApplicantCountry?.message}
+              >
                 <Input
                   {...register('coApplicantCountry')}
                   className='h-8'
@@ -934,6 +1034,7 @@ export default function CreateAccount() {
                 value={data.coApplicantPincode}
                 onChange={(val) => setValue('coApplicantPincode', val)}
                 isEdit={true}
+                error={errors.coApplicantPincode?.message}
               />
               <FieldRow label='No of Years residing in current residence'>
                 <Input

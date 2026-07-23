@@ -51,9 +51,10 @@ export default function NoteDialog({ onAddNote }: NoteDialogProps) {
     reset,
     watch,
     setValue,
-    formState: { errors },
+    formState: { errors, isValid, isSubmitting },
   } = useForm<NoteFormValues>({
     resolver: zodResolver(noteSchema),
+    mode: 'onChange',
     defaultValues: {
       description: '',
     },
@@ -205,7 +206,11 @@ export default function NoteDialog({ onAddNote }: NoteDialogProps) {
             )}
           </div>
           <DialogFooter>
-            <Button type='submit' className='cursor-pointer'>
+            <Button
+              type='submit'
+              className='cursor-pointer'
+              disabled={!isValid || isSubmitting}
+            >
               Save Note
             </Button>
           </DialogFooter>

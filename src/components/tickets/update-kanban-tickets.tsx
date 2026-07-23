@@ -225,7 +225,7 @@ export default function UpdateKanbanTicket() {
     'sutapa.roy@r1xchange.com',
     'namrata.srivastava@r1xchange.com',
     'subhasini.ts@r1xchange.com',
-    'raj.nandini@r1xchange.com'
+    'raj.nandini@r1xchange.com',
   ]
 
   const isEmailAuthorized = allowedEmails.includes(user?.email ?? '')
@@ -370,7 +370,9 @@ export default function UpdateKanbanTicket() {
       })
       if (!res.ok) {
         const errData = await res.json().catch(() => ({}))
-        throw new Error(errData.detail || errData.message || 'Failed to update ticket')
+        throw new Error(
+          errData.detail || errData.message || 'Failed to update ticket',
+        )
       }
       return res.json()
     },
@@ -711,6 +713,18 @@ export default function UpdateKanbanTicket() {
                 </span>
               )}
             </FieldRow>
+
+            <FieldRow label='Created By'>
+              <span className='text-sm font-medium text-muted-foreground'>
+                {(users as Record<string, string>)[dealData.created_by]}
+              </span>
+            </FieldRow>
+
+            <FieldRow label='Modified By'>
+              <span className='text-sm font-medium text-muted-foreground'>
+                {(users as Record<string, string>)[dealData.modified_by] || '—'}
+              </span>
+            </FieldRow>
           </div>
 
           <div>
@@ -858,6 +872,22 @@ export default function UpdateKanbanTicket() {
                 value={formValues.ticketStage as string}
                 onChange={(value) => setValue('ticketStage', value, DIRTY_OPTS)}
               />
+            </FieldRow>
+
+            <FieldRow label='Created At'>
+              <span className='text-sm font-medium text-muted-foreground'>
+                {dealData.created_at
+                  ? formatExactDate(dealData.created_at, 'dd MMM yyyy, hh:mm a')
+                  : '—'}
+              </span>
+            </FieldRow>
+
+            <FieldRow label='Modified At'>
+              <span className='text-sm font-medium text-muted-foreground'>
+                {dealData.updated_at
+                  ? formatExactDate(dealData.updated_at, 'dd MMM yyyy, hh:mm a')
+                  : '—'}
+              </span>
             </FieldRow>
           </div>
         </CardContent>

@@ -7,6 +7,7 @@ interface CitySelectorProps {
   onChange: (city: string) => void
   isEdit?: boolean
   placeholder?: string
+  error?: string
 }
 
 export function CitySelector({
@@ -15,6 +16,7 @@ export function CitySelector({
   onChange,
   isEdit = true,
   placeholder = 'Select City',
+  error,
 }: CitySelectorProps) {
   const { cities, searchCities } = useLocationData()
 
@@ -26,6 +28,7 @@ export function CitySelector({
         placeholder={placeholder}
         label={label}
         isEdit={isEdit}
+        error={error}
       />
   )
 }

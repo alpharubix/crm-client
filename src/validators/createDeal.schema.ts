@@ -38,6 +38,7 @@ export const createDealSchema = z.object({
 
   lenderCode: z.string().optional(),
   lenderName: z.string().min(1, 'Lender name is required'),
+  partnerName: z.string().min(1, 'Partner name is required'),
   customerRejectionReason: z.string().optional(),
   customerRejectionStatusExplanation: z.string().optional(),
   lenderRejectionReason: z.string().optional(),
