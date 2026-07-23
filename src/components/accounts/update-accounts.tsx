@@ -38,7 +38,18 @@ import {
 } from '@/validators/updateAccount.schema'
 import { ENV } from '@/conf'
 import { formatExactDate } from '@/utils/date-formatter'
-import { Plus, X } from 'lucide-react'
+import {
+  Plus,
+  X,
+  Users,
+  Briefcase,
+  FileText,
+  Ticket as TicketIcon,
+  IndianRupee,
+  BarChart3,
+  ExternalLink,
+} from 'lucide-react'
+import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs'
 import { formatAmount } from '@/utils/number-formatter'
 import { CitySelector } from '../shared/city-selector'
 import { StateSelector } from '../shared/state-selector'
@@ -639,7 +650,11 @@ export default function UpdateAccounts() {
   const accountData = apiResponse?.data?.[0]
   const Deals = accountData?.deals || []
   const contacts = accountData?.account_linked_contact || []
+  const tickets = accountData?.tickets || []
+  const dealDocuments = accountData?.deal_documents || []
+  const revenues = accountData?.revenue || []
   const notes = accountData?.notes || []
+  const [activeTab, setActiveTab] = useState('contacts')
 
   const sortedNotes = [...notes].sort((a: any, b: any) => {
     return (
@@ -855,6 +870,491 @@ export default function UpdateAccounts() {
       </div>
 
       <Card className='overflow-hidden space-y-1'>
+        {/* ================= Relational Tabs (Contacts, Deals, Documentation, Tickets, Revenue, Analysis) ================= */}
+        <div className='mt-6 px-4 pb-6'>
+          <Tabs
+            defaultValue='contacts'
+            value={activeTab}
+            onValueChange={setActiveTab}
+            className='w-full'
+          >
+            {/* Browser-style Tab Header */}
+            <div className='border-b border-border bg-muted/40 p-1.5 rounded-t-xl shadow-inner'>
+              <TabsList className='h-11 w-full justify-start gap-1 bg-transparent p-0 overflow-x-auto'>
+                <TabsTrigger
+                  value='contacts'
+                  className='data-[state=active]:bg-background data-[state=active]:shadow-sm border border-transparent data-[state=active]:border-border rounded-lg px-4 py-2 flex items-center gap-2 text-sm font-medium transition-all'
+                >
+                  <Users className='h-4 w-4 text-blue-500' />
+                  <span>Contacts</span>
+                  <span className='ml-1 px-1.5 py-0.5 text-xs font-semibold rounded-full bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300'>
+                    {contacts.length}
+                  </span>
+                </TabsTrigger>
+
+                <TabsTrigger
+                  value='deals'
+                  className='data-[state=active]:bg-background data-[state=active]:shadow-sm border border-transparent data-[state=active]:border-border rounded-lg px-4 py-2 flex items-center gap-2 text-sm font-medium transition-all'
+                >
+                  <Briefcase className='h-4 w-4 text-purple-500' />
+                  <span>Deals</span>
+                  <span className='ml-1 px-1.5 py-0.5 text-xs font-semibold rounded-full bg-purple-100 text-purple-700 dark:bg-purple-900/40 dark:text-purple-300'>
+                    {Deals.length}
+                  </span>
+                </TabsTrigger>
+
+                <TabsTrigger
+                  value='documentation'
+                  className='data-[state=active]:bg-background data-[state=active]:shadow-sm border border-transparent data-[state=active]:border-border rounded-lg px-4 py-2 flex items-center gap-2 text-sm font-medium transition-all'
+                >
+                  <FileText className='h-4 w-4 text-amber-500' />
+                  <span>Documentation</span>
+                  <span className='ml-1 px-1.5 py-0.5 text-xs font-semibold rounded-full bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300'>
+                    {dealDocuments.length}
+                  </span>
+                </TabsTrigger>
+
+                <TabsTrigger
+                  value='tickets'
+                  className='data-[state=active]:bg-background data-[state=active]:shadow-sm border border-transparent data-[state=active]:border-border rounded-lg px-4 py-2 flex items-center gap-2 text-sm font-medium transition-all'
+                >
+                  <TicketIcon className='h-4 w-4 text-emerald-500' />
+                  <span>Tickets</span>
+                  <span className='ml-1 px-1.5 py-0.5 text-xs font-semibold rounded-full bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300'>
+                    {tickets.length}
+                  </span>
+                </TabsTrigger>
+
+                <TabsTrigger
+                  value='revenue'
+                  className='data-[state=active]:bg-background data-[state=active]:shadow-sm border border-transparent data-[state=active]:border-border rounded-lg px-4 py-2 flex items-center gap-2 text-sm font-medium transition-all'
+                >
+                  <IndianRupee className='h-4 w-4 text-teal-500' />
+                  <span>Revenue</span>
+                  <span className='ml-1 px-1.5 py-0.5 text-xs font-semibold rounded-full bg-teal-100 text-teal-700 dark:bg-teal-900/40 dark:text-teal-300'>
+                    {revenues.length}
+                  </span>
+                </TabsTrigger>
+
+                <TabsTrigger
+                  value='analysis'
+                  className='data-[state=active]:bg-background data-[state=active]:shadow-sm border border-transparent data-[state=active]:border-border rounded-lg px-4 py-2 flex items-center gap-2 text-sm font-medium transition-all'
+                >
+                  <BarChart3 className='h-4 w-4 text-rose-500' />
+                  <span>Analysis</span>
+                </TabsTrigger>
+              </TabsList>
+            </div>
+
+            <div className='p-4 border border-t-0 border-border rounded-b-xl bg-background/50 shadow-sm min-h-[250px]'>
+              {/* ===== CONTACTS TAB ===== */}
+              <TabsContent value='contacts' className='space-y-4 m-0'>
+                <div className='flex items-center justify-between'>
+                  <p className='text-sm text-muted-foreground'>
+                    Total Contacts linked to this account:{' '}
+                    <span className='font-semibold text-foreground'>
+                      {contacts.length}
+                    </span>
+                  </p>
+                  <Button
+                    variant='outline'
+                    size='sm'
+                    onClick={() =>
+                      navigate(`/contacts-create`, {
+                        state: {
+                          accountId: id,
+                          accountName: accountData?.account_name,
+                          leadSource: data.source,
+                        },
+                      })
+                    }
+                  >
+                    <Plus className='h-4 w-4 mr-2' /> Add Contact
+                  </Button>
+                </div>
+                <div className='border rounded-md overflow-hidden'>
+                  <Table>
+                    <TableHeader className='bg-muted'>
+                      <TableRow>
+                        <TableHead>Contact Name</TableHead>
+                        <TableHead>Phone</TableHead>
+                        <TableHead>Mobile</TableHead>
+                        <TableHead>Email</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {contacts.length === 0 ? (
+                        <TableRow>
+                          <TableCell
+                            colSpan={4}
+                            className='text-center text-muted-foreground py-8'
+                          >
+                            No contacts available for this account
+                          </TableCell>
+                        </TableRow>
+                      ) : (
+                        contacts.map((contact: any) => (
+                          <TableRow
+                            key={contact.id}
+                            onClick={() => navigate(`/contacts/${contact.id}`)}
+                            className='cursor-pointer hover:bg-muted/50 transition-colors'
+                          >
+                            <TableCell className='font-medium'>
+                              {contact.last_name || contact.first_name || '—'}
+                            </TableCell>
+                            <TableCell>{contact.phone || '—'}</TableCell>
+                            <TableCell>{contact.mobile || '—'}</TableCell>
+                            <TableCell>{contact.email || '—'}</TableCell>
+                          </TableRow>
+                        ))
+                      )}
+                    </TableBody>
+                  </Table>
+                </div>
+              </TabsContent>
+
+              {/* ===== DEALS TAB ===== */}
+              <TabsContent value='deals' className='space-y-4 m-0'>
+                <div className='flex items-center justify-between'>
+                  <p className='text-sm text-muted-foreground'>
+                    Total Deals linked to this account:{' '}
+                    <span className='font-semibold text-foreground'>
+                      {Deals.length}
+                    </span>
+                  </p>
+                  <Button
+                    variant='outline'
+                    size='sm'
+                    onClick={() =>
+                      navigate(`/deals-create`, {
+                        state: {
+                          accountId: id,
+                          accountName: accountData?.account_name,
+                        },
+                      })
+                    }
+                  >
+                    <Plus className='h-4 w-4 mr-2' /> Add Deal
+                  </Button>
+                </div>
+                <div className='border rounded-md overflow-hidden'>
+                  <Table>
+                    <TableHeader className='bg-muted'>
+                      <TableRow>
+                        <TableHead>Owner</TableHead>
+                        <TableHead>Deal Type</TableHead>
+                        <TableHead>Deal Status</TableHead>
+                        <TableHead>Lender Name</TableHead>
+                        <TableHead>Disbursement Amount</TableHead>
+                        <TableHead>Modified Date/Time</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {Deals.length === 0 ? (
+                        <TableRow>
+                          <TableCell
+                            colSpan={6}
+                            className='text-center text-muted-foreground py-8'
+                          >
+                            No deals available for this account
+                          </TableCell>
+                        </TableRow>
+                      ) : (
+                        Deals.map((deal: any) => (
+                          <TableRow
+                            key={deal.id}
+                            onClick={() => navigate(`/deals/${deal.id}`)}
+                            className='cursor-pointer hover:bg-muted/50 transition-colors'
+                          >
+                            <TableCell>
+                              {uListLookup(deal.deal_owner_id, usersList)}
+                            </TableCell>
+                            <TableCell className='font-medium'>
+                              {deal.deal_type || '—'}
+                            </TableCell>
+                            <TableCell>{deal.deal_status || '—'}</TableCell>
+                            <TableCell>{deal.lender_name || '—'}</TableCell>
+                            <TableCell>
+                              {formatAmount(deal.disbursed_amount) || '—'}
+                            </TableCell>
+                            <TableCell>
+                              {formatExactDate(
+                                deal.updated_at,
+                                'dd MMM yyyy, hh:mm a',
+                              ) || '—'}
+                            </TableCell>
+                          </TableRow>
+                        ))
+                      )}
+                    </TableBody>
+                  </Table>
+                </div>
+              </TabsContent>
+
+              {/* ===== DOCUMENTATION TAB ===== */}
+              <TabsContent value='documentation' className='space-y-4 m-0'>
+                <div className='flex items-center justify-between'>
+                  <p className='text-sm text-muted-foreground'>
+                    Total Documents for Deals under this account:{' '}
+                    <span className='font-semibold text-foreground'>
+                      {dealDocuments.length}
+                    </span>
+                  </p>
+                </div>
+                <div className='border rounded-md overflow-hidden'>
+                  <Table>
+                    <TableHeader className='bg-muted'>
+                      <TableRow>
+                        <TableHead>Deal Name</TableHead>
+                        <TableHead>Module / Document</TableHead>
+                        <TableHead>Description</TableHead>
+                        <TableHead>From Date</TableHead>
+                        <TableHead>To Date</TableHead>
+                        <TableHead>Status</TableHead>
+                        <TableHead>Action</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {dealDocuments.length === 0 ? (
+                        <TableRow>
+                          <TableCell
+                            colSpan={7}
+                            className='text-center text-muted-foreground py-8'
+                          >
+                            No documentation uploaded for deals under this
+                            account
+                          </TableCell>
+                        </TableRow>
+                      ) : (
+                        dealDocuments.map((doc: any) => (
+                          <TableRow
+                            key={doc.id}
+                            className='hover:bg-muted/50 transition-colors'
+                          >
+                            <TableCell className='font-medium'>
+                              {doc.deal_name || '—'}
+                            </TableCell>
+                            <TableCell>{doc.module || '—'}</TableCell>
+                            <TableCell>{doc.description || '—'}</TableCell>
+                            <TableCell>
+                              {formatExactDate(doc.from_date, 'dd MMM yyyy') ||
+                                '—'}
+                            </TableCell>
+                            <TableCell>
+                              {formatExactDate(doc.to_date, 'dd MMM yyyy') ||
+                                '—'}
+                            </TableCell>
+                            <TableCell>
+                              <span className='px-2 py-0.5 text-xs rounded border border-border bg-muted'>
+                                {doc.status || 'Active'}
+                              </span>
+                            </TableCell>
+                            <TableCell>
+                              {doc.link ? (
+                                <a
+                                  href={doc.link}
+                                  target='_blank'
+                                  rel='noreferrer'
+                                  className='text-blue-600 hover:underline flex items-center gap-1 text-xs font-medium'
+                                >
+                                  View <ExternalLink className='h-3 w-3' />
+                                </a>
+                              ) : (
+                                '—'
+                              )}
+                            </TableCell>
+                          </TableRow>
+                        ))
+                      )}
+                    </TableBody>
+                  </Table>
+                </div>
+              </TabsContent>
+
+              {/* ===== TICKETS TAB ===== */}
+              <TabsContent value='tickets' className='space-y-4 m-0'>
+                <div className='flex items-center justify-between'>
+                  <p className='text-sm text-muted-foreground'>
+                    Total Tickets for Deals under this account:{' '}
+                    <span className='font-semibold text-foreground'>
+                      {tickets.length}
+                    </span>
+                  </p>
+                </div>
+                <div className='border rounded-md overflow-hidden'>
+                  <Table>
+                    <TableHeader className='bg-muted'>
+                      <TableRow>
+                        <TableHead>Ticket Name / ID</TableHead>
+                        <TableHead>Deal Name</TableHead>
+                        <TableHead>Lender</TableHead>
+                        <TableHead>Stage</TableHead>
+                        <TableHead>Status</TableHead>
+                        <TableHead>Disbursed Amount</TableHead>
+                        <TableHead>Target Date</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {tickets.length === 0 ? (
+                        <TableRow>
+                          <TableCell
+                            colSpan={7}
+                            className='text-center text-muted-foreground py-8'
+                          >
+                            No tickets generated for deals under this account
+                          </TableCell>
+                        </TableRow>
+                      ) : (
+                        tickets.map((t: any) => (
+                          <TableRow
+                            key={t.id}
+                            className='hover:bg-muted/50 transition-colors cursor-pointer'
+                            onClick={() => navigate(`/tickets/${t.id}`)}
+                          >
+                            <TableCell className='font-medium'>
+                              {t.ticket_name || `Ticket #${t.id}`}
+                            </TableCell>
+                            <TableCell>{t.deal_name || '—'}</TableCell>
+                            <TableCell>{t.lender_name || '—'}</TableCell>
+                            <TableCell>{t.ticket_stage || '—'}</TableCell>
+                            <TableCell>{t.ticket_status || '—'}</TableCell>
+                            <TableCell>
+                              {formatAmount(t.disbursed_amount) || '—'}
+                            </TableCell>
+                            <TableCell>
+                              {formatExactDate(
+                                t.targeted_disbursement_date,
+                                'dd MMM yyyy',
+                              ) || '—'}
+                            </TableCell>
+                          </TableRow>
+                        ))
+                      )}
+                    </TableBody>
+                  </Table>
+                </div>
+              </TabsContent>
+
+              {/* ===== REVENUE TAB ===== */}
+              <TabsContent value='revenue' className='space-y-4 m-0'>
+                <div className='flex items-center justify-between'>
+                  <p className='text-sm text-muted-foreground'>
+                    Total Revenue Records for Deals under this account:{' '}
+                    <span className='font-semibold text-foreground'>
+                      {revenues.length}
+                    </span>
+                  </p>
+                </div>
+                <div className='border rounded-md overflow-hidden'>
+                  <Table>
+                    <TableHeader className='bg-muted'>
+                      <TableRow>
+                        <TableHead>Reference No.</TableHead>
+                        <TableHead>Deal Name</TableHead>
+                        <TableHead>Type of Revenue</TableHead>
+                        <TableHead>Lender Name</TableHead>
+                        <TableHead>Booking Date</TableHead>
+                        <TableHead>GST Amount</TableHead>
+                        <TableHead>Total Amount</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {revenues.length === 0 ? (
+                        <TableRow>
+                          <TableCell
+                            colSpan={7}
+                            className='text-center text-muted-foreground py-8'
+                          >
+                            No revenue records booked for deals under this
+                            account
+                          </TableCell>
+                        </TableRow>
+                      ) : (
+                        revenues.map((rev: any) => (
+                          <TableRow
+                            key={rev.id}
+                            className='hover:bg-muted/50 transition-colors'
+                          >
+                            <TableCell className='font-medium'>
+                              {rev.reference_number || '—'}
+                            </TableCell>
+                            <TableCell>{rev.deal_name || '—'}</TableCell>
+                            <TableCell>{rev.type_of_revenue || '—'}</TableCell>
+                            <TableCell>{rev.lender_name || '—'}</TableCell>
+                            <TableCell>
+                              {formatExactDate(
+                                rev.income_booking_date,
+                                'dd MMM yyyy',
+                              ) || '—'}
+                            </TableCell>
+                            <TableCell>
+                              {formatAmount(rev.gst_amount) || '—'}
+                            </TableCell>
+                            <TableCell className='font-semibold'>
+                              {formatAmount(rev.amount) || '—'}
+                            </TableCell>
+                          </TableRow>
+                        ))
+                      )}
+                    </TableBody>
+                  </Table>
+                </div>
+              </TabsContent>
+
+              {/* ===== ANALYSIS TAB ===== */}
+              <TabsContent value='analysis' className='space-y-4 m-0'>
+                <p className='text-sm text-muted-foreground mb-4'>
+                  Available financial and background verification analysis for
+                  this account:
+                </p>
+                <div className='flex flex-wrap gap-4'>
+                  <Button
+                    size='lg'
+                    variant='outline'
+                    onClick={handleViewBsaAnalysis}
+                    disabled={isBsaLoading}
+                    className='cursor-pointer border-red-500 hover:bg-red-50 dark:hover:bg-red-950/20'
+                  >
+                    {isBsaLoading ? <Spinner className='mr-2 h-4 w-4' /> : null}
+                    BSA Analysis
+                  </Button>
+                  <Button
+                    size='lg'
+                    variant='outline'
+                    onClick={handleViewItrAnalysis}
+                    className='cursor-pointer border-blue-500 hover:bg-blue-50 dark:hover:bg-blue-950/20'
+                    disabled={isItrLoading}
+                  >
+                    {isItrLoading ? <Spinner className='mr-2 h-4 w-4' /> : null}
+                    ITR Analysis
+                  </Button>
+                  <Button
+                    size='lg'
+                    variant='outline'
+                    onClick={handleViewGstAnalysis}
+                    className='cursor-pointer border-green-500 hover:bg-green-50 dark:hover:bg-green-950/20'
+                    disabled={isGstLoading}
+                  >
+                    {isGstLoading ? <Spinner className='mr-2 h-4 w-4' /> : null}
+                    GST Analysis
+                  </Button>
+                  <Button
+                    size='lg'
+                    variant='outline'
+                    onClick={handleViewCibilAnalysis}
+                    className='cursor-pointer border-emerald-500 hover:bg-emerald-50 dark:hover:bg-emerald-950/20'
+                    disabled={isCibilLoading}
+                  >
+                    {isCibilLoading ? (
+                      <Spinner className='mr-2 h-4 w-4' />
+                    ) : null}
+                    Cibil Analysis
+                  </Button>
+                </div>
+              </TabsContent>
+            </div>
+          </Tabs>
+        </div>
         {/* ================= Account Status ================= */}
         <SectionHeader title='Account Status' />
         <CardContent className='p-0 grid grid-cols-1 md:grid-cols-2'>
@@ -1851,291 +2351,6 @@ export default function UpdateAccounts() {
           )}
           <NoteDialog onAddNote={handleAddNote} />
         </CardContent>
-
-        {/* ========================= Analysis ===================== */}
-        <SectionHeader title='Analysis' />
-        <div className='flex gap-4 mx-4'>
-          <Button
-            size='lg'
-            variant='outline'
-            onClick={handleViewBsaAnalysis}
-            disabled={isBsaLoading}
-            className='cursor-pointer border-red-500'
-          >
-            {isBsaLoading ? <Spinner className='mr-2 h-4 w-4' /> : null}
-            BSA Analysis
-          </Button>
-          <Button
-            size='lg'
-            variant='outline'
-            onClick={handleViewItrAnalysis}
-            className='cursor-pointer border-blue-500'
-            disabled={isItrLoading}
-          >
-            {isItrLoading ? <Spinner className='mr-2 h-4 w-4' /> : null}
-            ITR Analysis
-          </Button>
-          <Button
-            size='lg'
-            variant='outline'
-            onClick={handleViewGstAnalysis}
-            className='cursor-pointer border-green-500'
-            disabled={isGstLoading}
-          >
-            {isGstLoading ? <Spinner className='mr-2 h-4 w-4' /> : null}
-            GST Analysis
-          </Button>
-          <Button
-            size='lg'
-            variant='outline'
-            onClick={handleViewCibilAnalysis}
-            className='cursor-pointer border-green-500'
-            disabled={isCibilLoading}
-          >
-            {isCibilLoading ? <Spinner className='mr-2 h-4 w-4' /> : null}
-            Cibil Analysis
-          </Button>
-        </div>
-
-        {/* ================= Deals ================= */}
-        <SectionHeader title='Deals' />
-        <div className='space-y-4 mx-2'>
-          <div className='flex items-center justify-between'>
-            <p className='text-sm text-muted-foreground'>
-              Total Deals: <span className='font-semibold'>{Deals.length}</span>
-            </p>
-            {Deals.length > 3 && (
-              <Dialog open={openAllDeals} onOpenChange={setOpenAllDeals}>
-                <DialogTrigger asChild>
-                  <Button size='sm' variant='outline'>
-                    View More
-                  </Button>
-                </DialogTrigger>
-                <DialogContent className='min-w-4xl h-1/2'>
-                  <DialogHeader>
-                    <DialogTitle>All Deals ({Deals.length})</DialogTitle>
-                  </DialogHeader>
-                  <div className='overflow-auto'>
-                    <Table>
-                      <TableHeader className='bg-muted sticky top-0 z-10'>
-                        <TableRow>
-                          <TableHead>Owner</TableHead>
-                          <TableHead>Deal Type</TableHead>
-                          <TableHead>Deal Status</TableHead>
-                          <TableHead>Lender Name</TableHead>
-                          <TableHead>Disbursement Amount</TableHead>
-                          <TableHead>Modified Date/Time</TableHead>
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {Deals.map((deal: any) => (
-                          <TableRow
-                            key={deal.id}
-                            onClick={() => {
-                              navigate(`/deals/${deal.id}`)
-                              setOpenAllDeals(false)
-                            }}
-                            className='cursor-pointer'
-                          >
-                            <TableCell>
-                              {uListLookup(deal.deal_owner_id, usersList)}
-                            </TableCell>
-                            <TableCell>{deal.deal_type || '—'}</TableCell>
-                            <TableCell>{deal.deal_status || '—'}</TableCell>
-                            <TableCell>{deal.lender_name || '—'}</TableCell>
-                            <TableCell>
-                              {formatAmount(deal.disbursed_amount) || '—'}
-                            </TableCell>
-                            <TableCell>
-                              {formatExactDate(
-                                deal.updated_at,
-                                'dd MMM yyyy, hh:mm a',
-                              ) || '—'}
-                            </TableCell>
-                          </TableRow>
-                        ))}
-                      </TableBody>
-                    </Table>
-                  </div>
-                </DialogContent>
-              </Dialog>
-            )}
-          </div>
-          <div className='border rounded-md overflow-hidden'>
-            <Table>
-              <TableHeader className='bg-muted'>
-                <TableRow>
-                  <TableHead>Owner</TableHead>
-                  <TableHead>Deal Type</TableHead>
-                  <TableHead>Deal Status</TableHead>
-                  <TableHead>Lender Name</TableHead>
-                  <TableHead>Disbursement Amount</TableHead>
-                  <TableHead>Modified Date/Time</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {Deals.length === 0 ? (
-                  <TableRow>
-                    <TableCell
-                      colSpan={6}
-                      className='text-center text-muted-foreground'
-                    >
-                      No deals available
-                    </TableCell>
-                  </TableRow>
-                ) : (
-                  Deals.slice(0, 3).map((deal: any) => (
-                    <TableRow
-                      key={deal.id}
-                      onClick={() => navigate(`/deals/${deal.id}`)}
-                      className='cursor-pointer'
-                    >
-                      <TableCell>
-                        {uListLookup(deal.deal_owner_id, usersList)}
-                      </TableCell>
-                      <TableCell>{deal.deal_type || '—'}</TableCell>
-                      <TableCell>{deal.deal_status || '—'}</TableCell>
-                      <TableCell>{deal.lender_name || '—'}</TableCell>
-                      <TableCell>
-                        {formatAmount(deal.disbursed_amount) || '—'}
-                      </TableCell>
-                      <TableCell>
-                        {formatExactDate(
-                          deal.updated_at,
-                          'dd MMM yyyy, hh:mm a',
-                        ) || '—'}
-                      </TableCell>
-                    </TableRow>
-                  ))
-                )}
-              </TableBody>
-            </Table>
-          </div>
-          <div className='flex justify-center'>
-            <Button
-              variant='outline'
-              size='sm'
-              onClick={() =>
-                navigate(`/deals-create`, {
-                  state: {
-                    accountId: id,
-                    accountName: accountData?.account_name,
-                  },
-                })
-              }
-            >
-              <Plus className='h-4 w-4 mr-2' /> Add Deal
-            </Button>
-          </div>
-        </div>
-
-        {/* ================= Contacts ================= */}
-        <SectionHeader title='Contacts' />
-        <div className='space-y-4 mx-2'>
-          <div className='flex items-center justify-between'>
-            <p className='text-sm text-muted-foreground'>
-              Total Contacts:{' '}
-              <span className='font-semibold'>{contacts.length}</span>
-            </p>
-            {contacts.length > 3 && (
-              <Dialog open={openAllContacts} onOpenChange={setOpenAllContacts}>
-                <DialogTrigger asChild>
-                  <Button size='sm' variant='outline'>
-                    View More
-                  </Button>
-                </DialogTrigger>
-                <DialogContent className='max-w-4xl max-h-[80vh] flex flex-col'>
-                  <DialogHeader>
-                    <DialogTitle>All Contacts ({contacts.length})</DialogTitle>
-                  </DialogHeader>
-                  <div className='overflow-auto'>
-                    <Table>
-                      <TableHeader className='bg-muted sticky top-0 z-10'>
-                        <TableRow>
-                          <TableHead>Contact Name</TableHead>
-                          <TableHead>Phone</TableHead>
-                          <TableHead>Mobile</TableHead>
-                          <TableHead>Email</TableHead>
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {contacts.map((contact: any) => (
-                          <TableRow
-                            key={contact.id}
-                            onClick={() => {
-                              navigate(`/contacts/${contact.id}`)
-                              setOpenAllContacts(false)
-                            }}
-                            className='cursor-pointer'
-                          >
-                            <TableCell>{contact.last_name || '—'}</TableCell>
-                            <TableCell>{contact.phone || '—'}</TableCell>
-                            <TableCell>{contact.mobile || '—'}</TableCell>
-                            <TableCell>{contact.email || '—'}</TableCell>
-                          </TableRow>
-                        ))}
-                      </TableBody>
-                    </Table>
-                  </div>
-                </DialogContent>
-              </Dialog>
-            )}
-          </div>
-          <div className='border rounded-md overflow-hidden'>
-            <Table>
-              <TableHeader className='bg-muted'>
-                <TableRow>
-                  <TableHead>Contact Name</TableHead>
-                  <TableHead>Phone</TableHead>
-                  <TableHead>Mobile</TableHead>
-                  <TableHead>Email</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {contacts.length === 0 ? (
-                  <TableRow>
-                    <TableCell
-                      colSpan={4}
-                      className='text-center text-muted-foreground'
-                    >
-                      No contacts available
-                    </TableCell>
-                  </TableRow>
-                ) : (
-                  contacts.slice(0, 3).map((contact: any) => (
-                    <TableRow
-                      key={contact.id}
-                      onClick={() => navigate(`/contacts/${contact.id}`)}
-                      className='cursor-pointer'
-                    >
-                      <TableCell>{contact.last_name || '—'}</TableCell>
-                      <TableCell>{contact.phone || '—'}</TableCell>
-                      <TableCell>{contact.mobile || '—'}</TableCell>
-                      <TableCell>{contact.email || '—'}</TableCell>
-                    </TableRow>
-                  ))
-                )}
-              </TableBody>
-            </Table>
-          </div>
-          <div className='flex justify-center'>
-            <Button
-              variant='outline'
-              size='sm'
-              onClick={() =>
-                navigate(`/contacts-create`, {
-                  state: {
-                    accountId: id,
-                    accountName: accountData?.account_name,
-                    leadSource: data.source,
-                  },
-                })
-              }
-            >
-              <Plus className='h-4 w-4 mr-2' /> Add Contact
-            </Button>
-          </div>
-        </div>
       </Card>
     </div>
   )
