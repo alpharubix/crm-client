@@ -160,6 +160,7 @@ export default function CreateAccount() {
     register,
     handleSubmit,
     setValue,
+    trigger,
     watch,
     formState: { errors, isSubmitting, isValid },
   } = form
@@ -610,7 +611,10 @@ export default function CreateAccount() {
                   value={data.profileType}
                   isEdit={true}
                   options={['Salaried', 'Self Employed']}
-                  onChange={(v) => setValue('profileType', v, { shouldValidate: true })}
+                  onChange={(v) => {
+                    setValue('profileType', v, { shouldValidate: true })
+                    trigger('employerName')
+                  }}
                 />
               </FieldRow>
             </div>
@@ -731,7 +735,7 @@ export default function CreateAccount() {
                 </div>
                 <div>
                   <FieldRow
-                    label='Employer / Company Name'
+                    label={data.profileType === 'Salaried' ? 'Employer / Company Name *' : 'Employer / Company Name'}
                     error={errors.employerName?.message}
                   >
                     <Input {...register('employerName')} className='h-8' />

@@ -657,6 +657,7 @@ export default function UpdateAccounts() {
     handleSubmit,
     watch,
     setValue,
+    trigger,
     reset,
     control,
     formState: { errors, isDirty, dirtyFields },
@@ -1770,7 +1771,10 @@ export default function UpdateAccounts() {
                     value={field.value}
                     isEdit={isEdit}
                     options={['Salaried', 'Self Employed']}
-                    onChange={field.onChange}
+                    onChange={(v) => {
+                      field.onChange(v)
+                      trigger('employerName')
+                    }}
                   />
                 )}
               />
@@ -1952,7 +1956,7 @@ export default function UpdateAccounts() {
               </div>
               <div>
                 <FieldRow
-                  label='Employer / Company Name'
+                  label={data.profileType === 'Salaried' ? 'Employer / Company Name *' : 'Employer / Company Name'}
                   error={errors.employerName?.message}
                 >
                   {isEdit ? (

@@ -176,6 +176,17 @@ export const updateAccountSchema = z.object({
 
   coApplicantCode: z.string().optional(),
   coApplicantYears: z.string().optional(),
+}).superRefine((data, ctx) => {
+  if (
+    data.profileType === 'Salaried' &&
+    (!data.employerName || data.employerName.trim() === '')
+  ) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ['employerName'],
+      message: 'Employer / Company Name is required for Salaried profiles',
+    })
+  }
 })
 
 export type UpdateAccountFormValues = z.infer<typeof updateAccountSchema>
