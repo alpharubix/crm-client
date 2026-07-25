@@ -11,7 +11,6 @@ const navigate = useNavigate();
   const [error, setError] = useState<string | null>(null);
   
   useEffect(() => {
-    document.title = "Existing CIBIL Reports";
 
     const fetchReports = async () => {
       try {
@@ -38,7 +37,7 @@ const navigate = useNavigate();
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 flex items-center justify-center px-4">
+      <div className="min-h-screen bg-linear-to-br from-slate-50 to-slate-100 flex items-center justify-center px-4">
         <div className="bg-white rounded-2xl shadow-lg px-6 py-5 flex items-center gap-3 border border-slate-200">
           <div className="h-5 w-5 rounded-full border-2 border-slate-300 border-t-blue-600 animate-spin" />
           <p className="text-sm font-medium text-slate-700">Loading reports...</p>
@@ -49,7 +48,7 @@ const navigate = useNavigate();
 
   if (error) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 flex items-center justify-center px-4">
+      <div className="min-h-screen bg-linear-to-br from-slate-50 to-slate-100 flex items-center justify-center px-4">
         <div className="max-w-md w-full bg-white rounded-2xl shadow-lg border border-red-200 p-6">
           <div className="flex items-start gap-3">
             <div className="h-10 w-10 rounded-full bg-red-100 flex items-center justify-center text-red-600 text-lg">
@@ -66,7 +65,7 @@ const navigate = useNavigate();
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 py-10 px-4 sm:px-6 lg:px-8">
+    <div className="min-h-screen bg-linear-to-br from-slate-50 to-slate-100 py-10 px-4 sm:px-6 lg:px-8">
       <div className="max-w-5xl mx-auto">
         <div className="mb-8">
           <h1 className="text-3xl sm:text-4xl font-bold text-slate-900 tracking-tight">

@@ -107,9 +107,10 @@ export default function CreateTicket() {
     handleSubmit,
     setValue,
     watch,
-    formState: { errors },
+    formState: { errors, isValid, isSubmitting },
   } = useForm<CreateTicketFormValues>({
     resolver: zodResolver(createTicketSchema),
+    mode: 'onChange',
     defaultValues: {
       accountId: prefilledData.accountId ? String(prefilledData.accountId) : '',
     },
@@ -309,7 +310,7 @@ export default function CreateTicket() {
             onClick={handleSubmit(onSubmit, (errs) => {
               console.log('Validation Errors:', errs)
             })}
-            disabled={createMutation.isPending}
+            disabled={!isValid || createMutation.isPending || isSubmitting}
           >
             {createMutation.isPending ? (
               <Spinner className='mr-2 h-4 w-4' />

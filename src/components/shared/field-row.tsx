@@ -8,17 +8,22 @@ type Props = {
 
 export default function FieldRow({ label, error, children }: Props) {
   return (
-    <div className="grid grid-cols-2 py-2.5 px-4 border-b items-start">
-      <span className="text-sm font-medium text-muted-foreground">
-        {label}
+    <div className='grid grid-cols-2 py-2.5 px-4 border-b items-start'>
+      <span className='text-sm font-medium text-muted-foreground'>
+        {typeof label === 'string' ? (
+          label.split('*').map((part, index, array) => (
+            <React.Fragment key={index}>
+              {part}
+              {index < array.length - 1 && <span className="text-destructive">*</span>}
+            </React.Fragment>
+          ))
+        ) : (
+          label
+        )}
       </span>
       <div>
         {children}
-        {error && (
-          <p className="text-xs text-destructive mt-1">
-            {error}
-          </p>
-        )}
+        {error && <p className='text-xs text-destructive mt-1'>{error}</p>}
       </div>
     </div>
   )

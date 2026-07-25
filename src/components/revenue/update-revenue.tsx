@@ -29,7 +29,6 @@ import {
 } from '@/validators/revenue.schema'
 import LENDER_NAMES from '@/utils/lenders.json'
 
-
 export default function UpdateRevenue() {
   const { id } = useParams()
   const navigate = useNavigate()
@@ -44,8 +43,8 @@ export default function UpdateRevenue() {
   const filteredLenders =
     lenderSearch.length > 1
       ? LENDER_NAMES.filter((l: string) =>
-        l.toLowerCase().includes(lenderSearch.toLowerCase()),
-      ).slice(0, 50)
+          l.toLowerCase().includes(lenderSearch.toLowerCase()),
+        ).slice(0, 50)
       : []
 
   const [isEdit, setIsEdit] = useState(false)
@@ -55,7 +54,7 @@ export default function UpdateRevenue() {
     queryFn: async () => {
       const res = await fetch(
         `${ENV.VITE_BACKEND_BASE_URL}/revenue?revenue_id=${id}`,
-        { credentials: 'include' }
+        { credentials: 'include' },
       )
       if (!res.ok) throw new Error('Failed to fetch revenue data')
       return res.json()
@@ -97,9 +96,7 @@ export default function UpdateRevenue() {
         incomeBookingDate: rev.income_booking_date || '',
         typeOfRevenue: rev.type_of_revenue || '',
         amount:
-          rev.amount !== null && rev.amount !== undefined
-            ? rev.amount
-            : '',
+          rev.amount !== null && rev.amount !== undefined ? rev.amount : '',
         gstAmount:
           rev.gst_amount !== null && rev.gst_amount !== undefined
             ? rev.gst_amount
@@ -121,11 +118,12 @@ export default function UpdateRevenue() {
         income_booking_date: values.incomeBookingDate || undefined,
         type_of_revenue: values.typeOfRevenue || undefined,
         amount: values.amount !== undefined ? Number(values.amount) : undefined,
-        gst_amount: values.gstAmount !== undefined ? Number(values.gstAmount) : undefined,
+        gst_amount:
+          values.gstAmount !== undefined ? Number(values.gstAmount) : undefined,
       }
 
       Object.keys(payload).forEach(
-        (key) => payload[key] === undefined && delete payload[key]
+        (key) => payload[key] === undefined && delete payload[key],
       )
 
       const res = await fetch(`${ENV.VITE_BACKEND_BASE_URL}/revenue/${id}`, {
@@ -170,9 +168,7 @@ export default function UpdateRevenue() {
         <h1 className='text-2xl font-bold'>Update Revenue</h1>
         <div className='flex gap-2'>
           {!isEdit ? (
-            <Button onClick={() => setIsEdit(true)}>
-              Update
-            </Button>
+            <Button onClick={() => setIsEdit(true)}>Update</Button>
           ) : (
             <>
               <Button
@@ -203,7 +199,6 @@ export default function UpdateRevenue() {
         <SectionHeader title='Revenue Details' />
         <CardContent className='p-0 grid grid-cols-1 md:grid-cols-2 border-b'>
           <div className='md:border-r'>
-
             <FieldRow label='Lender Name' error={errors.lenderName?.message}>
               {isEdit ? (
                 <div className='relative'>
@@ -305,11 +300,13 @@ export default function UpdateRevenue() {
                   }
                 >
                   <SelectTrigger>
-                    <SelectValue placeholder="Select Type of Revenue" />
+                    <SelectValue placeholder='Select Type of Revenue' />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="Processing Fees">Processing Fees</SelectItem>
-                    <SelectItem value="Interest Fees">Interest Fees</SelectItem>
+                    <SelectItem value='Processing Fees'>
+                      Processing Fees
+                    </SelectItem>
+                    <SelectItem value='Interest Fees'>Interest Fees</SelectItem>
                   </SelectContent>
                 </Select>
               ) : (

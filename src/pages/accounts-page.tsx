@@ -86,6 +86,19 @@ const INDUSTRY_OPTIONS: Option[] = [
   { value: 'DVG Dist Petroleum', label: 'DVG Dist Petroleum' },
 ]
 
+const DEFAULT_COLUMNS = [
+  { id: 'account_name', label: 'Account Name' },
+  { id: 'account_owner', label: 'Account Owner' },
+  { id: 'account_status', label: 'Account Status' },
+  { id: 'source', label: 'Source' },
+  { id: 'type_of_business', label: 'Type of Business' },
+  { id: 'industry', label: 'Industry' },
+  { id: 'phone', label: 'Phone' },
+  { id: 'city', label: 'City' },
+  { id: 'state', label: 'State' },
+  { id: 'call_back_date', label: 'Call Back Date / Time' },
+]
+
 export default function AccountsPage() {
   const navigate = useNavigate()
   const queryClient = useQueryClient()
@@ -101,6 +114,32 @@ export default function AccountsPage() {
     state: searchParams.get('state') || '',
     accountOwnerId: [] as Option[],
   })
+
+  const [columns, setColumns] = useState(() => {
+    const saved = localStorage.getItem('accounts_table_columns')
+    return saved ? JSON.parse(saved) : DEFAULT_COLUMNS
+  })
+
+  useEffect(() => {
+    localStorage.setItem('accounts_table_columns', JSON.stringify(columns))
+  }, [columns])
+
+  const handleDragStart = (e: React.DragEvent, index: number) => {
+    e.dataTransfer.setData('colIndex', index.toString())
+  }
+
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault()
+  }
+
+  const handleDrop = (e: React.DragEvent, dropIndex: number) => {
+    const dragIndex = parseInt(e.dataTransfer.getData('colIndex'))
+    if (dragIndex === dropIndex) return
+    const newCols = [...columns]
+    const [draggedCol] = newCols.splice(dragIndex, 1)
+    newCols.splice(dropIndex, 0, draggedCol)
+    setColumns(newCols)
+  }
 
   const [appliedFilters, setAppliedFilters] = useState(filters)
 
@@ -245,33 +284,6 @@ export default function AccountsPage() {
     setCurrentPage(1)
   }
 
-  const exportParams = new URLSearchParams()
-  if (appliedFilters.accountName)
-    exportParams.set('account_name', appliedFilters.accountName)
-  if (appliedFilters.accountStatus && appliedFilters.accountStatus.length > 0) {
-    appliedFilters.accountStatus.forEach((o: Option) =>
-      exportParams.append('account_status', o.value),
-    )
-  }
-  if (appliedFilters.source && appliedFilters.source.length > 0) {
-    appliedFilters.source.forEach((o: Option) =>
-      exportParams.append('source', o.value),
-    )
-  }
-  if (appliedFilters.industry && appliedFilters.industry.length > 0) {
-    appliedFilters.industry.forEach((o: Option) =>
-      exportParams.append('industry', o.value),
-    )
-  }
-  if (appliedFilters.phone) exportParams.set('phone', appliedFilters.phone)
-  if (appliedFilters.city) exportParams.set('city', appliedFilters.city)
-  if (appliedFilters.state) exportParams.set('state', appliedFilters.state)
-  if (appliedFilters.accountOwnerId && appliedFilters.accountOwnerId.length > 0) {
-    appliedFilters.accountOwnerId.forEach((o: Option) =>
-      exportParams.append('account_owner_id', o.value),
-    )
-  }
-
   const handleClear = () => {
     const emptyFilters = {
       accountName: '',
@@ -299,9 +311,6 @@ export default function AccountsPage() {
 
   const handleRowClick = async (id: string) => {
     try {
-      // Prefetch data before navigating
-      // This will trigger the global progress bar (via useIsFetching)
-      // and ensure the next page has data ready immediately.
       await queryClient.ensureQueryData({
         queryKey: ['account', id],
         queryFn: async () => {
@@ -315,7 +324,6 @@ export default function AccountsPage() {
       })
       window.open(`${window.location.origin}/accounts/${id}`, '_blank')
     } catch (error) {
-      // If fetch fails, navigate anyway so the user sees the error on the page
       window.open(`${window.location.origin}/accounts/${id}`, '_blank')
     }
   }
@@ -345,9 +353,6 @@ export default function AccountsPage() {
           </div>
         )}
 
-        {/* <div className='flex gap-2 items-center'>
-          <UploadCsv isLoading={isLoading} refetch={refetch} />
-        </div> */}
         <div className='flex gap-2 items-center'>
           {isAllowToCreate && (
             <Button onClick={() => navigate('/accounts/create')}>
@@ -470,16 +475,18 @@ export default function AccountsPage() {
                 <table className='w-full caption-bottom text-sm'>
                   <TableHeader>
                     <TableRow className='sticky top-0 z-10 bg-background hover:bg-accent'>
-                      <TableHead>Account Name</TableHead>
-                      <TableHead>Account Owner</TableHead>
-                      <TableHead>Account Status</TableHead>
-                      <TableHead>Source</TableHead>
-                      <TableHead>Type of Business</TableHead>
-                      <TableHead>Industry</TableHead>
-                      <TableHead>Phone</TableHead>
-                      <TableHead>City</TableHead>
-                      <TableHead>State</TableHead>
-                      <TableHead>Call Back Date / Time</TableHead>
+                      {columns.map((col: any, index: number) => (
+                        <TableHead
+                          key={col.id}
+                          draggable
+                          onDragStart={(e) => handleDragStart(e, index)}
+                          onDragOver={handleDragOver}
+                          onDrop={(e) => handleDrop(e, index)}
+                          className='cursor-move'
+                        >
+                          {col.label}
+                        </TableHead>
+                      ))}
                     </TableRow>
                   </TableHeader>
 
@@ -497,55 +504,86 @@ export default function AccountsPage() {
                           className='cursor-pointer hover:bg-accent'
                           onClick={() => handleRowClick(acc.id)}
                         >
-                          <TableCell className='font-medium text-primary'>
-                            <HighlightedText
-                              text={acc.account_name}
-                              highlight={appliedFilters.accountName}
-                            />
-                          </TableCell>
-                          <TableCell className='text-primary'>
-                            {(users as Record<string, string>)[
-                              acc.account_owner_id
-                            ] || '—'}
-                          </TableCell>
-                          <TableCell className='text-primary'>
-                            {acc.account_status || '—'}
-                          </TableCell>
-                          <TableCell className='text-primary'>
-                            {acc.source || '—'}
-                          </TableCell>
-                          <TableCell className='text-primary'>
-                            {acc.type_of_business || '—'}
-                          </TableCell>
-                          <TableCell className='text-primary'>
-                            {acc.industry || '—'}
-                          </TableCell>
-                          <TableCell className='text-primary'>
-                            <HighlightedText
-                              text={acc.phone}
-                              highlight={appliedFilters.phone}
-                            />
-                          </TableCell>
-                          <TableCell className='text-primary'>
-                            <HighlightedText
-                              text={acc.city}
-                              highlight={appliedFilters.city}
-                            />
-                          </TableCell>
-                          <TableCell className='text-primary'>
-                            <HighlightedText
-                              text={acc.state}
-                              highlight={appliedFilters.state}
-                            />
-                          </TableCell>
-                          <TableCell className='text-primary'>
-                            {acc.call_back_date_time
-                              ? formatExactDate(
-                                  acc.call_back_date_time,
-                                  'dd MMM yyyy, hh:mm a',
+                          {columns.map((col: any) => {
+                            switch (col.id) {
+                              case 'account_name':
+                                return (
+                                  <TableCell key={col.id} className='font-medium text-primary'>
+                                    <HighlightedText
+                                      text={acc.account_name}
+                                      highlight={appliedFilters.accountName}
+                                    />
+                                  </TableCell>
                                 )
-                              : '—'}
-                          </TableCell>
+                              case 'account_owner':
+                                return (
+                                  <TableCell key={col.id} className='text-primary'>
+                                    {(users as Record<string, string>)[acc.account_owner_id] || '—'}
+                                  </TableCell>
+                                )
+                              case 'account_status':
+                                return (
+                                  <TableCell key={col.id} className='text-primary'>
+                                    {acc.account_status || '—'}
+                                  </TableCell>
+                                )
+                              case 'source':
+                                return (
+                                  <TableCell key={col.id} className='text-primary'>
+                                    {acc.source || '—'}
+                                  </TableCell>
+                                )
+                              case 'type_of_business':
+                                return (
+                                  <TableCell key={col.id} className='text-primary'>
+                                    {acc.type_of_business || '—'}
+                                  </TableCell>
+                                )
+                              case 'industry':
+                                return (
+                                  <TableCell key={col.id} className='text-primary'>
+                                    {acc.industry || '—'}
+                                  </TableCell>
+                                )
+                              case 'phone':
+                                return (
+                                  <TableCell key={col.id} className='text-primary'>
+                                    <HighlightedText
+                                      text={acc.phone}
+                                      highlight={appliedFilters.phone}
+                                    />
+                                  </TableCell>
+                                )
+                              case 'city':
+                                return (
+                                  <TableCell key={col.id} className='text-primary'>
+                                    <HighlightedText
+                                      text={acc.city}
+                                      highlight={appliedFilters.city}
+                                    />
+                                  </TableCell>
+                                )
+                              case 'state':
+                                return (
+                                  <TableCell key={col.id} className='text-primary'>
+                                    <HighlightedText
+                                      text={acc.state}
+                                      highlight={appliedFilters.state}
+                                    />
+                                  </TableCell>
+                                )
+                              case 'call_back_date':
+                                return (
+                                  <TableCell key={col.id} className='text-primary'>
+                                    {acc.call_back_date_time
+                                      ? formatExactDate(acc.call_back_date_time, 'dd MMM yyyy, hh:mm a')
+                                      : '—'}
+                                  </TableCell>
+                                )
+                              default:
+                                return <TableCell key={col.id} />
+                            }
+                          })}
                         </TableRow>
                       ))
                     )}

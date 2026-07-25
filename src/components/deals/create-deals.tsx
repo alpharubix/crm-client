@@ -29,6 +29,7 @@ export default function CreateDeal() {
 
   const form = useForm<CreateDealFormValues>({
     resolver: zodResolver(createDealSchema),
+    mode: 'onChange',
     defaultValues: {
       accountId: prefilledData.accountId || '',
       accountName: prefilledData.accountName || '',
@@ -40,6 +41,7 @@ export default function CreateDeal() {
       dealStatus: '',
       dealStage: '',
       lenderName: '',
+      partnerName: '',
       lenderLoginType: '',
       partnerCode: '',
       mmCharges: '',
@@ -53,7 +55,7 @@ export default function CreateDeal() {
     handleSubmit,
     setValue,
     watch,
-    formState: { errors, isSubmitting },
+    formState: { errors, isSubmitting, isValid },
   } = form
 
   const formValues = watch()
@@ -114,6 +116,7 @@ export default function CreateDeal() {
         deal_status: values.dealStatus || undefined,
         deal_stage: values.dealStage || undefined,
         lender_name: values.lenderName || undefined,
+        partner_name: values.partnerName || undefined,
         lender_login_type: values.lenderLoginType || undefined,
         partner_code: values.partnerCode || undefined,
         mm_charges: values.mmCharges || undefined,
@@ -136,7 +139,9 @@ export default function CreateDeal() {
 
       if (!res.ok) {
         const errorData = await res.json().catch(() => ({}))
-        throw new Error(errorData.detail || errorData.message || 'Failed to create deal')
+        throw new Error(
+          errorData.detail || errorData.message || 'Failed to create deal',
+        )
       }
       return res.json()
     },
@@ -163,7 +168,7 @@ export default function CreateDeal() {
           </Button>
           <Button
             onClick={handleSubmit(onSubmit)}
-            disabled={isSubmitting || createMutation.isPending}
+            disabled={!isValid || isSubmitting || createMutation.isPending}
           >
             {createMutation.isPending ? (
               <Spinner className='mr-2 h-4 w-4' />
@@ -179,7 +184,7 @@ export default function CreateDeal() {
         <SectionHeader title='Deal Details' />
         <CardContent className='p-0 grid grid-cols-1 md:grid-cols-2 border-b'>
           <div className='md:border-r'>
-            <FieldRow label='Account Name' error={errors.accountId?.message}>
+            <FieldRow label='Account Name *' error={errors.accountId?.message}>
               <div className='relative'>
                 <Input
                   placeholder='Search Account...'
@@ -435,6 +440,26 @@ export default function CreateDeal() {
                   </div>
                 )}
               </div>
+            </FieldRow>
+
+            <FieldRow label='Partner Name *' error={errors.partnerName?.message}>
+              <SelectField
+                isEdit={true}
+                options={[
+                  'Rupifi Private Ltd',
+                  'FlexiLoans Technologies Private Ltd',
+                  'Recur Club Technologies Private Ltd',
+                  'Rupeeboss Financial Services Pvt Ltd',
+                  'Others',
+                ]}
+                value={formValues.partnerName as string}
+                onChange={(value) =>
+                  setValue('partnerName', value, {
+                    shouldValidate: true,
+                    shouldDirty: true,
+                  })
+                }
+              />
             </FieldRow>
 
             <FieldRow

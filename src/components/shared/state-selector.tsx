@@ -7,6 +7,7 @@ interface StateSelectorProps {
   isEdit?: boolean
   placeholder?: string
   label: string
+  error?: string
 }
 
 export function StateSelector({
@@ -15,6 +16,7 @@ export function StateSelector({
   isEdit = true,
   label,
   placeholder = 'Select State',
+  error,
 }: StateSelectorProps) {
   const { states } = useLocationData()
 
@@ -26,6 +28,7 @@ export function StateSelector({
       options={states}
       placeholder={placeholder}
       isEdit={isEdit}
+      error={error}
     />
   )
 }

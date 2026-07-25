@@ -44,6 +44,14 @@ const MODULE_OPTIONS = [
   'Others',
 ]
 
+const MODULE_DOCUMENT_MAP: Record<string, string[]> = {
+  'Banking': ['Bank Statement', 'Sanction Letter', 'Loan SOA'],
+  'GST': ['GST Certificate', 'GST 3B'],
+  'ITR': ['ITR ACK', 'ITR', '3CB & 3CD', 'Prov ITR'],
+  'Ledger': ['Anchor Ledger'],
+  'Credit Bureau': ['Credit Report'],
+}
+
 type DocRow = {
   id?: string
   module: string
@@ -57,6 +65,7 @@ type DocRow = {
   created_at?: string
   updated_at?: string
   _isNew?: boolean // local flag for unsaved rows
+  _isCustomDesc?: boolean
 }
 
 export default function DocumentationSection({ dealId }: { dealId: string }) {
@@ -152,14 +161,14 @@ export default function DocumentationSection({ dealId }: { dealId: string }) {
   // track edits to existing rows locally during edit mode
   const [editedRows, setEditedRows] = useState<Record<string, DocRow>>({})
 
-  function updateExistingCell(id: string, key: keyof DocRow, value: string) {
+  function updateExistingCell(id: string, key: keyof DocRow, value: string | boolean) {
     setEditedRows((prev) => ({
       ...prev,
       [id]: { ...(prev[id] || docs.find((d) => d.id === id)!), [key]: value },
     }))
   }
 
-  function updateNewCell(index: number, key: keyof DocRow, value: string) {
+  function updateNewCell(index: number, key: keyof DocRow, value: string | boolean) {
     setLocalRows((prev) =>
       prev.map((r, i) => (i === index ? { ...r, [key]: value } : r)),
     )
@@ -185,9 +194,17 @@ export default function DocumentationSection({ dealId }: { dealId: string }) {
     const newRows = localRows.filter((r) => r._isNew)
     const allRows = [...docs.map((d) => editedRows[d.id!] || d), ...newRows]
 
-    const invalid = allRows.some((r) => !r.module)
-    if (invalid) {
+    const invalidModule = allRows.some((r) => !r.module)
+    if (invalidModule) {
       toast.error('Module is required for all rows')
+      return
+    }
+
+    const invalidDescription = allRows.some(
+      (r) => !r.description || !r.description.trim(),
+    )
+    if (invalidDescription) {
+      toast.error('Description is required for all rows')
       return
     }
 
@@ -263,7 +280,7 @@ export default function DocumentationSection({ dealId }: { dealId: string }) {
               <TableRow>
                 <TableHead className='px-3 py-2 border-b'>Module *</TableHead>
                 <TableHead className='px-3 py-2 border-b'>
-                  Description
+                  Description *
                 </TableHead>
                 <TableHead className='px-3 py-2 border-b whitespace-nowrap'>
                   From
@@ -322,26 +339,50 @@ export default function DocumentationSection({ dealId }: { dealId: string }) {
                             isEdit={isEdit}
                             options={MODULE_OPTIONS}
                             value={row.module}
-                            onChange={(v) =>
+                            onChange={(v) => {
                               updateExistingCell(doc.id!, 'module', v)
-                            }
+                              updateExistingCell(doc.id!, 'description', '')
+                              updateExistingCell(doc.id!, '_isCustomDesc', false)
+                            }}
                           />
                         </TableCell>
                         <TableCell className='px-3 py-2'>
-                          {isEdit ? (
-                            <Input
-                              value={row.description}
-                              onChange={(e) =>
-                                updateExistingCell(
-                                  doc.id!,
-                                  'description',
-                                  e.target.value,
-                                )
-                              }
-                              className='h-7 text-sm'
-                              placeholder='—'
-                            />
-                          ) : (
+                          {isEdit ? (() => {
+                            const descOptions = MODULE_DOCUMENT_MAP[row.module] || []
+                            const isCustomDesc = row._isCustomDesc ?? (row.description ? !descOptions.includes(row.description) : false)
+                            return (
+                              <div className="flex flex-col gap-1">
+                                <SelectField
+                                  isEdit={isEdit}
+                                  options={[...descOptions, 'Others']}
+                                  value={isCustomDesc ? 'Others' : row.description}
+                                  onChange={(v) => {
+                                    if (v === 'Others') {
+                                      updateExistingCell(doc.id!, '_isCustomDesc', true)
+                                      updateExistingCell(doc.id!, 'description', '')
+                                    } else {
+                                      updateExistingCell(doc.id!, '_isCustomDesc', false)
+                                      updateExistingCell(doc.id!, 'description', v)
+                                    }
+                                  }}
+                                />
+                                {isCustomDesc && (
+                                  <Input
+                                    value={row.description}
+                                    onChange={(e) =>
+                                      updateExistingCell(
+                                        doc.id!,
+                                        'description',
+                                        e.target.value,
+                                      )
+                                    }
+                                    className='h-7 text-sm'
+                                    placeholder='Enter description'
+                                  />
+                                )}
+                              </div>
+                            )
+                          })() : (
                             <span>{row.description || '—'}</span>
                           )}
                         </TableCell>
@@ -487,18 +528,46 @@ export default function DocumentationSection({ dealId }: { dealId: string }) {
                             isEdit={true}
                             options={MODULE_OPTIONS}
                             value={row.module}
-                            onChange={(v) => updateNewCell(i, 'module', v)}
+                            onChange={(v) => {
+                              updateNewCell(i, 'module', v)
+                              updateNewCell(i, 'description', '')
+                              updateNewCell(i, '_isCustomDesc', false)
+                            }}
                           />
                         </TableCell>
                         <TableCell className='px-3 py-2'>
-                          <Input
-                            value={row.description}
-                            onChange={(e) =>
-                              updateNewCell(i, 'description', e.target.value)
-                            }
-                            className='h-7 text-sm'
-                            placeholder='—'
-                          />
+                          {(() => {
+                            const descOptions = MODULE_DOCUMENT_MAP[row.module] || []
+                            const isCustomDesc = row._isCustomDesc ?? (row.description ? !descOptions.includes(row.description) : false)
+                            return (
+                              <div className="flex flex-col gap-1">
+                                <SelectField
+                                  isEdit={true}
+                                  options={[...descOptions, 'Others']}
+                                  value={isCustomDesc ? 'Others' : row.description}
+                                  onChange={(v) => {
+                                    if (v === 'Others') {
+                                      updateNewCell(i, '_isCustomDesc', true)
+                                      updateNewCell(i, 'description', '')
+                                    } else {
+                                      updateNewCell(i, '_isCustomDesc', false)
+                                      updateNewCell(i, 'description', v)
+                                    }
+                                  }}
+                                />
+                                {isCustomDesc && (
+                                  <Input
+                                    value={row.description}
+                                    onChange={(e) =>
+                                      updateNewCell(i, 'description', e.target.value)
+                                    }
+                                    className='h-7 text-sm'
+                                    placeholder='Enter description'
+                                  />
+                                )}
+                              </div>
+                            )
+                          })()}
                         </TableCell>
                         <TableCell className='px-3 py-2'>
                           <DateField

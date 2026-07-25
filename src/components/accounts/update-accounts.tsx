@@ -202,6 +202,16 @@ function mapAccountToForm(apiData: any): UpdateAccountFormValues {
       ? apiData.preferred_languages
       : [],
     createdBy: apiData.created_by?.full_name ?? '',
+    createdAt: apiData.created_time ?? '',
+    modifiedBy: apiData.modified_by?.full_name ?? '',
+    modifiedAt: apiData.modified_time ?? '',
+
+    priorityAccount: apiData.priority_account ?? '',
+    profileType: apiData.profile_type ?? '',
+    employmentType: apiData.customer_salary_details?.employment_type ?? '',
+    employerName: apiData.customer_salary_details?.employer_name ?? '',
+    employmentVintage: apiData.customer_salary_details?.employment_vintage?.toString() ?? '',
+    annualIncome: apiData.customer_salary_details?.annual_income?.toString() ?? '',
 
     businessVintage: apiData.business_details?.vintage_years?.toString() ?? '',
     businessRegistrationType: apiData.business_details?.registration_type ?? '',
@@ -323,6 +333,10 @@ function mapFormToApi(
     payload.preferred_languages = formData.preferredLanguages
   if (dirtyFields.parentAccount) payload.parent_account = formData.parentAccount
 
+  if (dirtyFields.priorityAccount)
+    payload.priority_account = formData.priorityAccount
+  if (dirtyFields.profileType) payload.profile_type = formData.profileType
+
   // 2. Business Details Object Block
   if (
     dirtyFields.businessRegistrationType ||
@@ -434,6 +448,20 @@ function mapFormToApi(
         ) || 0,
       gps_location: formData.coApplicantGpsLocation || null,
       ownership_type: formData.coApplicantOwnership || null,
+    }
+  }
+
+  if (
+    dirtyFields.employmentType ||
+    dirtyFields.employerName ||
+    dirtyFields.employmentVintage ||
+    dirtyFields.annualIncome
+  ) {
+    payload.customer_salary_details = {
+      employment_type: formData.employmentType || null,
+      employer_name: formData.employerName || null,
+      employment_vintage: formData.employmentVintage || null,
+      annual_income: formData.annualIncome || null,
     }
   }
 
@@ -1460,30 +1488,28 @@ export default function UpdateAccounts() {
               )}
             </FieldRow>
 
-            <FieldRow
-              label='Distributor Code'
-              error={errors.distributorCode?.message}
-            >
-              {isEdit ? (
-                <Input {...register('distributorCode')} className='h-8' />
-              ) : (
-                <span>{data.distributorCode || '—'}</span>
-              )}
+            <FieldRow label='Created By'>
+              <span>{display(data.createdBy)}</span>
             </FieldRow>
 
-            <FieldRow label='WABA Interested'>
-              <Controller
-                control={control}
-                name='wabaInterested'
-                render={({ field }) => (
-                  <SelectField
-                    value={field.value ? 'Yes' : 'No'}
-                    isEdit={isEdit}
-                    options={['Yes', 'No']}
-                    onChange={(v) => field.onChange(v === 'Yes')}
-                  />
-                )}
-              />
+            <FieldRow label='Created At'>
+              <span className='text-sm font-medium text-muted-foreground'>
+                {data.createdAt
+                  ? formatExactDate(data.createdAt, 'dd MMM yyyy, hh:mm a')
+                  : '—'}
+              </span>
+            </FieldRow>
+
+            <FieldRow label='Modified By'>
+              <span>{display(data.modifiedBy)}</span>
+            </FieldRow>
+
+            <FieldRow label='Modified At'>
+              <span className='text-sm font-medium text-muted-foreground'>
+                {data.modifiedAt
+                  ? formatExactDate(data.modifiedAt, 'dd MMM yyyy, hh:mm a')
+                  : '—'}
+              </span>
             </FieldRow>
           </div>
 
@@ -1580,6 +1606,50 @@ export default function UpdateAccounts() {
                 )}
               />
             </FieldRow>
+
+            <FieldRow
+              label='Distributor Code'
+              error={errors.distributorCode?.message}
+            >
+              {isEdit ? (
+                <Input {...register('distributorCode')} className='h-8' />
+              ) : (
+                <span>{data.distributorCode || '—'}</span>
+              )}
+            </FieldRow>
+
+            <FieldRow label='WABA Interested'>
+              <Controller
+                control={control}
+                name='wabaInterested'
+                render={({ field }) => (
+                  <SelectField
+                    value={field.value ? 'Yes' : 'No'}
+                    isEdit={isEdit}
+                    options={['Yes', 'No']}
+                    onChange={(v) => field.onChange(v === 'Yes')}
+                  />
+                )}
+              />
+            </FieldRow>
+
+            <FieldRow
+              label='Priority Account'
+              error={errors.priorityAccount?.message}
+            >
+              <Controller
+                control={control}
+                name='priorityAccount'
+                render={({ field }) => (
+                  <SelectField
+                    value={field.value}
+                    isEdit={isEdit}
+                    options={['Yes', 'No']}
+                    onChange={field.onChange}
+                  />
+                )}
+              />
+            </FieldRow>
           </div>
         </CardContent>
 
@@ -1607,9 +1677,6 @@ export default function UpdateAccounts() {
               ) : (
                 <span>{display(data.email)}</span>
               )}
-            </FieldRow>
-            <FieldRow label='Created By'>
-              <span>{display(data.createdBy)}</span>
             </FieldRow>
           </div>
 
@@ -1639,6 +1706,20 @@ export default function UpdateAccounts() {
                     isEdit={isEdit}
                     onChange={field.onChange}
                     placeholder='Select languages...'
+                  />
+                )}
+              />
+            </FieldRow>
+            <FieldRow label='Profile Type' error={errors.profileType?.message}>
+              <Controller
+                control={control}
+                name='profileType'
+                render={({ field }) => (
+                  <SelectField
+                    value={field.value}
+                    isEdit={isEdit}
+                    options={['Salaried', 'Self Employed']}
+                    onChange={field.onChange}
                   />
                 )}
               />
@@ -1775,6 +1856,79 @@ export default function UpdateAccounts() {
           </div>
         </CardContent>
 
+        {/* ================= Customer Salary Details ================= */}
+        {data.profileType == 'Salaried' && (
+          <>
+            <SectionHeader title='Customer Salary Details' />
+            <CardContent className='p-0 grid grid-cols-1 md:grid-cols-2'>
+              <div className='md:border-r'>
+                <FieldRow
+                  label='Employment Type'
+                  error={errors.employmentType?.message}
+                >
+                  <Controller
+                    control={control}
+                    name='employmentType'
+                    render={({ field }) => (
+                      <SelectField
+                        value={field.value}
+                        isEdit={isEdit}
+                        options={[
+                          'Private Employee',
+                          'Government Employee',
+                          'Retired',
+                          'Others',
+                        ]}
+                        onChange={field.onChange}
+                      />
+                    )}
+                  />
+                </FieldRow>
+                <FieldRow
+                  label='Employment Vintage'
+                  error={errors.employmentVintage?.message}
+                >
+                  {isEdit ? (
+                    <Input
+                      {...register('employmentVintage')}
+                      className='h-8'
+                      type='number'
+                    />
+                  ) : (
+                    <span>{display(data.employmentVintage)}</span>
+                  )}
+                </FieldRow>
+              </div>
+              <div>
+                <FieldRow
+                  label='Employer / Company Name'
+                  error={errors.employerName?.message}
+                >
+                  {isEdit ? (
+                    <Input {...register('employerName')} className='h-8' />
+                  ) : (
+                    <span>{display(data.employerName)}</span>
+                  )}
+                </FieldRow>
+                <FieldRow
+                  label='Annual Income'
+                  error={errors.annualIncome?.message}
+                >
+                  {isEdit ? (
+                    <Input
+                      {...register('annualIncome')}
+                      className='h-8'
+                      type='number'
+                    />
+                  ) : (
+                    <span>{display(data.annualIncome)}</span>
+                  )}
+                </FieldRow>
+              </div>
+            </CardContent>
+          </>
+        )}
+
         {/* ================= Address Information of Business Premise ================= */}
         <SectionHeader title='Address Information of Business Premise' />
         <CardContent className='p-0 grid grid-cols-1 md:grid-cols-2'>
@@ -1786,7 +1940,7 @@ export default function UpdateAccounts() {
                 <span>{display(data.businessStreet)}</span>
               )}
             </FieldRow>
-            <FieldRow label='State'>
+            <FieldRow label='State' error={errors.businessState?.message}>
               {isEdit ? (
                 <div className='relative'>
                   <Input
@@ -1829,7 +1983,7 @@ export default function UpdateAccounts() {
                 <span>{display(data.businessState)}</span>
               )}
             </FieldRow>
-            <FieldRow label='Pincode'>
+            <FieldRow label='Pincode' error={errors.businessPincode?.message}>
               {isEdit ? (
                 <div className='relative'>
                   <Input
@@ -1882,7 +2036,7 @@ export default function UpdateAccounts() {
             </FieldRow>
           </div>
           <div>
-            <FieldRow label='City'>
+            <FieldRow label='City' error={errors.businessCity?.message}>
               {isEdit ? (
                 <div className='relative'>
                   <Input
@@ -1925,7 +2079,7 @@ export default function UpdateAccounts() {
                 <span>{display(data.businessCity)}</span>
               )}
             </FieldRow>
-            <FieldRow label='Country'>
+            <FieldRow label='Country' error={errors.businessCountry?.message}>
               {isEdit ? (
                 <Input {...register('businessCountry')} className='h-8' />
               ) : (
@@ -1989,6 +2143,7 @@ export default function UpdateAccounts() {
                   value={field.value}
                   onChange={field.onChange}
                   isEdit={isEdit}
+                  error={errors.applicantState?.message}
                 />
               )}
             />
@@ -2003,11 +2158,12 @@ export default function UpdateAccounts() {
                   value={field.value}
                   onChange={field.onChange}
                   isEdit={isEdit}
+                  error={errors.applicantCity?.message}
                 />
               )}
             />
             {/* </FieldRow> */}
-            <FieldRow label='Country'>
+            <FieldRow label='Country' error={errors.applicantCountry?.message}>
               {isEdit ? (
                 <Input
                   {...register('applicantCountry')}
@@ -2031,6 +2187,7 @@ export default function UpdateAccounts() {
                   value={field.value}
                   onChange={field.onChange}
                   isEdit={isEdit}
+                  error={errors.applicantPincode?.message}
                 />
               )}
             />
@@ -2098,6 +2255,7 @@ export default function UpdateAccounts() {
                   value={field.value}
                   onChange={field.onChange}
                   isEdit={isEdit}
+                  error={errors.coApplicantState?.message}
                 />
               )}
             />
@@ -2112,6 +2270,7 @@ export default function UpdateAccounts() {
                   value={field.value}
                   onChange={field.onChange}
                   isEdit={isEdit}
+                  error={errors.coApplicantCity?.message}
                 />
               )}
             />
@@ -2119,7 +2278,10 @@ export default function UpdateAccounts() {
           </div>
 
           <div>
-            <FieldRow label='Country'>
+            <FieldRow
+              label='Country'
+              error={errors.coApplicantCountry?.message}
+            >
               {isEdit ? (
                 <Input
                   {...register('coApplicantCountry')}
@@ -2140,6 +2302,7 @@ export default function UpdateAccounts() {
                   value={field.value}
                   onChange={field.onChange}
                   isEdit={isEdit}
+                  error={errors.coApplicantPincode?.message}
                 />
               )}
             />
