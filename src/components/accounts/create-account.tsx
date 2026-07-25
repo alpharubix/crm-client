@@ -758,14 +758,14 @@ export default function CreateAccount() {
               <FieldRow label='Street'>
                 <Input {...register('businessStreet')} className='h-8' />
               </FieldRow>
-              <FieldRow label='State' error={errors.businessState?.message}>
+              <FieldRow label='State *' error={errors.businessState?.message}>
                 <div className='relative'>
                   <Input
                     value={businessStateSearch}
                     onChange={(e) => {
                       setBusinessStateSearch(e.target.value)
                       setBusinessStateOpen(true)
-                      setValue('businessState', e.target.value)
+                      setValue('businessState', e.target.value, { shouldValidate: true })
                     }}
                     onFocus={() => setBusinessStateOpen(true)}
                     onBlur={() =>
@@ -781,7 +781,7 @@ export default function CreateAccount() {
                           key={state}
                           className='p-2 hover:bg-muted cursor-pointer text-sm'
                           onMouseDown={() => {
-                            setValue('businessState', state)
+                            setValue('businessState', state, { shouldValidate: true })
                             setBusinessStateSearch(state)
                             setBusinessStateOpen(false)
                           }}
@@ -793,14 +793,14 @@ export default function CreateAccount() {
                   )}
                 </div>
               </FieldRow>
-              <FieldRow label='Pincode' error={errors.businessPincode?.message}>
+              <FieldRow label='Pincode *' error={errors.businessPincode?.message}>
                 <div className='relative'>
                   <Input
                     value={businessPincodeSearch}
                     onChange={(e) => {
                       setBusinessPincodeSearch(e.target.value)
                       setBusinessPincodeOpen(true)
-                      setValue('businessPincode', e.target.value)
+                      setValue('businessPincode', e.target.value, { shouldValidate: true })
                     }}
                     onFocus={() => setBusinessPincodeOpen(true)}
                     onBlur={() =>
@@ -817,7 +817,7 @@ export default function CreateAccount() {
                             key={pincode}
                             className='p-2 hover:bg-muted cursor-pointer text-sm'
                             onMouseDown={() => {
-                              setValue('businessPincode', pincode)
+                              setValue('businessPincode', pincode, { shouldValidate: true })
                               setBusinessPincodeSearch(pincode)
                               setBusinessPincodeOpen(false)
                             }}
@@ -834,14 +834,14 @@ export default function CreateAccount() {
               </FieldRow>
             </div>
             <div>
-              <FieldRow label='City' error={errors.businessCity?.message}>
+              <FieldRow label='City *' error={errors.businessCity?.message}>
                 <div className='relative'>
                   <Input
                     value={businessCitySearch}
                     onChange={(e) => {
                       setBusinessCitySearch(e.target.value)
                       setBusinessCityOpen(true)
-                      setValue('businessCity', e.target.value)
+                      setValue('businessCity', e.target.value, { shouldValidate: true })
                     }}
                     onFocus={() => setBusinessCityOpen(true)}
                     onBlur={() =>
@@ -857,7 +857,7 @@ export default function CreateAccount() {
                           key={city}
                           className='p-2 hover:bg-muted cursor-pointer text-sm'
                           onMouseDown={() => {
-                            setValue('businessCity', city)
+                            setValue('businessCity', city, { shouldValidate: true })
                             setBusinessCitySearch(city)
                             setBusinessCityOpen(false)
                           }}
@@ -910,16 +910,16 @@ export default function CreateAccount() {
                 <Input {...register('applicantStreet')} className='h-8' />
               </FieldRow>
               <StateSelector
-                label='State *'
+                label='State'
                 value={data.applicantState}
-                onChange={(val) => setValue('applicantState', val, { shouldValidate: true })}
+                onChange={(val) => setValue('applicantState', val)}
                 isEdit={true}
                 error={errors.applicantState?.message}
               />
               <CitySelector
-                label='City *'
+                label='City'
                 value={data.applicantCity}
-                onChange={(val) => setValue('applicantCity', val, { shouldValidate: true })}
+                onChange={(val) => setValue('applicantCity', val)}
                 isEdit={true}
                 error={errors.applicantCity?.message}
               />
@@ -936,9 +936,9 @@ export default function CreateAccount() {
             </div>
             <div>
               <PincodeSelector
-                label='Pincode *'
+                label='Pincode'
                 value={data.applicantPincode}
-                onChange={(val) => setValue('applicantPincode', val, { shouldValidate: true })}
+                onChange={(val) => setValue('applicantPincode', val)}
                 isEdit={true}
                 error={errors.applicantPincode?.message}
               />

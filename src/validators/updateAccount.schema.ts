@@ -89,10 +89,10 @@ export const updateAccountSchema = z.object({
 
   // ================= Address - Business Premise =================
   businessStreet: z.string().optional(),
-  businessCity: z.string().optional().refine(val => !val || validCities.has(val), 'Please select a valid predefined city'),
-  businessState: z.string().optional().refine(val => !val || validStates.has(val), 'Please select a valid predefined state'),
+  businessCity: z.string().min(1, 'City is required').refine(val => validCities.has(val), 'Please select a valid predefined city'),
+  businessState: z.string().min(1, 'State is required').refine(val => validStates.has(val), 'Please select a valid predefined state'),
   businessCountry: z.string().optional().refine(val => !val || validCountries.has(val), 'Please select a valid predefined country'),
-  businessPincode: z.string().regex(/^\d{6}$/, 'Pincode must be a 6-digit number').optional().or(z.literal('')),
+  businessPincode: z.string().min(1, 'Pincode is required').regex(/^\d{6}$/, 'Pincode must be a 6-digit number'),
   businessYearsResiding: z.preprocess(
     (val) =>
       val === '' || val === null || val === undefined ? undefined : Number(val),
@@ -103,10 +103,10 @@ export const updateAccountSchema = z.object({
 
   // ================= Address - Applicant Residence =================
   applicantStreet: z.string().optional(),
-  applicantCity: z.string().min(1, 'City is required').refine(val => validCities.has(val), 'Please select a valid predefined city'),
-  applicantState: z.string().min(1, 'State is required').refine(val => validStates.has(val), 'Please select a valid predefined state'),
+  applicantCity: z.string().optional().refine(val => !val || validCities.has(val), 'Please select a valid predefined city'),
+  applicantState: z.string().optional().refine(val => !val || validStates.has(val), 'Please select a valid predefined state'),
   applicantCountry: z.string().optional().refine(val => !val || validCountries.has(val), 'Please select a valid predefined country'),
-  applicantPincode: z.string().min(1, 'Pincode is required').regex(/^\d{6}$/, 'Pincode must be a 6-digit number'),
+  applicantPincode: z.string().regex(/^\d{6}$/, 'Pincode must be a 6-digit number').optional().or(z.literal('')),
   applicantYearsResiding: z.preprocess(
     (val) =>
       val === '' || val === null || val === undefined ? undefined : Number(val),

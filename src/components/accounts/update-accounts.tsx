@@ -1991,7 +1991,7 @@ export default function UpdateAccounts() {
                 <span>{display(data.businessStreet)}</span>
               )}
             </FieldRow>
-            <FieldRow label='State' error={errors.businessState?.message}>
+            <FieldRow label='State *' error={errors.businessState?.message}>
               {isEdit ? (
                 <div className='relative'>
                   <Input
@@ -2001,6 +2001,7 @@ export default function UpdateAccounts() {
                       setBusinessStateOpen(true)
                       setValue('businessState', e.target.value, {
                         shouldDirty: true,
+                        shouldValidate: true,
                       })
                     }}
                     onFocus={() => setBusinessStateOpen(true)}
@@ -2019,6 +2020,7 @@ export default function UpdateAccounts() {
                           onMouseDown={() => {
                             setValue('businessState', state, {
                               shouldDirty: true,
+                              shouldValidate: true,
                             })
                             setBusinessStateSearch(state)
                             setBusinessStateOpen(false)
@@ -2034,7 +2036,7 @@ export default function UpdateAccounts() {
                 <span>{display(data.businessState)}</span>
               )}
             </FieldRow>
-            <FieldRow label='Pincode' error={errors.businessPincode?.message}>
+            <FieldRow label='Pincode *' error={errors.businessPincode?.message}>
               {isEdit ? (
                 <div className='relative'>
                   <Input
@@ -2087,7 +2089,7 @@ export default function UpdateAccounts() {
             </FieldRow>
           </div>
           <div>
-            <FieldRow label='City' error={errors.businessCity?.message}>
+            <FieldRow label='City *' error={errors.businessCity?.message}>
               {isEdit ? (
                 <div className='relative'>
                   <Input
@@ -2190,7 +2192,7 @@ export default function UpdateAccounts() {
               name='applicantState'
               render={({ field }) => (
                 <StateSelector
-                  label='State *'
+                  label='State'
                   value={field.value}
                   onChange={field.onChange}
                   isEdit={isEdit}
@@ -2205,7 +2207,7 @@ export default function UpdateAccounts() {
               name='applicantCity'
               render={({ field }) => (
                 <CitySelector
-                  label='City *'
+                  label='City'
                   value={field.value}
                   onChange={field.onChange}
                   isEdit={isEdit}
@@ -2234,7 +2236,7 @@ export default function UpdateAccounts() {
               name='applicantPincode'
               render={({ field }) => (
                 <PincodeSelector
-                  label='Pincode *'
+                  label='Pincode'
                   value={field.value}
                   onChange={field.onChange}
                   isEdit={isEdit}
