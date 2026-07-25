@@ -240,8 +240,15 @@ function mapFormToApi(
   return payload
 }
 
-export default function UpdateDeals() {
-  const { id } = useParams()
+export default function UpdateDeals({
+  dealIdProp,
+  onBack,
+}: {
+  dealIdProp?: string | number
+  onBack?: () => void
+} = {}) {
+  const params = useParams()
+  const id = dealIdProp !== undefined ? String(dealIdProp) : params.id
   const queryClient = useQueryClient()
   const navigate = useNavigate()
   const [isEdit, setIsEdit] = useState(false)
@@ -429,6 +436,11 @@ export default function UpdateDeals() {
           </h1>
         </div>
         <div className='flex items-center gap-2'>
+          {onBack && (
+            <Button size='sm' variant='outline' onClick={onBack}>
+              ← Back
+            </Button>
+          )}
           {!isEdit ? (
             <Button
               size='sm'

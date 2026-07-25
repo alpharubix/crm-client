@@ -85,8 +85,15 @@ function mapFormToApi(
   return payload
 }
 
-export default function UpdateContacts() {
-  const { id } = useParams()
+export default function UpdateContacts({
+  contactIdProp,
+  onBack,
+}: {
+  contactIdProp?: string | number
+  onBack?: () => void
+} = {}) {
+  const params = useParams()
+  const id = contactIdProp !== undefined ? String(contactIdProp) : params.id
   const queryClient = useQueryClient()
   const [isEdit, setIsEdit] = useState(false)
   const [openAllNotes, setOpenAllNotes] = useState(false)
@@ -245,6 +252,11 @@ export default function UpdateContacts() {
           </h1>
         </div>
         <div className='flex items-center gap-2'>
+          {onBack && (
+            <Button size='sm' variant='outline' onClick={onBack}>
+              ← Back
+            </Button>
+          )}
           {!isEdit ? (
             <Button
               size='sm'

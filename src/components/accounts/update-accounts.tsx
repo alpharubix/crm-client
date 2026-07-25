@@ -48,9 +48,13 @@ import {
   IndianRupee,
   BarChart3,
   ExternalLink,
+  LayoutDashboard,
 } from 'lucide-react'
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs'
 import { formatAmount } from '@/utils/number-formatter'
+import UpdateDeals from '@/components/deals/update-deals'
+import UpdateContacts from '@/components/contacts/update-contacts'
+import UpdateKanbanTicket from '@/components/tickets/update-kanban-tickets'
 import { CitySelector } from '../shared/city-selector'
 import { StateSelector } from '../shared/state-selector'
 import { PincodeSelector } from '../shared/pincode-selector'
@@ -682,7 +686,10 @@ export default function UpdateAccounts() {
   const dealDocuments = accountData?.deal_documents || []
   const revenues = accountData?.revenue || []
   const notes = accountData?.notes || []
-  const [activeTab, setActiveTab] = useState('contacts')
+  const [activeTab, setActiveTab] = useState('overview')
+  const [selectedDealId, setSelectedDealId] = useState<string | number | null>(null)
+  const [selectedContactId, setSelectedContactId] = useState<string | number | null>(null)
+  const [selectedTicketId, setSelectedTicketId] = useState<string | number | null>(null)
 
   const sortedNotes = [...notes].sort((a: any, b: any) => {
     return (
@@ -821,31 +828,41 @@ export default function UpdateAccounts() {
     : sortedNotes
 
   return (
-    <div className='space-y-6 bg-background min-h-screen'>
+    <div className='space-y-3 bg-background min-h-screen'>
       {/* HEADER */}
-      <div className='flex justify-between items-center border p-4 rounded-xl bg-card'>
-        <div className='space-y-2'>
-          <FieldRow label='Account Name' error={errors.accountName?.message}>
+      <div className='flex flex-wrap items-center justify-between gap-4 border px-4 py-2.5 rounded-xl bg-card shadow-sm'>
+        <div className='flex items-center gap-6 flex-wrap'>
+          {/* Account Name */}
+          <div className='flex items-center gap-2'>
+            <span className='text-xs font-semibold text-muted-foreground uppercase tracking-wide'>
+              Account Name:
+            </span>
             {isEdit && isAllow ? (
-              <Input {...register('accountName')} className='h-8' />
+              <Input {...register('accountName')} className='h-7 w-48 text-sm font-semibold' />
             ) : (
-              <span className='text-lg font-semibold'>
+              <span className='text-base font-bold text-foreground'>
                 {display(accountData?.account_name)}
               </span>
             )}
-          </FieldRow>
+            {errors.accountName?.message && (
+              <span className='text-xs text-destructive ml-1'>{errors.accountName.message}</span>
+            )}
+          </div>
 
-          <FieldRow label='Account Owner'>
+          <div className='h-4 w-px bg-border hidden sm:block' />
+
+          {/* Account Owner */}
+          <div className='flex items-center gap-2'>
+            <span className='text-xs font-semibold text-muted-foreground uppercase tracking-wide'>
+              Account Owner:
+            </span>
             {isEdit && isAllow ? (
               <Controller
                 control={control}
                 name='accountOwnerId'
                 render={({ field }) => (
-                  <Select
-                    value={field.value || ''}
-                    onValueChange={field.onChange}
-                  >
-                    <SelectTrigger className='h-8'>
+                  <Select value={field.value || ''} onValueChange={field.onChange}>
+                    <SelectTrigger className='h-7 w-48 text-sm font-semibold'>
                       <SelectValue placeholder='Select Account Owner' />
                     </SelectTrigger>
                     <SelectContent>
@@ -859,33 +876,32 @@ export default function UpdateAccounts() {
                 )}
               />
             ) : (
-              <span className='text-base font-bold'>{ownerName}</span>
+              <span className='text-sm font-bold text-primary'>{ownerName}</span>
             )}
-          </FieldRow>
+          </div>
         </div>
 
         {!isEdit ? (
-          <div className='flex gap-2'>
-            <Button size='sm' onClick={() => setIsEdit(true)}>
+          <div className='flex items-center gap-2'>
+            <Button size='sm' className='h-8 cursor-pointer' onClick={() => setIsEdit(true)}>
               Update
             </Button>
           </div>
         ) : (
-          <div className='flex gap-2'>
+          <div className='flex items-center gap-2'>
             <Button
               size='sm'
+              className='h-8 cursor-pointer'
               disabled={!isDirty || updateMutation.isPending}
               onClick={handleSubmit(onSave)}
             >
-              {updateMutation.isPending ? (
-                <Spinner className='mr-2 h-4 w-4' />
-              ) : (
-                'Save'
-              )}
+              {updateMutation.isPending ? <Spinner className='mr-2 h-3.5 w-3.5' /> : null}
+              Save
             </Button>
             <Button
               size='sm'
               variant='outline'
+              className='h-8 cursor-pointer'
               onClick={() => {
                 reset()
                 setIsEdit(false)
@@ -901,7 +917,7 @@ export default function UpdateAccounts() {
         {/* ================= Relational Tabs (Contacts, Deals, Documentation, Tickets, Revenue, Analysis) ================= */}
         <div className='mt-6 px-4 pb-6'>
           <Tabs
-            defaultValue='contacts'
+            defaultValue='overview'
             value={activeTab}
             onValueChange={setActiveTab}
             className='w-full'
@@ -909,6 +925,14 @@ export default function UpdateAccounts() {
             {/* Browser-style Tab Header */}
             <div className='border-b border-border bg-muted/40 p-1.5 rounded-t-xl shadow-inner'>
               <TabsList className='h-11 w-full justify-start gap-1 bg-transparent p-0 overflow-x-auto'>
+                <TabsTrigger
+                  value='overview'
+                  className='data-[state=active]:bg-background data-[state=active]:shadow-sm border border-transparent data-[state=active]:border-border rounded-lg px-4 py-2 flex items-center gap-2 text-sm font-medium transition-all'
+                >
+                  <LayoutDashboard className='h-4 w-4 text-indigo-500' />
+                  <span>Overview</span>
+                </TabsTrigger>
+
                 <TabsTrigger
                   value='contacts'
                   className='data-[state=active]:bg-background data-[state=active]:shadow-sm border border-transparent data-[state=active]:border-border rounded-lg px-4 py-2 flex items-center gap-2 text-sm font-medium transition-all'
@@ -977,146 +1001,164 @@ export default function UpdateAccounts() {
             <div className='p-4 border border-t-0 border-border rounded-b-xl bg-background/50 shadow-sm min-h-[250px]'>
               {/* ===== CONTACTS TAB ===== */}
               <TabsContent value='contacts' className='space-y-4 m-0'>
-                <div className='flex items-center justify-between'>
-                  <p className='text-sm text-muted-foreground'>
-                    Total Contacts linked to this account:{' '}
-                    <span className='font-semibold text-foreground'>
-                      {contacts.length}
-                    </span>
-                  </p>
-                  <Button
-                    variant='outline'
-                    size='sm'
-                    onClick={() =>
-                      navigate(`/contacts-create`, {
-                        state: {
-                          accountId: id,
-                          accountName: accountData?.account_name,
-                          leadSource: data.source,
-                        },
-                      })
-                    }
-                  >
-                    <Plus className='h-4 w-4 mr-2' /> Add Contact
-                  </Button>
-                </div>
-                <div className='border rounded-md overflow-hidden'>
-                  <Table>
-                    <TableHeader className='bg-muted'>
-                      <TableRow>
-                        <TableHead>Contact Name</TableHead>
-                        <TableHead>Phone</TableHead>
-                        <TableHead>Mobile</TableHead>
-                        <TableHead>Email</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {contacts.length === 0 ? (
-                        <TableRow>
-                          <TableCell
-                            colSpan={4}
-                            className='text-center text-muted-foreground py-8'
-                          >
-                            No contacts available for this account
-                          </TableCell>
-                        </TableRow>
-                      ) : (
-                        contacts.map((contact: any) => (
-                          <TableRow
-                            key={contact.id}
-                            onClick={() => navigate(`/contacts/${contact.id}`)}
-                            className='cursor-pointer hover:bg-muted/50 transition-colors'
-                          >
-                            <TableCell className='font-medium'>
-                              {contact.last_name || contact.first_name || '—'}
-                            </TableCell>
-                            <TableCell>{contact.phone || '—'}</TableCell>
-                            <TableCell>{contact.mobile || '—'}</TableCell>
-                            <TableCell>{contact.email || '—'}</TableCell>
+                {selectedContactId ? (
+                  <UpdateContacts
+                    contactIdProp={selectedContactId}
+                    onBack={() => setSelectedContactId(null)}
+                  />
+                ) : (
+                  <>
+                    <div className='flex items-center justify-between'>
+                      <p className='text-sm text-muted-foreground'>
+                        Total Contacts linked to this account:{' '}
+                        <span className='font-semibold text-foreground'>
+                          {contacts.length}
+                        </span>
+                      </p>
+                      <Button
+                        variant='outline'
+                        size='sm'
+                        onClick={() =>
+                          navigate(`/contacts-create`, {
+                            state: {
+                              accountId: id,
+                              accountName: accountData?.account_name,
+                              leadSource: data.source,
+                            },
+                          })
+                        }
+                      >
+                        <Plus className='h-4 w-4 mr-2' /> Add Contact
+                      </Button>
+                    </div>
+                    <div className='border rounded-md overflow-hidden'>
+                      <Table>
+                        <TableHeader className='bg-muted'>
+                          <TableRow>
+                            <TableHead>Contact Name</TableHead>
+                            <TableHead>Phone</TableHead>
+                            <TableHead>Mobile</TableHead>
+                            <TableHead>Email</TableHead>
                           </TableRow>
-                        ))
-                      )}
-                    </TableBody>
-                  </Table>
-                </div>
+                        </TableHeader>
+                        <TableBody>
+                          {contacts.length === 0 ? (
+                            <TableRow>
+                              <TableCell
+                                colSpan={4}
+                                className='text-center text-muted-foreground py-8'
+                              >
+                                No contacts available for this account
+                              </TableCell>
+                            </TableRow>
+                          ) : (
+                            contacts.map((contact: any) => (
+                              <TableRow
+                                key={contact.id}
+                                onClick={() => setSelectedContactId(contact.id)}
+                                className='cursor-pointer hover:bg-muted/50 transition-colors'
+                              >
+                                <TableCell className='font-medium'>
+                                  {contact.last_name || contact.first_name || '—'}
+                                </TableCell>
+                                <TableCell>{contact.phone || '—'}</TableCell>
+                                <TableCell>{contact.mobile || '—'}</TableCell>
+                                <TableCell>{contact.email || '—'}</TableCell>
+                              </TableRow>
+                            ))
+                          )}
+                        </TableBody>
+                      </Table>
+                    </div>
+                  </>
+                )}
               </TabsContent>
 
               {/* ===== DEALS TAB ===== */}
               <TabsContent value='deals' className='space-y-4 m-0'>
-                <div className='flex items-center justify-between'>
-                  <p className='text-sm text-muted-foreground'>
-                    Total Deals linked to this account:{' '}
-                    <span className='font-semibold text-foreground'>
-                      {Deals.length}
-                    </span>
-                  </p>
-                  <Button
-                    variant='outline'
-                    size='sm'
-                    onClick={() =>
-                      navigate(`/deals-create`, {
-                        state: {
-                          accountId: id,
-                          accountName: accountData?.account_name,
-                        },
-                      })
-                    }
-                  >
-                    <Plus className='h-4 w-4 mr-2' /> Add Deal
-                  </Button>
-                </div>
-                <div className='border rounded-md overflow-hidden'>
-                  <Table>
-                    <TableHeader className='bg-muted'>
-                      <TableRow>
-                        <TableHead>Owner</TableHead>
-                        <TableHead>Deal Type</TableHead>
-                        <TableHead>Deal Status</TableHead>
-                        <TableHead>Lender Name</TableHead>
-                        <TableHead>Disbursement Amount</TableHead>
-                        <TableHead>Modified Date/Time</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {Deals.length === 0 ? (
-                        <TableRow>
-                          <TableCell
-                            colSpan={6}
-                            className='text-center text-muted-foreground py-8'
-                          >
-                            No deals available for this account
-                          </TableCell>
-                        </TableRow>
-                      ) : (
-                        Deals.map((deal: any) => (
-                          <TableRow
-                            key={deal.id}
-                            onClick={() => navigate(`/deals/${deal.id}`)}
-                            className='cursor-pointer hover:bg-muted/50 transition-colors'
-                          >
-                            <TableCell>
-                              {uListLookup(deal.deal_owner_id, usersList)}
-                            </TableCell>
-                            <TableCell className='font-medium'>
-                              {deal.deal_type || '—'}
-                            </TableCell>
-                            <TableCell>{deal.deal_status || '—'}</TableCell>
-                            <TableCell>{deal.lender_name || '—'}</TableCell>
-                            <TableCell>
-                              {formatAmount(deal.disbursed_amount) || '—'}
-                            </TableCell>
-                            <TableCell>
-                              {formatExactDate(
-                                deal.updated_at,
-                                'dd MMM yyyy, hh:mm a',
-                              ) || '—'}
-                            </TableCell>
+                {selectedDealId ? (
+                  <UpdateDeals
+                    dealIdProp={selectedDealId}
+                    onBack={() => setSelectedDealId(null)}
+                  />
+                ) : (
+                  <>
+                    <div className='flex items-center justify-between'>
+                      <p className='text-sm text-muted-foreground'>
+                        Total Deals linked to this account:{' '}
+                        <span className='font-semibold text-foreground'>
+                          {Deals.length}
+                        </span>
+                      </p>
+                      <Button
+                        variant='outline'
+                        size='sm'
+                        onClick={() =>
+                          navigate(`/deals-create`, {
+                            state: {
+                              accountId: id,
+                              accountName: accountData?.account_name,
+                            },
+                          })
+                        }
+                      >
+                        <Plus className='h-4 w-4 mr-2' /> Add Deal
+                      </Button>
+                    </div>
+                    <div className='border rounded-md overflow-hidden'>
+                      <Table>
+                        <TableHeader className='bg-muted'>
+                          <TableRow>
+                            <TableHead>Owner</TableHead>
+                            <TableHead>Deal Type</TableHead>
+                            <TableHead>Deal Status</TableHead>
+                            <TableHead>Lender Name</TableHead>
+                            <TableHead>Disbursement Amount</TableHead>
+                            <TableHead>Modified Date/Time</TableHead>
                           </TableRow>
-                        ))
-                      )}
-                    </TableBody>
-                  </Table>
-                </div>
+                        </TableHeader>
+                        <TableBody>
+                          {Deals.length === 0 ? (
+                            <TableRow>
+                              <TableCell
+                                colSpan={6}
+                                className='text-center text-muted-foreground py-8'
+                              >
+                                No deals available for this account
+                              </TableCell>
+                            </TableRow>
+                          ) : (
+                            Deals.map((deal: any) => (
+                              <TableRow
+                                key={deal.id}
+                                onClick={() => setSelectedDealId(deal.id)}
+                                className='cursor-pointer hover:bg-muted/50 transition-colors'
+                              >
+                                <TableCell>
+                                  {uListLookup(deal.deal_owner_id, usersList)}
+                                </TableCell>
+                                <TableCell className='font-medium'>
+                                  {deal.deal_type || '—'}
+                                </TableCell>
+                                <TableCell>{deal.deal_status || '—'}</TableCell>
+                                <TableCell>{deal.lender_name || '—'}</TableCell>
+                                <TableCell>
+                                  {formatAmount(deal.disbursed_amount) || '—'}
+                                </TableCell>
+                                <TableCell>
+                                  {formatExactDate(
+                                    deal.updated_at,
+                                    'dd MMM yyyy, hh:mm a',
+                                  ) || '—'}
+                                </TableCell>
+                              </TableRow>
+                            ))
+                          )}
+                        </TableBody>
+                      </Table>
+                    </div>
+                  </>
+                )}
               </TabsContent>
 
               {/* ===== DOCUMENTATION TAB ===== */}
@@ -1201,66 +1243,75 @@ export default function UpdateAccounts() {
 
               {/* ===== TICKETS TAB ===== */}
               <TabsContent value='tickets' className='space-y-4 m-0'>
-                <div className='flex items-center justify-between'>
-                  <p className='text-sm text-muted-foreground'>
-                    Total Tickets for Deals under this account:{' '}
-                    <span className='font-semibold text-foreground'>
-                      {tickets.length}
-                    </span>
-                  </p>
-                </div>
-                <div className='border rounded-md overflow-hidden'>
-                  <Table>
-                    <TableHeader className='bg-muted'>
-                      <TableRow>
-                        <TableHead>Ticket Name / ID</TableHead>
-                        <TableHead>Deal Name</TableHead>
-                        <TableHead>Lender</TableHead>
-                        <TableHead>Stage</TableHead>
-                        <TableHead>Status</TableHead>
-                        <TableHead>Disbursed Amount</TableHead>
-                        <TableHead>Target Date</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {tickets.length === 0 ? (
-                        <TableRow>
-                          <TableCell
-                            colSpan={7}
-                            className='text-center text-muted-foreground py-8'
-                          >
-                            No tickets generated for deals under this account
-                          </TableCell>
-                        </TableRow>
-                      ) : (
-                        tickets.map((t: any) => (
-                          <TableRow
-                            key={t.id}
-                            className='hover:bg-muted/50 transition-colors cursor-pointer'
-                            onClick={() => navigate(`/tickets/${t.id}`)}
-                          >
-                            <TableCell className='font-medium'>
-                              {t.ticket_name || `Ticket #${t.id}`}
-                            </TableCell>
-                            <TableCell>{t.deal_name || '—'}</TableCell>
-                            <TableCell>{t.lender_name || '—'}</TableCell>
-                            <TableCell>{t.ticket_stage || '—'}</TableCell>
-                            <TableCell>{t.ticket_status || '—'}</TableCell>
-                            <TableCell>
-                              {formatAmount(t.disbursed_amount) || '—'}
-                            </TableCell>
-                            <TableCell>
-                              {formatExactDate(
-                                t.targeted_disbursement_date,
-                                'dd MMM yyyy',
-                              ) || '—'}
-                            </TableCell>
+                {selectedTicketId ? (
+                  <UpdateKanbanTicket
+                    ticketIdProp={selectedTicketId}
+                    onBack={() => setSelectedTicketId(null)}
+                  />
+                ) : (
+                  <>
+                    <div className='flex items-center justify-between'>
+                      <p className='text-sm text-muted-foreground'>
+                        Total Tickets for Deals under this account:{' '}
+                        <span className='font-semibold text-foreground'>
+                          {tickets.length}
+                        </span>
+                      </p>
+                    </div>
+                    <div className='border rounded-md overflow-hidden'>
+                      <Table>
+                        <TableHeader className='bg-muted'>
+                          <TableRow>
+                            <TableHead>Ticket Name / ID</TableHead>
+                            <TableHead>Deal Name</TableHead>
+                            <TableHead>Lender</TableHead>
+                            <TableHead>Stage</TableHead>
+                            <TableHead>Status</TableHead>
+                            <TableHead>Disbursed Amount</TableHead>
+                            <TableHead>Target Date</TableHead>
                           </TableRow>
-                        ))
-                      )}
-                    </TableBody>
-                  </Table>
-                </div>
+                        </TableHeader>
+                        <TableBody>
+                          {tickets.length === 0 ? (
+                            <TableRow>
+                              <TableCell
+                                colSpan={7}
+                                className='text-center text-muted-foreground py-8'
+                              >
+                                No tickets generated for deals under this account
+                              </TableCell>
+                            </TableRow>
+                          ) : (
+                            tickets.map((t: any) => (
+                              <TableRow
+                                key={t.id}
+                                className='hover:bg-muted/50 transition-colors cursor-pointer'
+                                onClick={() => setSelectedTicketId(t.id)}
+                              >
+                                <TableCell className='font-medium'>
+                                  {t.ticket_name || `Ticket #${t.id}`}
+                                </TableCell>
+                                <TableCell>{t.deal_name || '—'}</TableCell>
+                                <TableCell>{t.lender_name || '—'}</TableCell>
+                                <TableCell>{t.ticket_stage || '—'}</TableCell>
+                                <TableCell>{t.ticket_status || '—'}</TableCell>
+                                <TableCell>
+                                  {formatAmount(t.disbursed_amount) || '—'}
+                                </TableCell>
+                                <TableCell>
+                                  {formatExactDate(
+                                    t.targeted_disbursement_date,
+                                    'dd MMM yyyy',
+                                  ) || '—'}
+                                </TableCell>
+                              </TableRow>
+                            ))
+                          )}
+                        </TableBody>
+                      </Table>
+                    </div>
+                  </>
+                )}
               </TabsContent>
 
               {/* ===== REVENUE TAB ===== */}
@@ -1380,10 +1431,10 @@ export default function UpdateAccounts() {
                   </Button>
                 </div>
               </TabsContent>
-            </div>
-          </Tabs>
-        </div>
-        {/* ================= Account Status ================= */}
+
+              {/* ===== OVERVIEW TAB ===== */}
+              <TabsContent value='overview' className='space-y-6 m-0 pt-2'>
+                {/* ================= Account Status ================= */}
         <SectionHeader title='Account Status' />
         <CardContent className='p-0 grid grid-cols-1 md:grid-cols-2'>
           <div className='md:border-r'>
@@ -2514,6 +2565,10 @@ export default function UpdateAccounts() {
           )}
           <NoteDialog onAddNote={handleAddNote} />
         </CardContent>
+              </TabsContent>
+            </div>
+          </Tabs>
+        </div>
       </Card>
     </div>
   )

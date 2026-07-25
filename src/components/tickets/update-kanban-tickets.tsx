@@ -211,8 +211,15 @@ const DIRTY_OPTS = {
   shouldTouch: true,
 } as const
 
-export default function UpdateKanbanTicket() {
-  const { id } = useParams()
+export default function UpdateKanbanTicket({
+  ticketIdProp,
+  onBack,
+}: {
+  ticketIdProp?: string | number
+  onBack?: () => void
+} = {}) {
+  const params = useParams()
+  const id = ticketIdProp !== undefined ? String(ticketIdProp) : params.id
   const queryClient = useQueryClient()
   const navigate = useNavigate()
   const [isEdit, setIsEdit] = useState(false)
@@ -476,6 +483,11 @@ export default function UpdateKanbanTicket() {
           </h1>
         </div>
         <div className='flex items-center gap-2'>
+          {onBack && (
+            <Button size='sm' variant='outline' onClick={onBack}>
+              ← Back
+            </Button>
+          )}
           {!isEdit && isEmailAuthorized && (
             <Button
               size='sm'

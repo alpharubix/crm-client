@@ -265,7 +265,8 @@ export default function CreateTicket() {
     onSuccess: () => {
       toast.success('Ticket created successfully')
       queryClient.invalidateQueries({ queryKey: ['deal', dealId] })
-      navigate(`/deals/${dealId}`)
+      queryClient.invalidateQueries({ queryKey: ['account'] })
+      navigate(-1)
     },
     onError: (err) => {
       toast.error(err.message)
