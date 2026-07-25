@@ -113,6 +113,7 @@ export default function CreateTicket() {
     mode: 'onChange',
     defaultValues: {
       accountId: prefilledData.accountId ? String(prefilledData.accountId) : '',
+      partnerName: '',
     },
   })
 
@@ -247,6 +248,7 @@ export default function CreateTicket() {
       if (values.customerRejectionStatusExplanation)
         payload.customer_rejection_status_explanation =
           values.customerRejectionStatusExplanation
+      if (values.partnerName) payload.partner_name = values.partnerName
       if (values.partnerCode) payload.partner_code = values.partnerCode
 
       const res = await fetch(`${ENV.VITE_BACKEND_BASE_URL}/tickets`, {
@@ -499,6 +501,26 @@ export default function CreateTicket() {
                   </div>
                 )}
               </div>
+            </FieldRow>
+
+            <FieldRow label='Partner Name *' error={errors.partnerName?.message}>
+              <SelectField
+                isEdit={true}
+                options={[
+                  'Rupifi Private Ltd',
+                  'FlexiLoans Technologies Private Ltd',
+                  'Recur Club Technologies Private Ltd',
+                  'Rupeeboss Financial Services Pvt Ltd',
+                  'Others',
+                ]}
+                value={formValues.partnerName ?? ''}
+                onChange={(value) =>
+                  setValue('partnerName', value, {
+                    shouldValidate: true,
+                    shouldDirty: true,
+                  })
+                }
+              />
             </FieldRow>
 
             <FieldRow

@@ -87,6 +87,7 @@ function mapTicketToForm(apiData: any): UpdateTicketFormValues {
     lenderRejectionStatusExplanation:
       apiData.lender_rejection_status_explanation || '',
     partnerCode: apiData.partner_code || '',
+    partnerName: apiData.partner_name || '',
     customerRejectionReason: apiData.customer_rejection_reason || '',
     customerRejectionStatusExplanation:
       apiData.customer_rejection_status_explanation || '',
@@ -183,6 +184,7 @@ function mapFormToApi(
       key: 'lenderRejectionStatusExplanation',
     },
     partner_code: { value: formData.partnerCode || null, key: 'partnerCode' },
+    partner_name: { value: formData.partnerName || null, key: 'partnerName' },
     customer_rejection_reason: {
       value: formData.customerRejectionReason || null,
       key: 'customerRejectionReason',
@@ -776,6 +778,23 @@ export default function UpdateKanbanTicket({
                   </div>
                 )}
               </div>
+            </FieldRow>
+
+            <FieldRow label='Partner Name *' error={errors.partnerName?.message}>
+              <SelectField
+                isEdit={isEdit}
+                options={[
+                  'Rupifi Private Ltd',
+                  'FlexiLoans Technologies Private Ltd',
+                  'Recur Club Technologies Private Ltd',
+                  'Rupeeboss Financial Services Pvt Ltd',
+                  'Others',
+                ]}
+                value={formValues.partnerName as string}
+                onChange={(value) =>
+                  setValue('partnerName', value, DIRTY_OPTS)
+                }
+              />
             </FieldRow>
 
             <FieldRow

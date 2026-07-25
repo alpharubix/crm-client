@@ -26,15 +26,17 @@ import type { Contact } from '@/types'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Spinner } from '@/components/ui/spinner'
 import { useAuth } from '@/context/auth-context'
+import { useManageColumns } from '@/hooks/use-manage-columns'
+import { ManageColumnsDialog } from '@/components/shared/manage-columns'
 
 const DEFAULT_COLUMNS = [
-  { id: 'contact_name', label: 'Contact Name' },
-  { id: 'designation', label: 'Designation' },
-  { id: 'mobile', label: 'Mobile' },
-  { id: 'phone', label: 'Phone' },
-  { id: 'email', label: 'Email' },
-  { id: 'city', label: 'City' },
-  { id: 'state', label: 'State' },
+  { id: 'contact_name', label: 'Contact Name', selected: true },
+  { id: 'designation', label: 'Designation', selected: true },
+  { id: 'mobile', label: 'Mobile', selected: true },
+  { id: 'phone', label: 'Phone', selected: true },
+  { id: 'email', label: 'Email', selected: true },
+  { id: 'city', label: 'City', selected: true },
+  { id: 'state', label: 'State', selected: true },
 ]
 
 export default function ContactsPage() {
@@ -52,31 +54,12 @@ export default function ContactsPage() {
     phone: searchParams.get('phone') || '',
   })
 
-  const [columns, setColumns] = useState(() => {
-    const saved = localStorage.getItem('contacts_table_columns')
-    return saved ? JSON.parse(saved) : DEFAULT_COLUMNS
-  })
+  const { columns, savePreferences, resetToDefault } = useManageColumns(
+    'contacts',
+    DEFAULT_COLUMNS,
+  )
 
-  useEffect(() => {
-    localStorage.setItem('contacts_table_columns', JSON.stringify(columns))
-  }, [columns])
-
-  const handleDragStart = (e: React.DragEvent, index: number) => {
-    e.dataTransfer.setData('colIndex', index.toString())
-  }
-
-  const handleDragOver = (e: React.DragEvent) => {
-    e.preventDefault()
-  }
-
-  const handleDrop = (e: React.DragEvent, dropIndex: number) => {
-    const dragIndex = parseInt(e.dataTransfer.getData('colIndex'))
-    if (dragIndex === dropIndex) return
-    const newCols = [...columns]
-    const [draggedCol] = newCols.splice(dragIndex, 1)
-    newCols.splice(dropIndex, 0, draggedCol)
-    setColumns(newCols)
-  }
+  const visibleColumns = columns.filter((c) => c.selected)
 
   // Separate state for applied filters (what the query actually uses)
   const [appliedFilters, setAppliedFilters] = useState(filters)
@@ -301,6 +284,11 @@ export default function ContactsPage() {
               Clear
             </Button>
           </div>
+          <ManageColumnsDialog
+            columns={columns}
+            onSave={savePreferences}
+            onReset={resetToDefault}
+          />
         </div>
 
         {/* -------- Table -------- */}
@@ -315,17 +303,8 @@ export default function ContactsPage() {
                 <TableCaption>Contacts list</TableCaption>
                 <TableHeader>
                   <TableRow className='sticky top-0 z-10 bg-background hover:bg-accent'>
-                    {columns.map((col: any, index: number) => (
-                      <TableHead
-                        key={col.id}
-                        draggable
-                        onDragStart={(e) => handleDragStart(e, index)}
-                        onDragOver={handleDragOver}
-                        onDrop={(e) => handleDrop(e, index)}
-                        className='cursor-move'
-                      >
-                        {col.label}
-                      </TableHead>
+                    {visibleColumns.map((col: any) => (
+                      <TableHead key={col.id}>{col.label}</TableHead>
                     ))}
                   </TableRow>
                 </TableHeader>
@@ -339,69 +318,77 @@ export default function ContactsPage() {
                     </TableRow>
                   ) : (
                     contacts.map((contact) => (
-                        <TableRow
-                          key={contact.id}
-                          className='cursor-pointer hover:bg-accent'
-                          onClick={() => handleRowClick(contact.id)}
-                        >
-                          {columns.map((col: any) => {
-                            switch (col.id) {
-                              case 'contact_name':
-                                return (
-                                  <TableCell key={col.id}>
-                                    <div className='font-medium'>
-                                      <HighlightedText
-                                        text={`${contact.first_name} ${contact.last_name}`}
-                                        highlight={appliedFilters.full_name}
-                                      />
-                                    </div>
-                                  </TableCell>
-                                )
-                              case 'designation':
-                                return <TableCell key={col.id}>{contact.designation || '—'}</TableCell>
-                              case 'mobile':
-                                return (
-                                  <TableCell key={col.id}>
+                      <TableRow
+                        key={contact.id}
+                        className='cursor-pointer hover:bg-accent'
+                        onClick={() => handleRowClick(contact.id)}
+                      >
+                        {visibleColumns.map((col: any) => {
+                          switch (col.id) {
+                            case 'contact_name':
+                              return (
+                                <TableCell key={col.id}>
+                                  <div className='font-medium'>
                                     <HighlightedText
-                                      text={contact.mobile}
-                                      highlight={appliedFilters.mobile}
+                                      text={`${contact.first_name} ${contact.last_name}`}
+                                      highlight={appliedFilters.full_name}
                                     />
-                                  </TableCell>
-                                )
-                              case 'phone':
-                                return (
-                                  <TableCell key={col.id}>
-                                    <HighlightedText
-                                      text={contact.phone}
-                                      highlight={appliedFilters.phone}
-                                    />
-                                  </TableCell>
-                                )
-                              case 'email':
-                                return (
-                                  <TableCell key={col.id}>
-                                    <HighlightedText
-                                      text={contact.email}
-                                      highlight={appliedFilters.email}
-                                    />
-                                  </TableCell>
-                                )
-                              case 'city':
-                                return (
-                                  <TableCell key={col.id}>
-                                    <HighlightedText
-                                      text={contact.city}
-                                      highlight={appliedFilters.city}
-                                    />
-                                  </TableCell>
-                                )
-                              case 'state':
-                                return <TableCell key={col.id}>{contact.state || '—'}</TableCell>
-                              default:
-                                return <TableCell key={col.id} />
-                            }
-                          })}
-                        </TableRow>
+                                  </div>
+                                </TableCell>
+                              )
+                            case 'designation':
+                              return (
+                                <TableCell key={col.id}>
+                                  {contact.designation || '—'}
+                                </TableCell>
+                              )
+                            case 'mobile':
+                              return (
+                                <TableCell key={col.id}>
+                                  <HighlightedText
+                                    text={contact.mobile}
+                                    highlight={appliedFilters.mobile}
+                                  />
+                                </TableCell>
+                              )
+                            case 'phone':
+                              return (
+                                <TableCell key={col.id}>
+                                  <HighlightedText
+                                    text={contact.phone}
+                                    highlight={appliedFilters.phone}
+                                  />
+                                </TableCell>
+                              )
+                            case 'email':
+                              return (
+                                <TableCell key={col.id}>
+                                  <HighlightedText
+                                    text={contact.email}
+                                    highlight={appliedFilters.email}
+                                  />
+                                </TableCell>
+                              )
+                            case 'city':
+                              return (
+                                <TableCell key={col.id}>
+                                  <HighlightedText
+                                    text={contact.city}
+                                    highlight={appliedFilters.city}
+                                  />
+                                </TableCell>
+                              )
+                            case 'state':
+                              return (
+                                <TableCell key={col.id}>
+                                  {contact.state || '—'}
+                                </TableCell>
+                              )
+                            default:
+                              return <TableCell key={col.id} />
+                          }
+                        })}
+                      </TableRow>
                     ))
                   )}
                 </TableBody>

@@ -40,6 +40,8 @@ import Pagination from '@/components/shared/pagination'
 import { formatExactDate } from '@/utils/date-formatter'
 import HighlightedText from '@/components/shared/highlighted-text'
 import { MultiSelect, type Option } from '@/components/ui/multi-select'
+import { useManageColumns } from '@/hooks/use-manage-columns'
+import { ManageColumnsDialog } from '@/components/shared/manage-columns'
 
 const LOAN_TYPES = [
   'SCF',
@@ -70,18 +72,24 @@ const TICKET_STATUSES = [
 ]
 
 const DEFAULT_COLUMNS = [
-  { id: 'deal_name', label: 'Deal Name' },
-  { id: 'deal_owner', label: 'Deal Owner' },
-  { id: 'ticket_login', label: 'Ticket Login' },
-  { id: 'lender_name', label: 'Lender Name' },
-  { id: 'lender_login_type', label: 'Lender Login Type' },
-  { id: 'lender_login_date', label: 'Lender login date' },
-  { id: 'ticket_status', label: 'Ticket Status' },
-  { id: 'ticket_stage', label: 'Ticket Stage' },
+  { id: 'deal_name', label: 'Deal Name', selected: true },
+  { id: 'deal_owner', label: 'Deal Owner', selected: true },
+  { id: 'ticket_login', label: 'Ticket Login', selected: true },
+  { id: 'lender_name', label: 'Lender Name', selected: true },
+  { id: 'lender_login_type', label: 'Lender Login Type', selected: true },
+  { id: 'lender_login_date', label: 'Lender login date', selected: true },
+  { id: 'ticket_status', label: 'Ticket Status', selected: true },
+  { id: 'ticket_stage', label: 'Ticket Stage', selected: true },
 ]
 
-const LOAN_TYPE_OPTIONS: Option[] = LOAN_TYPES.map((val) => ({ value: val, label: val }))
-const TICKET_STATUS_OPTIONS: Option[] = TICKET_STATUSES.map((val) => ({ value: val, label: val }))
+const LOAN_TYPE_OPTIONS: Option[] = LOAN_TYPES.map((val) => ({
+  value: val,
+  label: val,
+}))
+const TICKET_STATUS_OPTIONS: Option[] = TICKET_STATUSES.map((val) => ({
+  value: val,
+  label: val,
+}))
 
 function getDefaultDates() {
   const to = new Date()
@@ -119,31 +127,12 @@ const TicketsPage = () => {
     }
   })
 
-  const [columns, setColumns] = useState(() => {
-    const saved = localStorage.getItem('tickets_table_columns')
-    return saved ? JSON.parse(saved) : DEFAULT_COLUMNS
-  })
+  const { columns, savePreferences, resetToDefault } = useManageColumns(
+    'tickets',
+    DEFAULT_COLUMNS,
+  )
 
-  useEffect(() => {
-    localStorage.setItem('tickets_table_columns', JSON.stringify(columns))
-  }, [columns])
-
-  const handleDragStart = (e: React.DragEvent, index: number) => {
-    e.dataTransfer.setData('colIndex', index.toString())
-  }
-
-  const handleDragOver = (e: React.DragEvent) => {
-    e.preventDefault()
-  }
-
-  const handleDrop = (e: React.DragEvent, dropIndex: number) => {
-    const dragIndex = parseInt(e.dataTransfer.getData('colIndex'))
-    if (dragIndex === dropIndex) return
-    const newCols = [...columns]
-    const [draggedCol] = newCols.splice(dragIndex, 1)
-    newCols.splice(dropIndex, 0, draggedCol)
-    setColumns(newCols)
-  }
+  const visibleColumns = columns.filter((c) => c.selected)
 
   const [appliedFilters, setAppliedFilters] = useState(filters)
 
@@ -241,7 +230,10 @@ const TicketsPage = () => {
           params.append('type_of_loan', o.value),
         )
       }
-      if (appliedFilters.ticketStatus && appliedFilters.ticketStatus.length > 0) {
+      if (
+        appliedFilters.ticketStatus &&
+        appliedFilters.ticketStatus.length > 0
+      ) {
         appliedFilters.ticketStatus.forEach((o: Option) =>
           params.append('ticket_status', o.value),
         )
@@ -444,7 +436,7 @@ const TicketsPage = () => {
 
           <div className='border-t border-dashed border-zinc-400 pt-3 space-y-3'>
             {/* <div className='space-y-1.5'> */}
-              {/* <Label className=''>Created From</Label>
+            {/* <Label className=''>Created From</Label>
               <Input
                 type='date'
                 className='h-9 text-xs'
@@ -548,6 +540,11 @@ const TicketsPage = () => {
               Clear
             </Button>
           </div>
+          <ManageColumnsDialog
+            columns={columns}
+            onSave={savePreferences}
+            onReset={resetToDefault}
+          />
         </div>
 
         {/* Table Content window */}
@@ -562,17 +559,8 @@ const TicketsPage = () => {
                 <table className='w-full caption-bottom text-sm'>
                   <TableHeader>
                     <TableRow className='sticky top-0 z-10 bg-background hover:bg-accent'>
-                      {columns.map((col: any, index: number) => (
-                        <TableHead
-                          key={col.id}
-                          draggable
-                          onDragStart={(e) => handleDragStart(e, index)}
-                          onDragOver={handleDragOver}
-                          onDrop={(e) => handleDrop(e, index)}
-                          className='cursor-move'
-                        >
-                          {col.label}
-                        </TableHead>
+                      {visibleColumns.map((col: any) => (
+                        <TableHead key={col.id}>{col.label}</TableHead>
                       ))}
                     </TableRow>
                   </TableHeader>
@@ -591,11 +579,14 @@ const TicketsPage = () => {
                           className='cursor-pointer hover:bg-accent'
                           onClick={() => handleRowClick(ticket.id)}
                         >
-                          {columns.map((col: any) => {
+                          {visibleColumns.map((col: any) => {
                             switch (col.id) {
                               case 'deal_name':
                                 return (
-                                  <TableCell key={col.id} className='font-medium'>
+                                  <TableCell
+                                    key={col.id}
+                                    className='font-medium'
+                                  >
                                     <HighlightedText
                                       text={ticket.account_name || '-'}
                                       highlight={appliedFilters.accountName}
@@ -606,28 +597,53 @@ const TicketsPage = () => {
                                 return (
                                   <TableCell key={col.id}>
                                     {ticket.deal_owner_id
-                                      ? (users as Record<string, string>)[ticket.deal_owner_id] || '-'
+                                      ? (users as Record<string, string>)[
+                                          ticket.deal_owner_id
+                                        ] || '-'
                                       : '-'}
                                   </TableCell>
                                 )
                               case 'ticket_login':
-                                return <TableCell key={col.id}>{ticket.ticket_login || '-'}</TableCell>
+                                return (
+                                  <TableCell key={col.id}>
+                                    {ticket.ticket_login || '-'}
+                                  </TableCell>
+                                )
                               case 'lender_name':
-                                return <TableCell key={col.id}>{ticket.lender_name || '-'}</TableCell>
+                                return (
+                                  <TableCell key={col.id}>
+                                    {ticket.lender_name || '-'}
+                                  </TableCell>
+                                )
                               case 'lender_login_type':
-                                return <TableCell key={col.id}>{ticket.lender_login_type || '-'}</TableCell>
+                                return (
+                                  <TableCell key={col.id}>
+                                    {ticket.lender_login_type || '-'}
+                                  </TableCell>
+                                )
                               case 'lender_login_date':
                                 return (
                                   <TableCell key={col.id}>
                                     {ticket.lender_login_date
-                                      ? formatExactDate(ticket.lender_login_date, 'dd MMM yyyy')
+                                      ? formatExactDate(
+                                          ticket.lender_login_date,
+                                          'dd MMM yyyy',
+                                        )
                                       : '—'}
                                   </TableCell>
                                 )
                               case 'ticket_status':
-                                return <TableCell key={col.id}>{ticket.ticket_status || '-'}</TableCell>
+                                return (
+                                  <TableCell key={col.id}>
+                                    {ticket.ticket_status || '-'}
+                                  </TableCell>
+                                )
                               case 'ticket_stage':
-                                return <TableCell key={col.id}>{ticket.ticket_stage || '-'}</TableCell>
+                                return (
+                                  <TableCell key={col.id}>
+                                    {ticket.ticket_stage || '-'}
+                                  </TableCell>
+                                )
                               default:
                                 return <TableCell key={col.id} />
                             }

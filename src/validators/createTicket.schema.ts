@@ -69,6 +69,7 @@ export const createTicketSchema = z.object({
   partnerCode: z.string().optional(),
   customerRejectionReason: z.string().optional(),
   customerRejectionStatusExplanation: z.string().optional(),
+  partnerName: z.string().min(1, 'Partner name is required'),
 })
 
 export type CreateTicketFormValues = z.infer<typeof createTicketSchema>

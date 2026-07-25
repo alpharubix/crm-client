@@ -35,7 +35,10 @@ import UploadCsv from '@/components/accounts/csv-upload'
 
 import users from '@/utils/users.json'
 import { useAuth } from '@/context/auth-context'
-import { MultiSelect, type Option } from '@/components/ui/multi-select'
+import type { Option } from '@/components/ui/multi-select'
+import { useManageColumns } from '@/hooks/use-manage-columns'
+import { ManageColumnsDialog } from '@/components/shared/manage-columns'
+import { MultiSelect } from '@/components/ui/multi-select'
 
 const ACCOUNT_STATUS_OPTIONS: Option[] = [
   { value: 'Yet to be dialed', label: 'Yet to be dialed' },
@@ -87,16 +90,16 @@ const INDUSTRY_OPTIONS: Option[] = [
 ]
 
 const DEFAULT_COLUMNS = [
-  { id: 'account_name', label: 'Account Name' },
-  { id: 'account_owner', label: 'Account Owner' },
-  { id: 'account_status', label: 'Account Status' },
-  { id: 'source', label: 'Source' },
-  { id: 'type_of_business', label: 'Type of Business' },
-  { id: 'industry', label: 'Industry' },
-  { id: 'phone', label: 'Phone' },
-  { id: 'city', label: 'City' },
-  { id: 'state', label: 'State' },
-  { id: 'call_back_date', label: 'Call Back Date / Time' },
+  { id: 'account_name', label: 'Account Name', selected: true },
+  { id: 'account_owner', label: 'Account Owner', selected: true },
+  { id: 'account_status', label: 'Account Status', selected: true },
+  { id: 'source', label: 'Source', selected: true },
+  { id: 'type_of_business', label: 'Type of Business', selected: true },
+  { id: 'industry', label: 'Industry', selected: true },
+  { id: 'phone', label: 'Phone', selected: true },
+  { id: 'city', label: 'City', selected: true },
+  { id: 'state', label: 'State', selected: true },
+  { id: 'call_back_date', label: 'Call Back Date / Time', selected: true },
 ]
 
 export default function AccountsPage() {
@@ -115,31 +118,12 @@ export default function AccountsPage() {
     accountOwnerId: [] as Option[],
   })
 
-  const [columns, setColumns] = useState(() => {
-    const saved = localStorage.getItem('accounts_table_columns')
-    return saved ? JSON.parse(saved) : DEFAULT_COLUMNS
-  })
+  const { columns, savePreferences, resetToDefault } = useManageColumns(
+    'accounts',
+    DEFAULT_COLUMNS
+  )
 
-  useEffect(() => {
-    localStorage.setItem('accounts_table_columns', JSON.stringify(columns))
-  }, [columns])
-
-  const handleDragStart = (e: React.DragEvent, index: number) => {
-    e.dataTransfer.setData('colIndex', index.toString())
-  }
-
-  const handleDragOver = (e: React.DragEvent) => {
-    e.preventDefault()
-  }
-
-  const handleDrop = (e: React.DragEvent, dropIndex: number) => {
-    const dragIndex = parseInt(e.dataTransfer.getData('colIndex'))
-    if (dragIndex === dropIndex) return
-    const newCols = [...columns]
-    const [draggedCol] = newCols.splice(dragIndex, 1)
-    newCols.splice(dropIndex, 0, draggedCol)
-    setColumns(newCols)
-  }
+  const visibleColumns = columns.filter((c) => c.selected)
 
   const [appliedFilters, setAppliedFilters] = useState(filters)
 
@@ -461,7 +445,13 @@ export default function AccountsPage() {
             >
               Clear
             </Button>
+            
           </div>
+          <ManageColumnsDialog
+              columns={columns}
+              onSave={savePreferences}
+              onReset={resetToDefault}
+            />
         </div>
 
         <div className='flex flex-col gap-4 min-w-0 h-[calc(100vh-140px)]'>
@@ -475,15 +465,8 @@ export default function AccountsPage() {
                 <table className='w-full caption-bottom text-sm'>
                   <TableHeader>
                     <TableRow className='sticky top-0 z-10 bg-background hover:bg-accent'>
-                      {columns.map((col: any, index: number) => (
-                        <TableHead
-                          key={col.id}
-                          draggable
-                          onDragStart={(e) => handleDragStart(e, index)}
-                          onDragOver={handleDragOver}
-                          onDrop={(e) => handleDrop(e, index)}
-                          className='cursor-move'
-                        >
+                      {visibleColumns.map((col: any) => (
+                        <TableHead key={col.id}>
                           {col.label}
                         </TableHead>
                       ))}
@@ -504,7 +487,7 @@ export default function AccountsPage() {
                           className='cursor-pointer hover:bg-accent'
                           onClick={() => handleRowClick(acc.id)}
                         >
-                          {columns.map((col: any) => {
+                          {visibleColumns.map((col: any) => {
                             switch (col.id) {
                               case 'account_name':
                                 return (

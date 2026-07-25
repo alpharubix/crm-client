@@ -75,6 +75,7 @@ export const updateTicketSchema = z.object({
   createdAt: z.string().optional(),
   modifiedBy: z.string().optional(),
   modifiedAt: z.string().optional(),
+  partnerName: z.string().optional(),
 })
 
 export type UpdateTicketFormValues = z.infer<typeof updateTicketSchema>
