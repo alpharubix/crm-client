@@ -10,32 +10,44 @@ const validCountries = new Set(['India'])
 export const updateAccountSchema = z.object({
   // ================= Account Status Section =================
   assignmentDate: z.date().optional(),
-  callBackDate: z.date().optional(),
+  callBackDate: z.date({
+    required_error: 'Call back date is required',
+    invalid_type_error: 'Call back date is required',
+  }),
 
-  source: z.string().optional(),
-  sourceType: z.string().optional(),
+  source: z.string().min(1, 'Source is required'),
+  sourceType: z.string().min(1, 'Source type is required'),
   sourceOther: z.string().optional(),
-  sourceDate: z.date().optional(),
+  sourceDate: z.date({
+    required_error: 'Source date is required',
+    invalid_type_error: 'Source date is required',
+  }),
   sourceDescription: z.string().optional(),
   distributorCode: z.string().optional(),
 
   wabaInterested: z.boolean().optional(),
 
-  accountStatus: z.string().optional(),
+  accountStatus: z.string().min(1, 'Account status is required'),
   accountStage: z.string().min(1, 'Account stage is required'),
-  businessStatus: z.string().optional(),
+  businessStatus: z.string().min(1, 'Business status is required'),
   accountOwnerId: z.string().min(1, 'Account owner is required'),
   priorityAccount: z.string().optional(),
   partnerName: z.string().optional(),
   // ================= Customer Basic Details =================
-  profileType: z.string().optional(),
-  firstName: z.string().min(1, 'Account name is required'),
-  lastName: z.string().optional(),
+  profileType: z.string().min(1, 'Profile type is required'),
+  firstName: z.string().min(1, 'First name is required'),
+  lastName: z.string().min(1, 'Last name is required'),
   accountName: z.string().min(1, 'Account name is required'),
 
-  phone: z.string().regex(/^\+?[0-9\s-]{10,15}$/, 'Invalid phone number'),
+  phone: z
+    .string()
+    .min(1, 'Phone number is required')
+    .regex(/^\+?[0-9\s-]{10,15}$/, 'Invalid phone number'),
 
-  email: z.string().email('Invalid email address'),
+  email: z
+    .string()
+    .min(1, 'Email address is required')
+    .email('Invalid email address'),
 
   mothersName: z.string().optional(),
 
@@ -91,10 +103,10 @@ export const updateAccountSchema = z.object({
 
   // ================= Address - Applicant Residence =================
   applicantStreet: z.string().optional(),
-  applicantCity: z.string().optional().refine(val => !val || validCities.has(val), 'Please select a valid predefined city'),
-  applicantState: z.string().optional().refine(val => !val || validStates.has(val), 'Please select a valid predefined state'),
+  applicantCity: z.string().min(1, 'City is required').refine(val => validCities.has(val), 'Please select a valid predefined city'),
+  applicantState: z.string().min(1, 'State is required').refine(val => validStates.has(val), 'Please select a valid predefined state'),
   applicantCountry: z.string().optional().refine(val => !val || validCountries.has(val), 'Please select a valid predefined country'),
-  applicantPincode: z.string().regex(/^\d{6}$/, 'Pincode must be a 6-digit number').optional().or(z.literal('')),
+  applicantPincode: z.string().min(1, 'Pincode is required').regex(/^\d{6}$/, 'Pincode must be a 6-digit number'),
   applicantYearsResiding: z.preprocess(
     (val) =>
       val === '' || val === null || val === undefined ? undefined : Number(val),

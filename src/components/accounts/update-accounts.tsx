@@ -1449,7 +1449,7 @@ export default function UpdateAccounts() {
               </span>
             </FieldRow>
 
-            <FieldRow label='Source' error={errors.source?.message}>
+            <FieldRow label='Source *' error={errors.source?.message}>
               <Controller
                 control={control}
                 name='source'
@@ -1480,7 +1480,7 @@ export default function UpdateAccounts() {
               />
             </FieldRow>
 
-            <FieldRow label='Source Type' error={errors.sourceType?.message}>
+            <FieldRow label='Source Type *' error={errors.sourceType?.message}>
               <Controller
                 control={control}
                 name='sourceType'
@@ -1511,7 +1511,7 @@ export default function UpdateAccounts() {
               </FieldRow>
             )}
 
-            <FieldRow label='Source Date' error={errors.sourceDate?.message}>
+            <FieldRow label='Source Date *' error={errors.sourceDate?.message}>
               <Controller
                 control={control}
                 name='sourceDate'
@@ -1565,7 +1565,7 @@ export default function UpdateAccounts() {
           </div>
 
           <div>
-            <FieldRow label='Call Back Date/ Time'>
+            <FieldRow label='Call Back Date/ Time *' error={errors.callBackDate?.message}>
               <Controller
                 control={control}
                 name='callBackDate'
@@ -1582,7 +1582,7 @@ export default function UpdateAccounts() {
             </FieldRow>
 
             <FieldRow
-              label='Account Status'
+              label='Account Status *'
               error={errors.accountStatus?.message}
             >
               <Controller
@@ -1611,7 +1611,7 @@ export default function UpdateAccounts() {
             </FieldRow>
 
             <FieldRow
-              label='Account Stage'
+              label='Account Stage *'
               error={errors.accountStage?.message}
             >
               <Controller
@@ -1641,7 +1641,7 @@ export default function UpdateAccounts() {
             </FieldRow>
 
             <FieldRow
-              label='Business Status'
+              label='Business Status *'
               error={errors.businessStatus?.message}
             >
               <Controller
@@ -1708,21 +1708,21 @@ export default function UpdateAccounts() {
         <SectionHeader title='Customer Basic Details' />
         <CardContent className='p-0 grid grid-cols-1 md:grid-cols-2'>
           <div className='md:border-r'>
-            <FieldRow label='First Name'>
+            <FieldRow label='First Name *' error={errors.firstName?.message}>
               {isEdit ? (
                 <Input {...register('firstName')} className='h-8' />
               ) : (
                 <span>{display(data.firstName)}</span>
               )}
             </FieldRow>
-            <FieldRow label='Phone No' error={errors.phone?.message}>
+            <FieldRow label='Phone No *' error={errors.phone?.message}>
               {isEdit ? (
                 <Input {...register('phone')} className='h-8' />
               ) : (
                 <span>{display(data.phone)}</span>
               )}
             </FieldRow>
-            <FieldRow label='Email' error={errors.email?.message}>
+            <FieldRow label='Email *' error={errors.email?.message}>
               {isEdit ? (
                 <Input {...register('email')} className='h-8' />
               ) : (
@@ -1732,7 +1732,7 @@ export default function UpdateAccounts() {
           </div>
 
           <div>
-            <FieldRow label='Last Name' error={errors.lastName?.message}>
+            <FieldRow label='Last Name *' error={errors.lastName?.message}>
               {isEdit ? (
                 <Input {...register('lastName')} className='h-8' />
               ) : (
@@ -1761,7 +1761,7 @@ export default function UpdateAccounts() {
                 )}
               />
             </FieldRow>
-            <FieldRow label='Profile Type' error={errors.profileType?.message}>
+            <FieldRow label='Profile Type *' error={errors.profileType?.message}>
               <Controller
                 control={control}
                 name='profileType'
@@ -2190,7 +2190,7 @@ export default function UpdateAccounts() {
               name='applicantState'
               render={({ field }) => (
                 <StateSelector
-                  label='State'
+                  label='State *'
                   value={field.value}
                   onChange={field.onChange}
                   isEdit={isEdit}
@@ -2205,7 +2205,7 @@ export default function UpdateAccounts() {
               name='applicantCity'
               render={({ field }) => (
                 <CitySelector
-                  label='City'
+                  label='City *'
                   value={field.value}
                   onChange={field.onChange}
                   isEdit={isEdit}
@@ -2234,7 +2234,7 @@ export default function UpdateAccounts() {
               name='applicantPincode'
               render={({ field }) => (
                 <PincodeSelector
-                  label='Pincode'
+                  label='Pincode *'
                   value={field.value}
                   onChange={field.onChange}
                   isEdit={isEdit}

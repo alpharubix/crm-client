@@ -354,7 +354,7 @@ export default function CreateAccount() {
             size='sm'
             type='submit'
             form='create-account-form'
-            disabled={!isValid || isSubmitting || createMutation.isPending}
+            disabled={isSubmitting || createMutation.isPending}
           >
             {createMutation.isPending ? (
               <Spinner className='mr-2 h-4 w-4' />
@@ -387,7 +387,7 @@ export default function CreateAccount() {
                 <Select
                   value={data.accountOwnerId || ''}
                   onValueChange={(val) =>
-                    setValue('accountOwnerId', val, { shouldDirty: true })
+                    setValue('accountOwnerId', val, { shouldDirty: true, shouldValidate: true })
                   }
                 >
                   <SelectTrigger className='h-8'>
@@ -402,7 +402,7 @@ export default function CreateAccount() {
                   </SelectContent>
                 </Select>
               </FieldRow>
-              <FieldRow label='Source' error={errors.source?.message}>
+              <FieldRow label='Source *' error={errors.source?.message}>
                 <SelectField
                   value={data.source}
                   isEdit={true}
@@ -429,11 +429,11 @@ export default function CreateAccount() {
                     'Other',
                     'Event',
                   ]}
-                  onChange={(v) => setValue('source', v)}
+                  onChange={(v) => setValue('source', v, { shouldValidate: true })}
                 />
               </FieldRow>
 
-              <FieldRow label='Source Type' error={errors.sourceType?.message}>
+              <FieldRow label='Source Type *' error={errors.sourceType?.message}>
                 <SelectField
                   value={data.sourceType}
                   isEdit={true}
@@ -444,7 +444,7 @@ export default function CreateAccount() {
                     'Website',
                     'Other',
                   ]}
-                  onChange={(v) => setValue('sourceType', v)}
+                  onChange={(v) => setValue('sourceType', v, { shouldValidate: true })}
                 />
               </FieldRow>
 
@@ -454,11 +454,11 @@ export default function CreateAccount() {
                 </FieldRow>
               )}
 
-              <FieldRow label='Source Date' error={errors.sourceDate?.message}>
+              <FieldRow label='Source Date *' error={errors.sourceDate?.message}>
                 <DateField
                   value={data.sourceDate}
                   isEdit={true}
-                  onChange={(d) => setValue('sourceDate', d)}
+                  onChange={(d) => setValue('sourceDate', d, { shouldValidate: true })}
                 />
               </FieldRow>
 
@@ -490,18 +490,18 @@ export default function CreateAccount() {
             </div>
 
             <div>
-              <FieldRow label='Call Back Date/ Time'>
+              <FieldRow label='Call Back Date/ Time *' error={errors.callBackDate?.message}>
                 <DateField
                   value={data.callBackDate}
                   isEdit={true}
                   showTime={true}
                   disablePast={true}
-                  onChange={(d) => setValue('callBackDate', d)}
+                  onChange={(d) => setValue('callBackDate', d, { shouldValidate: true })}
                 />
               </FieldRow>
 
               <FieldRow
-                label='Account Status'
+                label='Account Status *'
                 error={errors.accountStatus?.message}
               >
                 <SelectField
@@ -519,7 +519,7 @@ export default function CreateAccount() {
                     'Not Interested',
                     'Location Unserviceable',
                   ]}
-                  onChange={(v) => setValue('accountStatus', v)}
+                  onChange={(v) => setValue('accountStatus', v, { shouldValidate: true })}
                 />
               </FieldRow>
 
@@ -543,19 +543,19 @@ export default function CreateAccount() {
                     'Location not doable',
                     'No Requirement',
                   ]}
-                  onChange={(v) => setValue('accountStage', v)}
+                  onChange={(v) => setValue('accountStage', v, { shouldValidate: true })}
                 />
               </FieldRow>
 
               <FieldRow
-                label='Business Status'
+                label='Business Status *'
                 error={errors.businessStatus?.message}
               >
                 <SelectField
                   value={data.businessStatus}
                   isEdit={true}
                   options={['Active', 'Inactive', 'Not Sure', 'NA']}
-                  onChange={(v) => setValue('businessStatus', v)}
+                  onChange={(v) => setValue('businessStatus', v, { shouldValidate: true })}
                 />
               </FieldRow>
 
@@ -588,7 +588,7 @@ export default function CreateAccount() {
               </FieldRow>
             </div>
             <div>
-              <FieldRow label='Last Name' error={errors.lastName?.message}>
+              <FieldRow label='Last Name *' error={errors.lastName?.message}>
                 <Input {...register('lastName')} className='h-8' />
               </FieldRow>
               <FieldRow label="Mother's Name">
@@ -603,14 +603,14 @@ export default function CreateAccount() {
                 />
               </FieldRow>
               <FieldRow
-                label='Profile Type'
+                label='Profile Type *'
                 error={errors.profileType?.message}
               >
                 <SelectField
                   value={data.profileType}
                   isEdit={true}
                   options={['Salaried', 'Self Employed']}
-                  onChange={(v) => setValue('profileType', v)}
+                  onChange={(v) => setValue('profileType', v, { shouldValidate: true })}
                 />
               </FieldRow>
             </div>
@@ -910,16 +910,16 @@ export default function CreateAccount() {
                 <Input {...register('applicantStreet')} className='h-8' />
               </FieldRow>
               <StateSelector
-                label='State'
+                label='State *'
                 value={data.applicantState}
-                onChange={(val) => setValue('applicantState', val)}
+                onChange={(val) => setValue('applicantState', val, { shouldValidate: true })}
                 isEdit={true}
                 error={errors.applicantState?.message}
               />
               <CitySelector
-                label='City'
+                label='City *'
                 value={data.applicantCity}
-                onChange={(val) => setValue('applicantCity', val)}
+                onChange={(val) => setValue('applicantCity', val, { shouldValidate: true })}
                 isEdit={true}
                 error={errors.applicantCity?.message}
               />
@@ -936,9 +936,9 @@ export default function CreateAccount() {
             </div>
             <div>
               <PincodeSelector
-                label='Pincode'
+                label='Pincode *'
                 value={data.applicantPincode}
-                onChange={(val) => setValue('applicantPincode', val)}
+                onChange={(val) => setValue('applicantPincode', val, { shouldValidate: true })}
                 isEdit={true}
                 error={errors.applicantPincode?.message}
               />
