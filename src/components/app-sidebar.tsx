@@ -21,6 +21,7 @@ import {
   GalleryVerticalEnd,
   Logs,
   Megaphone,
+  LifeBuoy,
 } from 'lucide-react'
 import { useAuth } from '@/context/auth-context'
 
@@ -114,6 +115,17 @@ const data = {
         {
           title: 'Job Requirement',
           url: '/hiring',
+        },
+      ],
+    },
+    {
+      title: 'Support',
+      url: '#',
+      icon: LifeBuoy,
+      items: [
+        {
+          title: 'Software Support',
+          url: '/support-tickets',
         },
       ],
     },
