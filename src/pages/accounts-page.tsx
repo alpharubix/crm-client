@@ -56,17 +56,31 @@ const ACCOUNT_STATUS_OPTIONS: Option[] = [
 const SOURCE_OPTIONS: Option[] = [
   { value: 'Himalaya', label: 'Himalaya' },
   { value: 'CavinKare', label: 'CavinKare' },
-  { value: 'ALL INDIA CHEMISTS AND DRUGGISTS ASSOCIATION OF INDIA', label: 'ALL INDIA CHEMISTS AND DRUGGISTS ASSOCIATION OF INDIA' },
-  { value: 'All India Hardware Association (Based in Mumbai Charni Road)', label: 'All India Hardware Association (Based in Mumbai Charni Road)' },
+  {
+    value: 'ALL INDIA CHEMISTS AND DRUGGISTS ASSOCIATION OF INDIA',
+    label: 'ALL INDIA CHEMISTS AND DRUGGISTS ASSOCIATION OF INDIA',
+  },
+  {
+    value: 'All India Hardware Association (Based in Mumbai Charni Road)',
+    label: 'All India Hardware Association (Based in Mumbai Charni Road)',
+  },
   { value: 'Alpharubix', label: 'Alpharubix' },
   { value: 'Condor Footwear', label: 'Condor Footwear' },
   { value: 'DVG Dist Petroleum', label: 'DVG Dist Petroleum' },
-  { value: 'Federation of Hotel and Restaurant Association of India (Based in New Delhi)', label: 'Federation of Hotel and Restaurant Association of India (Based in New Delhi)' },
+  {
+    value:
+      'Federation of Hotel and Restaurant Association of India (Based in New Delhi)',
+    label:
+      'Federation of Hotel and Restaurant Association of India (Based in New Delhi)',
+  },
   { value: 'Havells', label: 'Havells' },
   { value: 'Liberty', label: 'Liberty' },
   { value: 'Marico', label: 'Marico' },
   { value: 'Reference', label: 'Reference' },
-  { value: 'Retail Association of India', label: 'Retail Association of India' },
+  {
+    value: 'Retail Association of India',
+    label: 'Retail Association of India',
+  },
   { value: 'SME CHAMBER', label: 'SME CHAMBER' },
   { value: 'Swastik', label: 'Swastik' },
   { value: 'Unicharm', label: 'Unicharm' },
@@ -99,7 +113,11 @@ const DEFAULT_COLUMNS = [
   { id: 'phone', label: 'Phone', selected: true },
   { id: 'city', label: 'City', selected: true },
   { id: 'state', label: 'State', selected: true },
-  { id: 'call_back_date', label: 'Call Back Date / Time', selected: true },
+  { id: 'business_status', label: 'Business Status', selected: true },
+  { id: 'priority_account', label: 'Priority Account', selected: true },
+  { id: 'source_date', label: 'Source Date', selected: true },
+  { id: 'assignment_date', label: 'Assignment Date', selected: true },
+  { id: 'modified_time', label: 'Modified At', selected: true },
 ]
 
 export default function AccountsPage() {
@@ -120,7 +138,7 @@ export default function AccountsPage() {
 
   const { columns, savePreferences, resetToDefault } = useManageColumns(
     'accounts',
-    DEFAULT_COLUMNS
+    DEFAULT_COLUMNS,
   )
 
   const visibleColumns = columns.filter((c) => c.selected)
@@ -207,7 +225,10 @@ export default function AccountsPage() {
 
       if (appliedFilters.accountName)
         params.set('account_name', appliedFilters.accountName)
-      if (appliedFilters.accountStatus && appliedFilters.accountStatus.length > 0) {
+      if (
+        appliedFilters.accountStatus &&
+        appliedFilters.accountStatus.length > 0
+      ) {
         appliedFilters.accountStatus.forEach((o: Option) =>
           params.append('account_status', o.value),
         )
@@ -225,7 +246,10 @@ export default function AccountsPage() {
       if (appliedFilters.phone) params.set('phone', appliedFilters.phone)
       if (appliedFilters.city) params.set('city', appliedFilters.city)
       if (appliedFilters.state) params.set('state', appliedFilters.state)
-      if (appliedFilters.accountOwnerId && appliedFilters.accountOwnerId.length > 0) {
+      if (
+        appliedFilters.accountOwnerId &&
+        appliedFilters.accountOwnerId.length > 0
+      ) {
         appliedFilters.accountOwnerId.forEach((o: Option) =>
           params.append('account_owner_id', o.value),
         )
@@ -445,13 +469,12 @@ export default function AccountsPage() {
             >
               Clear
             </Button>
-            
           </div>
           <ManageColumnsDialog
-              columns={columns}
-              onSave={savePreferences}
-              onReset={resetToDefault}
-            />
+            columns={columns}
+            onSave={savePreferences}
+            onReset={resetToDefault}
+          />
         </div>
 
         <div className='flex flex-col gap-4 min-w-0 h-[calc(100vh-140px)]'>
@@ -466,9 +489,7 @@ export default function AccountsPage() {
                   <TableHeader>
                     <TableRow className='sticky top-0 z-10 bg-background hover:bg-accent'>
                       {visibleColumns.map((col: any) => (
-                        <TableHead key={col.id}>
-                          {col.label}
-                        </TableHead>
+                        <TableHead key={col.id}>{col.label}</TableHead>
                       ))}
                     </TableRow>
                   </TableHeader>
@@ -491,7 +512,10 @@ export default function AccountsPage() {
                             switch (col.id) {
                               case 'account_name':
                                 return (
-                                  <TableCell key={col.id} className='font-medium text-primary'>
+                                  <TableCell
+                                    key={col.id}
+                                    className='font-medium text-primary'
+                                  >
                                     <HighlightedText
                                       text={acc.account_name}
                                       highlight={appliedFilters.accountName}
@@ -500,37 +524,57 @@ export default function AccountsPage() {
                                 )
                               case 'account_owner':
                                 return (
-                                  <TableCell key={col.id} className='text-primary'>
-                                    {(users as Record<string, string>)[acc.account_owner_id] || '—'}
+                                  <TableCell
+                                    key={col.id}
+                                    className='text-primary'
+                                  >
+                                    {(users as Record<string, string>)[
+                                      acc.account_owner_id
+                                    ] || '—'}
                                   </TableCell>
                                 )
                               case 'account_status':
                                 return (
-                                  <TableCell key={col.id} className='text-primary'>
+                                  <TableCell
+                                    key={col.id}
+                                    className='text-primary'
+                                  >
                                     {acc.account_status || '—'}
                                   </TableCell>
                                 )
                               case 'source':
                                 return (
-                                  <TableCell key={col.id} className='text-primary'>
+                                  <TableCell
+                                    key={col.id}
+                                    className='text-primary'
+                                  >
                                     {acc.source || '—'}
                                   </TableCell>
                                 )
                               case 'type_of_business':
                                 return (
-                                  <TableCell key={col.id} className='text-primary'>
+                                  <TableCell
+                                    key={col.id}
+                                    className='text-primary'
+                                  >
                                     {acc.type_of_business || '—'}
                                   </TableCell>
                                 )
                               case 'industry':
                                 return (
-                                  <TableCell key={col.id} className='text-primary'>
+                                  <TableCell
+                                    key={col.id}
+                                    className='text-primary'
+                                  >
                                     {acc.industry || '—'}
                                   </TableCell>
                                 )
                               case 'phone':
                                 return (
-                                  <TableCell key={col.id} className='text-primary'>
+                                  <TableCell
+                                    key={col.id}
+                                    className='text-primary'
+                                  >
                                     <HighlightedText
                                       text={acc.phone}
                                       highlight={appliedFilters.phone}
@@ -539,7 +583,10 @@ export default function AccountsPage() {
                                 )
                               case 'city':
                                 return (
-                                  <TableCell key={col.id} className='text-primary'>
+                                  <TableCell
+                                    key={col.id}
+                                    className='text-primary'
+                                  >
                                     <HighlightedText
                                       text={acc.city}
                                       highlight={appliedFilters.city}
@@ -548,7 +595,10 @@ export default function AccountsPage() {
                                 )
                               case 'state':
                                 return (
-                                  <TableCell key={col.id} className='text-primary'>
+                                  <TableCell
+                                    key={col.id}
+                                    className='text-primary'
+                                  >
                                     <HighlightedText
                                       text={acc.state}
                                       highlight={appliedFilters.state}
@@ -557,9 +607,75 @@ export default function AccountsPage() {
                                 )
                               case 'call_back_date':
                                 return (
-                                  <TableCell key={col.id} className='text-primary'>
+                                  <TableCell
+                                    key={col.id}
+                                    className='text-primary'
+                                  >
                                     {acc.call_back_date_time
-                                      ? formatExactDate(acc.call_back_date_time, 'dd MMM yyyy, hh:mm a')
+                                      ? formatExactDate(
+                                          acc.call_back_date_time,
+                                          'dd MMM yyyy, hh:mm a',
+                                        )
+                                      : '—'}
+                                  </TableCell>
+                                )
+                              case 'business_status':
+                                return (
+                                  <TableCell
+                                    key={col.id}
+                                    className='text-primary'
+                                  >
+                                    {acc.business_status || '—'}
+                                  </TableCell>
+                                )
+                              case 'priority_account':
+                                return (
+                                  <TableCell
+                                    key={col.id}
+                                    className='text-primary'
+                                  >
+                                    {acc?.is_priority_account || '—'}
+                                  </TableCell>
+                                )
+                              case 'source_date':
+                                return (
+                                  <TableCell
+                                    key={col.id}
+                                    className='text-primary'
+                                  >
+                                    {acc.source_date
+                                      ? formatExactDate(
+                                          acc.source_date,
+                                          'dd MMM yyyy',
+                                        )
+                                      : '—'}
+                                  </TableCell>
+                                )
+                              case 'assignment_date':
+                                return (
+                                  <TableCell
+                                    key={col.id}
+                                    className='text-primary'
+                                  >
+                                    {acc.assignment_date
+                                      ? formatExactDate(
+                                          acc.assignment_date,
+                                          'dd MMM yyyy',
+                                        )
+                                      : '—'}
+                                  </TableCell>
+                                )
+                              case 'modified_time':
+                                return (
+                                  <TableCell
+                                    key={col.id}
+                                    className='text-primary'
+                                  >
+                                    {acc.modified_time
+                                      ? formatExactDate(
+                                          acc.modified_time,
+                                          'dd MMM yyyy',
+                                        )
                                       : '—'}
                                   </TableCell>
                                 )

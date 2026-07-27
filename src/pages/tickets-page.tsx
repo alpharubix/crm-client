@@ -72,12 +72,32 @@ const TICKET_STATUSES = [
 ]
 
 const DEFAULT_COLUMNS = [
+  { id: 'account_name', label: 'Account Name', selected: true },
   { id: 'deal_name', label: 'Deal Name', selected: true },
   { id: 'deal_owner', label: 'Deal Owner', selected: true },
+  { id: 'ticket_name', label: 'Ticket Name', selected: true },
   { id: 'ticket_login', label: 'Ticket Login', selected: true },
+  { id: 'potential', label: 'Potential', selected: true },
+  { id: 'lender_login_date', label: 'Lender Login Date', selected: true },
+  {
+    id: 'targeted_disbursement_date',
+    label: 'Targeted Disbursement Date',
+    selected: true,
+  },
+  {
+    id: 'disbursement_date',
+    label: 'Disbursement Date',
+    selected: true,
+  },
+  { id: 'modified_at', label: 'Modified At', selected: true },
   { id: 'lender_name', label: 'Lender Name', selected: true },
-  { id: 'lender_login_type', label: 'Lender Login Type', selected: true },
-  { id: 'lender_login_date', label: 'Lender login date', selected: true },
+  {
+    id: 'lender_login_type',
+    label: 'Lender Login Type',
+    selected: true,
+  },
+  { id: 'partner_name', label: 'Partner Name', selected: true },
+  { id: 'type_of_loan', label: 'Type of Loan', selected: true },
   { id: 'ticket_status', label: 'Ticket Status', selected: true },
   { id: 'ticket_stage', label: 'Ticket Stage', selected: true },
 ]
@@ -123,7 +143,6 @@ const TicketsPage = () => {
       disbursementFrom: searchParams.get('disbursementFrom') || '',
       disbursementTo: searchParams.get('disbursementTo') || '',
       statusClosingTo: '',
-      dealOwnerId: [],
     }
   })
 
@@ -581,6 +600,18 @@ const TicketsPage = () => {
                         >
                           {visibleColumns.map((col: any) => {
                             switch (col.id) {
+                              case 'account_name':
+                                return (
+                                  <TableCell
+                                    key={col.id}
+                                    className='font-medium'
+                                  >
+                                    <HighlightedText
+                                      text={ticket.account_name || '-'}
+                                      highlight={appliedFilters.accountName}
+                                    />
+                                  </TableCell>
+                                )
                               case 'deal_name':
                                 return (
                                   <TableCell
@@ -603,10 +634,66 @@ const TicketsPage = () => {
                                       : '-'}
                                   </TableCell>
                                 )
+                              case 'ticket_name':
+                                return (
+                                  <TableCell key={col.id}>
+                                    {ticket.ticket_name || '-'}
+                                  </TableCell>
+                                )
                               case 'ticket_login':
                                 return (
                                   <TableCell key={col.id}>
                                     {ticket.ticket_login || '-'}
+                                  </TableCell>
+                                )
+                              case 'potential':
+                                return (
+                                  <TableCell key={col.id}>
+                                    {ticket?.potential || '-'}
+                                  </TableCell>
+                                )
+                                case 'lender_login_date':
+                                  return (
+                                    <TableCell key={col.id}>
+                                      {ticket.lender_login_date
+                                        ? formatExactDate(
+                                            ticket.lender_login_date,
+                                            'dd MMM yyyy',
+                                          )
+                                        : '—'}
+                                    </TableCell>
+                                  )
+                              case 'targeted_disbursement_date':
+                                return (
+                                  <TableCell key={col.id}>
+                                    {ticket.targeted_disbursement_date
+                                      ? formatExactDate(
+                                          ticket.targeted_disbursement_date,
+                                          'dd MMM yyyy',
+                                        )
+                                      : '—'}
+                                  </TableCell>
+                                )
+                              case 'disbursement_date':
+                                return (
+                                  <TableCell key={col.id}>
+                                    {ticket.disbursement_date
+                                      ? formatExactDate(
+                                          ticket.disbursement_date,
+                                          'dd MMM yyyy',
+                                        )
+                                      : '—'}
+                                  </TableCell>
+                                )
+                              case 'modified_at':
+                                return (
+                                  <TableCell key={col.id}>
+                                    {ticket.modified_at
+                                      ? formatExactDate(
+                                          ticket.modified_at,
+                                          'dd MMM yyyy',
+                                        )
+                                      : '—'}
                                   </TableCell>
                                 )
                               case 'lender_name':
@@ -621,15 +708,16 @@ const TicketsPage = () => {
                                     {ticket.lender_login_type || '-'}
                                   </TableCell>
                                 )
-                              case 'lender_login_date':
+                              case 'partner_name':
                                 return (
                                   <TableCell key={col.id}>
-                                    {ticket.lender_login_date
-                                      ? formatExactDate(
-                                          ticket.lender_login_date,
-                                          'dd MMM yyyy',
-                                        )
-                                      : '—'}
+                                    {ticket.partner_name || '-'}
+                                  </TableCell>
+                                )
+                              case 'type_of_loan':
+                                return (
+                                  <TableCell key={col.id}>
+                                    {ticket.type_of_loan || '-'}
                                   </TableCell>
                                 )
                               case 'ticket_status':

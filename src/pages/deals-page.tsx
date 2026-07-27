@@ -41,16 +41,27 @@ import { SearchableSelect } from '@/components/searchable-select'
 import { MultiSelect, type Option } from '@/components/ui/multi-select'
 import { useManageColumns } from '@/hooks/use-manage-columns'
 import { ManageColumnsDialog } from '@/components/shared/manage-columns'
+import { formatAmount } from '@/utils/number-formatter'
 
 const DEFAULT_COLUMNS = [
   { id: 'deal_name', label: 'Deal Name', selected: true },
+  { id: 'account_name', label: 'Account Name', selected: true },
   { id: 'deal_owner', label: 'Deal Owner', selected: true },
   { id: 'lender_name', label: 'Lender Name', selected: true },
   { id: 'case_status', label: 'Case Status', selected: true },
   { id: 'ticket_login', label: 'Ticket Login', selected: true },
   { id: 'type_of_loan', label: 'Type of Loan', selected: true },
   { id: 'type_of_case_login', label: 'Type of Case Login', selected: true },
-  { id: 'call_back_date', label: 'Call Back Date/Time', selected: true },
+  { id: 'deal_type', label: 'Deal Type', selected: true },
+  { id: 'amount_required', label: 'Amount Required', selected: true },
+  { id: 'partner_name', label: 'Partner Name', selected: true },
+  {
+    id: 'deal_expected_closing',
+    label: 'Expected Closing Date',
+    selected: true,
+  },
+  { id: 'deal_status_closing', label: 'Deal Status Closing', selected: true },
+  { id: 'modified_time', label: 'Modified At', selected: true },
 ]
 
 const LOAN_TYPES = [
@@ -92,11 +103,26 @@ const TICKET_LOGIN = [
   'Rejected',
 ]
 
-const LOAN_TYPE_OPTIONS: Option[] = LOAN_TYPES.map((val) => ({ value: val, label: val }))
-const CASE_STATUS_OPTIONS: Option[] = CASE_STATUSES.map((val) => ({ value: val, label: val }))
-const TYPE_OF_CASE_LOGIN_OPTIONS: Option[] = TYPE_OF_CASE_LOGIN.map((val) => ({ value: val, label: val }))
-const TICKET_LOGIN_OPTIONS: Option[] = TICKET_LOGIN.map((val) => ({ value: val, label: val }))
-const LENDER_OPTIONS: Option[] = LENDER_NAMES.map((val) => ({ value: val, label: val }))
+const LOAN_TYPE_OPTIONS: Option[] = LOAN_TYPES.map((val) => ({
+  value: val,
+  label: val,
+}))
+const CASE_STATUS_OPTIONS: Option[] = CASE_STATUSES.map((val) => ({
+  value: val,
+  label: val,
+}))
+const TYPE_OF_CASE_LOGIN_OPTIONS: Option[] = TYPE_OF_CASE_LOGIN.map((val) => ({
+  value: val,
+  label: val,
+}))
+const TICKET_LOGIN_OPTIONS: Option[] = TICKET_LOGIN.map((val) => ({
+  value: val,
+  label: val,
+}))
+const LENDER_OPTIONS: Option[] = LENDER_NAMES.map((val) => ({
+  value: val,
+  label: val,
+}))
 
 const DealsPage = () => {
   const navigate = useNavigate()
@@ -105,7 +131,7 @@ const DealsPage = () => {
 
   const { columns, savePreferences, resetToDefault } = useManageColumns(
     'deals',
-    DEFAULT_COLUMNS
+    DEFAULT_COLUMNS,
   )
 
   const visibleColumns = columns.filter((c) => c.selected)
@@ -234,7 +260,10 @@ const DealsPage = () => {
           params.append('loan_type', o.value),
         )
       }
-      if (appliedFilters.typeOfCaseLogin && appliedFilters.typeOfCaseLogin.length > 0) {
+      if (
+        appliedFilters.typeOfCaseLogin &&
+        appliedFilters.typeOfCaseLogin.length > 0
+      ) {
         appliedFilters.typeOfCaseLogin.forEach((o: Option) =>
           params.append('type_of_case_login', o.value),
         )
@@ -541,13 +570,12 @@ const DealsPage = () => {
             >
               Clear
             </Button>
-            
           </div>
           <ManageColumnsDialog
-              columns={columns}
-              onSave={savePreferences}
-              onReset={resetToDefault}
-            />
+            columns={columns}
+            onSave={savePreferences}
+            onReset={resetToDefault}
+          />
         </div>
 
         {/* Table Content window */}
@@ -563,9 +591,7 @@ const DealsPage = () => {
                   <TableHeader>
                     <TableRow className='sticky top-0 z-10 bg-background hover:bg-accent'>
                       {visibleColumns.map((col: any) => (
-                        <TableHead key={col.id}>
-                          {col.label}
-                        </TableHead>
+                        <TableHead key={col.id}>{col.label}</TableHead>
                       ))}
                     </TableRow>
                   </TableHeader>
@@ -578,7 +604,7 @@ const DealsPage = () => {
                         </TableCell>
                       </TableRow>
                     ) : (
-                      DealsData.map((deal) => (
+                      DealsData.map((deal: any) => (
                         <TableRow
                           key={deal.id}
                           className='cursor-pointer hover:bg-accent'
@@ -588,7 +614,19 @@ const DealsPage = () => {
                             switch (col.id) {
                               case 'deal_name':
                                 return (
-                                  <TableCell key={col.id} className='font-medium'>
+                                  <TableCell
+                                    key={col.id}
+                                    className='font-medium'
+                                  >
+                                    {deal?.deal_name || '-'}
+                                  </TableCell>
+                                )
+                              case 'account_name':
+                                return (
+                                  <TableCell
+                                    key={col.id}
+                                    className='font-medium'
+                                  >
                                     <HighlightedText
                                       text={deal.account_name}
                                       highlight={appliedFilters.accountName}
@@ -598,24 +636,100 @@ const DealsPage = () => {
                               case 'deal_owner':
                                 return (
                                   <TableCell key={col.id}>
-                                    {(users as Record<string, string>)[deal.deal_owner_id] || '-'}
+                                    {(users as Record<string, string>)[
+                                      deal.deal_owner_id
+                                    ] || '-'}
                                   </TableCell>
                                 )
                               case 'lender_name':
-                                return <TableCell key={col.id}>{deal.lender_name || '-'}</TableCell>
+                                return (
+                                  <TableCell key={col.id}>
+                                    {deal.lender_name || '-'}
+                                  </TableCell>
+                                )
                               case 'case_status':
-                                return <TableCell key={col.id}>{deal.case_status || '-'}</TableCell>
+                                return (
+                                  <TableCell key={col.id}>
+                                    {deal.case_status || '-'}
+                                  </TableCell>
+                                )
                               case 'ticket_login':
-                                return <TableCell key={col.id}>{deal.ticket_login || '-'}</TableCell>
+                                return (
+                                  <TableCell key={col.id}>
+                                    {deal.ticket_login || '-'}
+                                  </TableCell>
+                                )
                               case 'type_of_loan':
-                                return <TableCell key={col.id}>{deal.loan_type || '-'}</TableCell>
+                                return (
+                                  <TableCell key={col.id}>
+                                    {deal.loan_type || '-'}
+                                  </TableCell>
+                                )
                               case 'type_of_case_login':
-                                return <TableCell key={col.id}>{deal.type_of_case_login || '-'}</TableCell>
+                                return (
+                                  <TableCell key={col.id}>
+                                    {deal.type_of_case_login || '-'}
+                                  </TableCell>
+                                )
                               case 'call_back_date':
                                 return (
                                   <TableCell key={col.id}>
                                     {deal.deal_call_back_datetime
-                                      ? formatExactDate(deal.deal_call_back_datetime, 'dd MMM yyyy, hh:mm a')
+                                      ? formatExactDate(
+                                          deal.deal_call_back_datetime,
+                                          'dd MMM yyyy, hh:mm a',
+                                        )
+                                      : '—'}
+                                  </TableCell>
+                                )
+                              case 'deal_type':
+                                return (
+                                  <TableCell key={col.id}>
+                                    {deal.deal_type || '-'}
+                                  </TableCell>
+                                )
+                              case 'amount_required':
+                                return (
+                                  <TableCell key={col.id}>
+                                    {formatAmount(deal?.amount_required) || '-'}
+                                  </TableCell>
+                                )
+                              case 'partner_name':
+                                return (
+                                  <TableCell key={col.id}>
+                                    {deal?.partner_name || '-'}
+                                  </TableCell>
+                                )
+                              case 'deal_expected_closing':
+                                return (
+                                  <TableCell key={col.id}>
+                                    {deal?.deal_expected_closing
+                                      ? formatExactDate(
+                                          deal.deal_expected_closing,
+                                          'dd MMM yyyy, hh:mm a',
+                                        )
+                                      : '—'}
+                                  </TableCell>
+                                )
+                              case 'deal_status_closing':
+                                return (
+                                  <TableCell key={col.id}>
+                                    {deal?.deal_status_closing
+                                      ? formatExactDate(
+                                          deal.deal_status_closing,
+                                          'dd MMM yyyy, hh:mm a',
+                                        )
+                                      : '—'}
+                                  </TableCell>
+                                )
+                              case 'modified_time':
+                                return (
+                                  <TableCell key={col.id}>
+                                    {deal?.modified_time
+                                      ? formatExactDate(
+                                          deal.modified_time,
+                                          'dd MMM yyyy, hh:mm a',
+                                        )
                                       : '—'}
                                   </TableCell>
                                 )

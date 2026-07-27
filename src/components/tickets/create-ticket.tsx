@@ -537,14 +537,7 @@ export default function CreateTicket() {
               />
             </FieldRow>
 
-            <FieldRow label='Partner Code' error={errors.partnerCode?.message}>
-              <Input
-                {...register('partnerCode')}
-                placeholder='Enter Partner Code'
-                className='h-8'
-                disabled={formValues.lenderLoginType !== 'Partner'}
-              />
-            </FieldRow>
+
 
             <FieldRow label='Type of Loan *' error={errors.typeOfLoan?.message}>
               <SelectField

@@ -202,7 +202,7 @@ export default function CreateAccount() {
       business_status: formData.businessStatus,
       mothers_name: formData.mothersName,
       preferred_languages: formData.preferredLanguages,
-      priority_account: formData.priorityAccount,
+      is_priority_account: formData.priorityAccount,
       profile_type: formData.profileType,
 
       // Business Details

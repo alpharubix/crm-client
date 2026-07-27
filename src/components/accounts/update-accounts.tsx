@@ -210,7 +210,7 @@ function mapAccountToForm(apiData: any): UpdateAccountFormValues {
     modifiedBy: apiData.modified_by?.full_name ?? '',
     modifiedAt: apiData.modified_time ?? '',
 
-    priorityAccount: apiData.priority_account ?? '',
+    priorityAccount: apiData.is_priority_account ?? '',
     profileType: apiData.profile_type ?? '',
     employmentType: apiData.customer_salary_details?.employment_type ?? '',
     employerName: apiData.customer_salary_details?.employer_name ?? '',
@@ -338,7 +338,7 @@ function mapFormToApi(
   if (dirtyFields.parentAccount) payload.parent_account = formData.parentAccount
 
   if (dirtyFields.priorityAccount)
-    payload.priority_account = formData.priorityAccount
+    payload.is_priority_account = formData.priorityAccount
   if (dirtyFields.profileType) payload.profile_type = formData.profileType
 
   // 2. Business Details Object Block

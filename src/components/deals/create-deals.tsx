@@ -479,79 +479,9 @@ export default function CreateDeal() {
               />
             </FieldRow>
 
-            <FieldRow label='Partner Code' error={errors.partnerCode?.message}>
-              <Input
-                {...register('partnerCode')}
-                placeholder='Enter Partner Code'
-                className='h-8'
-                disabled={formValues.lenderLoginType !== 'Partner'}
-              />
-            </FieldRow>
           </div>
         </CardContent>
 
-        {/* ================= Funding & Commercials ================= */}
-        <SectionHeader title='Funding & Commercials' />
-        <CardContent className='p-0 grid grid-cols-1 md:grid-cols-2 border-b'>
-          <div className='md:border-r'>
-            <FieldRow label='MM Charges' error={errors.mmCharges?.message}>
-              <Input
-                {...register('mmCharges')}
-                placeholder='MM Charges'
-                type='number'
-                step='0.01'
-                className='h-8'
-              />
-            </FieldRow>
-          </div>
-          <div>
-            <FieldRow label='Sanction Letter'>
-              <span className='text-sm text-muted-foreground'>
-                Upload available in edit mode
-              </span>
-            </FieldRow>
-            <FieldRow label='Payment Receipt'>
-              <span className='text-sm text-muted-foreground'>
-                Upload available in edit mode
-              </span>
-            </FieldRow>
-          </div>
-        </CardContent>
-
-        {/* ================= Rejection Status ================= */}
-        <SectionHeader title='Rejection Status' />
-        <CardContent className='p-0 grid grid-cols-1 md:grid-cols-2'>
-          <div className='md:border-r'>
-            <FieldRow
-              label='Customer Rejection Reason'
-              error={errors.customerRejectionReason?.message}
-            >
-              <SelectField
-                isEdit={true}
-                options={['-None-', 'ROI', 'Limit', 'Charges', 'Other Terms']}
-                value={formValues.customerRejectionReason as string}
-                onChange={(value) =>
-                  setValue('customerRejectionReason', value, {
-                    shouldValidate: true,
-                    shouldDirty: true,
-                  })
-                }
-              />
-            </FieldRow>
-          </div>
-          <div>
-            <FieldRow
-              label='Customer Rejection Status Explanation'
-              error={errors.customerRejectionStatusExplanation?.message}
-            >
-              <Input
-                {...register('customerRejectionStatusExplanation')}
-                placeholder='Customer Rejection Explanation'
-                className='h-8'
-              />
-            </FieldRow>
-          </div>
-        </CardContent>
       </Card>
     </div>
   )

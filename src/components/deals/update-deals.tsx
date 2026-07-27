@@ -773,20 +773,7 @@ export default function UpdateDeals({
                 }
               />
             </FieldRow>
-            <FieldRow label='Partner Code' error={errors.partnerCode?.message}>
-              {isEdit ? (
-                <Input
-                  {...register('partnerCode')}
-                  placeholder='Partner Code'
-                  className='h-8'
-                  // Field is editable ONLY if lenderLoginType is Partner
-                  disabled={formValues.lenderLoginType !== 'Partner'}
-                />
-              ) : (
-                /* This span displays the value in Read-Only mode */
-                <span>{formValues.partnerCode || '—'}</span>
-              )}
-            </FieldRow>
+
             <FieldRow label='Deal Status Closing'>
               <span className='text-sm font-medium text-muted-foreground'>
                 {formValues.dealStatusClosing
@@ -821,92 +808,6 @@ export default function UpdateDeals({
                   })
                 }}
               />
-            </FieldRow>
-          </div>
-        </CardContent>
-
-        <SectionHeader title='Funding & Commercials' />
-        <CardContent className='p-0 grid grid-cols-1 md:grid-cols-2 border-b'>
-          <div className='md:border-r'>
-            <FieldRow label='MM Charges' error={errors.mmCharges?.message}>
-              {isEdit ? (
-                <Input
-                  {...register('mmCharges')}
-                  placeholder='MM Charges'
-                  type='number'
-                  step='0.01'
-                  className='h-8'
-                />
-              ) : (
-                <span>{formatAmount(Number(formValues.mmCharges)) || '—'}</span>
-              )}
-            </FieldRow>
-          </div>
-          <div>
-            <FieldRow label='Sanction Letter'>
-              <a
-                href={dealData.sanction_letter}
-                target='_blank'
-                rel='noopener noreferrer'
-                className='text-primary text-xs truncate block hover:underline'
-              >
-                <span className='text-sm text-blue-600'>
-                  {dealData.sanction_letter || '—'}
-                </span>
-              </a>
-            </FieldRow>
-            <FieldRow
-              label='Payment Receipt'
-              error={errors.paymentReceipt?.message}
-            >
-              <span>—</span>
-            </FieldRow>
-          </div>
-        </CardContent>
-
-        {/* ================= Rejection Status ================= */}
-        <SectionHeader title='Rejection Status' />
-        <CardContent className='p-0 grid grid-cols-1 md:grid-cols-2'>
-          <div className='md:border-r'>
-            <FieldRow
-              label='Lender Rejection Reason'
-              error={errors.lenderRejectionReason?.message}
-            >
-              <SelectField
-                isEdit={isEdit}
-                options={[
-                  '-None-',
-                  'Low Eligibility',
-                  'Credit Issues',
-                  'OGL',
-                  'Vintage',
-                ]}
-                value={formValues.lenderRejectionReason as string}
-                onChange={(value) =>
-                  setValue('lenderRejectionReason', value, {
-                    shouldValidate: true,
-                    shouldDirty: true,
-                  })
-                }
-              />
-            </FieldRow>
-          </div>
-          <div>
-            <FieldRow
-              label='Lender Rejection Status Explanation'
-              error={errors.lenderRejectionStatusExplanation?.message}
-            >
-              {isEdit ? (
-                <Input
-                  {...register('lenderRejectionStatusExplanation')}
-                  placeholder='Lender Rejection Explanation'
-                  className='h-8'
-                />
-              ) : (
-                <span>
-                  {formValues.lenderRejectionStatusExplanation || '—'}
-                </span>
-              )}
             </FieldRow>
           </div>
         </CardContent>

@@ -811,18 +811,7 @@ export default function UpdateKanbanTicket({
               />
             </FieldRow>
 
-            <FieldRow label='Partner Code' error={errors.partnerCode?.message}>
-              {isEdit ? (
-                <Input
-                  {...register('partnerCode')}
-                  placeholder='Enter Partner Code'
-                  className='h-8'
-                  disabled={formValues.lenderLoginType !== 'Partner'}
-                />
-              ) : (
-                <span>{formValues.partnerCode || '—'}</span>
-              )}
-            </FieldRow>
+
 
             <FieldRow label='Type of Loan *' error={errors.loanType?.message}>
               <SelectField
