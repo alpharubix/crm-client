@@ -52,6 +52,8 @@ const CreateRevenue = lazy(() => import('./components/revenue/create-revenue'))
 const UpdateRevenue = lazy(() => import('./components/revenue/update-revenue'))
 const BsaAnalysisPage = lazy(() => import('./pages/bsa-analysis-page'))
 const GstAnalysisPage = lazy(() => import('./pages/gst-page'))
+const SupportTicketsPage = lazy(() => import('./pages/support-tickets-page'))
+
 
 export default function App() {
   return (
@@ -129,7 +131,9 @@ export default function App() {
               <Route path='/projects' element={<Project />} />
               <Route path='/projects/:id' element={<Task />} />
               <Route path='/exports' element={<Export />} />
+              <Route path='/support-tickets' element={<SupportTicketsPage />} />
               <Route path='*' element={<NotFoundPage />} />
+
             </Route>
           </Routes>
         </Suspense>
