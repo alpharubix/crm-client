@@ -42,9 +42,7 @@ const CreateTicket = lazy(() => import('./components/tickets/create-ticket'))
 const UpdateTicketsKanban = lazy(
   () => import('./components/tickets/update-kanban-tickets'),
 )
-const UpdateDealsKanban = lazy(
-  () => import('./components/deals/update-kanban-deals'),
-)
+
 const CreateAccount = lazy(() => import('./components/accounts/create-account'))
 
 const Revenue = lazy(() => import('./pages/revenue'))
