@@ -134,6 +134,14 @@ export default function AccountsPage() {
     city: searchParams.get('city') || '',
     state: searchParams.get('state') || '',
     accountOwnerId: [] as Option[],
+    bsaFromDate: searchParams.get('bsaFromDate') || (searchParams.get('module') === 'bsa' ? searchParams.get('from_date') || '' : ''),
+    bsaToDate: searchParams.get('bsaToDate') || (searchParams.get('module') === 'bsa' ? searchParams.get('to_date') || '' : ''),
+    gstFromDate: searchParams.get('gstFromDate') || (searchParams.get('module') === 'gst' ? searchParams.get('from_date') || '' : ''),
+    gstToDate: searchParams.get('gstToDate') || (searchParams.get('module') === 'gst' ? searchParams.get('to_date') || '' : ''),
+    cibilFromDate: searchParams.get('cibilFromDate') || (searchParams.get('module') === 'cibil' ? searchParams.get('from_date') || '' : ''),
+    cibilToDate: searchParams.get('cibilToDate') || (searchParams.get('module') === 'cibil' ? searchParams.get('to_date') || '' : ''),
+    itrFromDate: searchParams.get('itrFromDate') || (searchParams.get('module') === 'itr' ? searchParams.get('from_date') || '' : ''),
+    itrToDate: searchParams.get('itrToDate') || (searchParams.get('module') === 'itr' ? searchParams.get('to_date') || '' : ''),
   })
 
   const { columns, savePreferences, resetToDefault } = useManageColumns(
@@ -254,6 +262,24 @@ export default function AccountsPage() {
           params.append('account_owner_id', o.value),
         )
       }
+      // --- Underwriting Tool Backend Module Filters (BSA, GST, CIBIL, ITR) ---
+      if (appliedFilters.bsaFromDate || appliedFilters.bsaToDate) {
+        params.set('module', 'bsa')
+        if (appliedFilters.bsaFromDate) params.set('from_date', appliedFilters.bsaFromDate)
+        if (appliedFilters.bsaToDate) params.set('to_date', appliedFilters.bsaToDate)
+      } else if (appliedFilters.gstFromDate || appliedFilters.gstToDate) {
+        params.set('module', 'gst')
+        if (appliedFilters.gstFromDate) params.set('from_date', appliedFilters.gstFromDate)
+        if (appliedFilters.gstToDate) params.set('to_date', appliedFilters.gstToDate)
+      } else if (appliedFilters.cibilFromDate || appliedFilters.cibilToDate) {
+        params.set('module', 'cibil')
+        if (appliedFilters.cibilFromDate) params.set('from_date', appliedFilters.cibilFromDate)
+        if (appliedFilters.cibilToDate) params.set('to_date', appliedFilters.cibilToDate)
+      } else if (appliedFilters.itrFromDate || appliedFilters.itrToDate) {
+        params.set('module', 'itr')
+        if (appliedFilters.itrFromDate) params.set('from_date', appliedFilters.itrFromDate)
+        if (appliedFilters.itrToDate) params.set('to_date', appliedFilters.itrToDate)
+      }
 
       const res = await fetch(
         `${ENV.VITE_BACKEND_BASE_URL}/accounts?${params.toString()}`,
@@ -277,7 +303,20 @@ export default function AccountsPage() {
     const params = new URLSearchParams()
     params.set('page', '1')
 
+    const moduleDateKeys = [
+      'bsaFromDate',
+      'bsaToDate',
+      'gstFromDate',
+      'gstToDate',
+      'cibilFromDate',
+      'cibilToDate',
+      'itrFromDate',
+      'itrToDate',
+    ]
+
     Object.entries(filters).forEach(([key, value]) => {
+      if (moduleDateKeys.includes(key)) return
+
       if (Array.isArray(value)) {
         value.forEach((item: Option) => {
           params.append(key, item.value)
@@ -286,6 +325,24 @@ export default function AccountsPage() {
         params.set(key, String(value))
       }
     })
+
+    if (filters.bsaFromDate || filters.bsaToDate) {
+      params.set('module', 'bsa')
+      if (filters.bsaFromDate) params.set('from_date', filters.bsaFromDate)
+      if (filters.bsaToDate) params.set('to_date', filters.bsaToDate)
+    } else if (filters.gstFromDate || filters.gstToDate) {
+      params.set('module', 'gst')
+      if (filters.gstFromDate) params.set('from_date', filters.gstFromDate)
+      if (filters.gstToDate) params.set('to_date', filters.gstToDate)
+    } else if (filters.cibilFromDate || filters.cibilToDate) {
+      params.set('module', 'cibil')
+      if (filters.cibilFromDate) params.set('from_date', filters.cibilFromDate)
+      if (filters.cibilToDate) params.set('to_date', filters.cibilToDate)
+    } else if (filters.itrFromDate || filters.itrToDate) {
+      params.set('module', 'itr')
+      if (filters.itrFromDate) params.set('from_date', filters.itrFromDate)
+      if (filters.itrToDate) params.set('to_date', filters.itrToDate)
+    }
 
     setSearchParams(params)
     setAppliedFilters(filters)
@@ -302,6 +359,14 @@ export default function AccountsPage() {
       city: '',
       state: '',
       accountOwnerId: [] as Option[],
+      bsaFromDate: '',
+      bsaToDate: '',
+      gstFromDate: '',
+      gstToDate: '',
+      cibilFromDate: '',
+      cibilToDate: '',
+      itrFromDate: '',
+      itrToDate: '',
     }
 
     setFilters(emptyFilters)
@@ -456,6 +521,114 @@ export default function AccountsPage() {
               value={filters.state}
               onChange={(e) => handleFilterChange('state', e.target.value)}
             />
+          </div>
+
+          <hr className='my-4 border-border' />
+
+          {/* BSA Filter (Year, Month) */}
+          <div className='space-y-2'>
+            <Label className='font-semibold text-xs'>BSA Filter</Label>
+            <div className='grid grid-cols-2 gap-2'>
+              <div>
+                <Label className='text-[11px] text-muted-foreground'>From Date</Label>
+                <Input
+                  type='month'
+                  value={filters.bsaFromDate}
+                  onChange={(e) => handleFilterChange('bsaFromDate', e.target.value)}
+                  className='h-8 text-xs'
+                />
+              </div>
+              <div>
+                <Label className='text-[11px] text-muted-foreground'>To Date</Label>
+                <Input
+                  type='month'
+                  value={filters.bsaToDate}
+                  onChange={(e) => handleFilterChange('bsaToDate', e.target.value)}
+                  className='h-8 text-xs'
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* GST Filter (Year, Month) */}
+          <div className='space-y-2'>
+            <Label className='font-semibold text-xs'>GST Filter</Label>
+            <div className='grid grid-cols-2 gap-2'>
+              <div>
+                <Label className='text-[11px] text-muted-foreground'>From Date</Label>
+                <Input
+                  type='month'
+                  value={filters.gstFromDate}
+                  onChange={(e) => handleFilterChange('gstFromDate', e.target.value)}
+                  className='h-8 text-xs'
+                />
+              </div>
+              <div>
+                <Label className='text-[11px] text-muted-foreground'>To Date</Label>
+                <Input
+                  type='month'
+                  value={filters.gstToDate}
+                  onChange={(e) => handleFilterChange('gstToDate', e.target.value)}
+                  className='h-8 text-xs'
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* CIBIL Filter (Year, Month) */}
+          <div className='space-y-2'>
+            <Label className='font-semibold text-xs'>CIBIL Filter</Label>
+            <div className='grid grid-cols-2 gap-2'>
+              <div>
+                <Label className='text-[11px] text-muted-foreground'>From Date</Label>
+                <Input
+                  type='month'
+                  value={filters.cibilFromDate}
+                  onChange={(e) => handleFilterChange('cibilFromDate', e.target.value)}
+                  className='h-8 text-xs'
+                />
+              </div>
+              <div>
+                <Label className='text-[11px] text-muted-foreground'>To Date</Label>
+                <Input
+                  type='month'
+                  value={filters.cibilToDate}
+                  onChange={(e) => handleFilterChange('cibilToDate', e.target.value)}
+                  className='h-8 text-xs'
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* ITR Filter (Year only) */}
+          <div className='space-y-2'>
+            <Label className='font-semibold text-xs'>ITR Filter</Label>
+            <div className='grid grid-cols-2 gap-2'>
+              <div>
+                <Label className='text-[11px] text-muted-foreground'>From Year</Label>
+                <Input
+                  type='number'
+                  min='2000'
+                  max='2099'
+                  placeholder='YYYY'
+                  value={filters.itrFromDate}
+                  onChange={(e) => handleFilterChange('itrFromDate', e.target.value)}
+                  className='h-8 text-xs'
+                />
+              </div>
+              <div>
+                <Label className='text-[11px] text-muted-foreground'>To Year</Label>
+                <Input
+                  type='number'
+                  min='2000'
+                  max='2099'
+                  placeholder='YYYY'
+                  value={filters.itrToDate}
+                  onChange={(e) => handleFilterChange('itrToDate', e.target.value)}
+                  className='h-8 text-xs'
+                />
+              </div>
+            </div>
           </div>
 
           <div className='flex gap-2 pt-2'>
