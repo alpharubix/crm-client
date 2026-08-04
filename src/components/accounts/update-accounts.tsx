@@ -38,6 +38,7 @@ import {
 } from '@/validators/updateAccount.schema'
 import { ENV } from '@/conf'
 import { formatExactDate } from '@/utils/date-formatter'
+import users from '@/utils/users.json'
 import {
   Plus,
   X,
@@ -87,6 +88,19 @@ function display(v: any) {
   if (v === null || v === undefined) return '—'
   if (typeof v === 'string' && v.trim() === '') return '—'
   return v
+}
+
+function resolveUserName(userObj: any, userId: any): string {
+  if (userObj && typeof userObj === 'object' && userObj.full_name) {
+    return userObj.full_name
+  }
+  const id = userId || (userObj && typeof userObj !== 'object' ? userObj : '')
+  if (id) {
+    const matched = (users as Record<string, string>)[String(id)]
+    if (matched) return matched
+    return String(id)
+  }
+  return ''
 }
 
 function MultiSelectField({
@@ -186,13 +200,13 @@ function mapAccountToForm(apiData: any): UpdateAccountFormValues {
       : '',
     sourceType: apiData.source_type ?? '',
     sourceOther: apiData.source_other ?? '',
-    sourceDate: apiData.source_date ? new Date(apiData.source_date) : undefined,
+    sourceDate: apiData.source_date ? new Date(apiData.source_date) : new Date(),
     sourceDescription: apiData.source_description ?? '',
     distributorCode: apiData.distributor_code ?? '',
     wabaInterested: apiData.waba_interested ?? false,
     callBackDate: apiData.call_back_date_time
       ? new Date(apiData.call_back_date_time)
-      : undefined,
+      : new Date(),
     accountStatus: apiData.account_status ?? '',
     accountStage: apiData.account_stage ?? '',
     businessStatus: apiData.business_status ?? '',
@@ -205,9 +219,9 @@ function mapAccountToForm(apiData: any): UpdateAccountFormValues {
     preferredLanguages: Array.isArray(apiData.preferred_languages)
       ? apiData.preferred_languages
       : [],
-    createdBy: apiData.created_by?.full_name ?? '',
+    createdBy: resolveUserName(apiData.created_by, apiData.created_by_id),
     createdAt: apiData.created_time ?? '',
-    modifiedBy: apiData.modified_by?.full_name ?? '',
+    modifiedBy: resolveUserName(apiData.modified_by, apiData.modified_by_id),
     modifiedAt: apiData.modified_time ?? '',
 
     priorityAccount: apiData.is_priority_account ?? '',
@@ -301,7 +315,7 @@ function mapAccountToForm(apiData: any): UpdateAccountFormValues {
 
 function mapFormToApi(
   formData: UpdateAccountFormValues,
-  dirtyFields: Partial<Record<keyof UpdateAccountFormValues, boolean>>,
+  dirtyFields: any,
 ): any {
   const payload: any = {}
 
@@ -354,7 +368,7 @@ function mapFormToApi(
   ) {
     payload.business_details = {
       registration_type: formData.businessRegistrationType || null,
-      vintage_years: parseInt(formData.businessVintage) || 0,
+      vintage_years: parseInt(String(formData.businessVintage || '0')) || 0,
       suppliers: formData.suppliers || null,
       description: formData.description || null,
       type_of_business: formData.typeOfBusiness || null,
@@ -385,7 +399,7 @@ function mapFormToApi(
       pincode: formData.businessPincode || null,
       years_residing:
         parseInt(
-          formData.businessYearsResiding || formData.noOfBusinessYears,
+          String(formData.businessYearsResiding || formData.noOfBusinessYears || '0'),
         ) || 0,
       gps_location:
         formData.businessGpsLocation || formData.gpsLocation || null,
@@ -413,7 +427,7 @@ function mapFormToApi(
       country: formData.applicantCountry || 'India',
       pincode: formData.applicantPincode || formData.applicantCode || null,
       years_residing:
-        parseInt(formData.applicantYearsResiding || formData.noOfYears) || 0,
+        parseInt(String(formData.applicantYearsResiding || formData.noOfYears || '0')) || 0,
       gps_location: formData.applicantGpsLocation || null,
       ownership_type: formData.applicantOwnership || null,
     }
@@ -448,7 +462,7 @@ function mapFormToApi(
       pincode: formData.coApplicantPincode || formData.coApplicantCode || null,
       years_residing:
         parseInt(
-          formData.coApplicantYearsResiding || formData.coApplicantYears,
+          String(formData.coApplicantYearsResiding || formData.coApplicantYears || '0'),
         ) || 0,
       gps_location: formData.coApplicantGpsLocation || null,
       ownership_type: formData.coApplicantOwnership || null,
@@ -649,7 +663,7 @@ export default function UpdateAccounts() {
     user?.role === 'manager'
 
   const form = useForm<UpdateAccountFormValues>({
-    resolver: zodResolver(updateAccountSchema),
+    resolver: zodResolver(updateAccountSchema) as any,
   })
 
   const {
@@ -999,7 +1013,7 @@ export default function UpdateAccounts() {
               </TabsList>
             </div>
 
-            <div className='p-4 border border-t-0 border-border rounded-b-xl bg-background/50 shadow-sm min-h-[250px]'>
+            <div className='p-4 border border-t-0 border-border rounded-b-xl bg-background/50 shadow-sm min-h-62.5'>
               {/* ===== CONTACTS TAB ===== */}
               <TabsContent value='contacts' className='space-y-4 m-0'>
                 {selectedContactId ? (
@@ -1182,7 +1196,7 @@ export default function UpdateAccounts() {
                         <TableHead>From Date</TableHead>
                         <TableHead>To Date</TableHead>
                         <TableHead>Status</TableHead>
-                        <TableHead>Action</TableHead>
+                       
                       </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -1753,7 +1767,7 @@ export default function UpdateAccounts() {
                 name='preferredLanguages'
                 render={({ field }) => (
                   <MultiSelectField
-                    value={field.value}
+                    value={field.value || []}
                     options={LANGUAGE_OPTIONS}
                     isEdit={isEdit}
                     onChange={field.onChange}
@@ -2197,7 +2211,7 @@ export default function UpdateAccounts() {
               render={({ field }) => (
                 <StateSelector
                   label='State'
-                  value={field.value}
+                  value={field.value || ''}
                   onChange={field.onChange}
                   isEdit={isEdit}
                   error={errors.applicantState?.message}
@@ -2212,7 +2226,7 @@ export default function UpdateAccounts() {
               render={({ field }) => (
                 <CitySelector
                   label='City'
-                  value={field.value}
+                  value={field.value || ''}
                   onChange={field.onChange}
                   isEdit={isEdit}
                   error={errors.applicantCity?.message}
@@ -2241,7 +2255,7 @@ export default function UpdateAccounts() {
               render={({ field }) => (
                 <PincodeSelector
                   label='Pincode'
-                  value={field.value}
+                  value={field.value || ''}
                   onChange={field.onChange}
                   isEdit={isEdit}
                   error={errors.applicantPincode?.message}
@@ -2309,7 +2323,7 @@ export default function UpdateAccounts() {
               render={({ field }) => (
                 <StateSelector
                   label='State'
-                  value={field.value}
+                  value={field.value || ''}
                   onChange={field.onChange}
                   isEdit={isEdit}
                   error={errors.coApplicantState?.message}
@@ -2324,7 +2338,7 @@ export default function UpdateAccounts() {
               render={({ field }) => (
                 <CitySelector
                   label='City'
-                  value={field.value}
+                  value={field.value || ''}
                   onChange={field.onChange}
                   isEdit={isEdit}
                   error={errors.coApplicantCity?.message}
@@ -2356,7 +2370,7 @@ export default function UpdateAccounts() {
               render={({ field }) => (
                 <PincodeSelector
                   label='Pincode'
-                  value={field.value}
+                  value={field.value || ''}
                   onChange={field.onChange}
                   isEdit={isEdit}
                   error={errors.coApplicantPincode?.message}

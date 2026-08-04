@@ -119,6 +119,25 @@ const data = {
       ],
     },
     {
+      title: 'Data Repository',
+      url: '#',
+      icon: FolderDown,
+      items: [
+        {
+          title: 'Invoicing Master',
+          url: '/invoicing-master',
+        },
+        {
+          title: 'Distributor Master',
+          url: '/distributer-master',
+        },
+        {
+          title: 'Limit Reports',
+          url: '/limit-reports',
+        },
+      ],
+    },
+    {
       title: 'Support',
       url: '#',
       icon: LifeBuoy,
@@ -129,6 +148,7 @@ const data = {
         },
       ],
     },
+    
   ],
 }
 

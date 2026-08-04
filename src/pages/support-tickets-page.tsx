@@ -302,7 +302,7 @@ export default function SupportTicketsPage() {
   }
 
   return (
-    <div className="p-6 md:p-8 space-y-8 max-w-7xl mx-auto min-h-screen bg-slate-50/40">
+    <div className="p-6 md:p-8 space-y-8 max-w-7xlZ mx-auto min-h-screen bg-slate-50/40">
       
       {/* 1. Header Banner */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 p-6 rounded-2xl bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900 text-white shadow-xl relative overflow-hidden">

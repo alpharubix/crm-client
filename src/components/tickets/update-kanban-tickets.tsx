@@ -730,13 +730,17 @@ export default function UpdateKanbanTicket({
 
             <FieldRow label='Created By'>
               <span className='text-sm font-medium text-muted-foreground'>
-                {(users as Record<string, string>)[dealData.created_by]}
+                {(users as Record<string, string>)[dealData.created_by] ||
+                  dealData.created_by ||
+                  '—'}
               </span>
             </FieldRow>
 
             <FieldRow label='Modified By'>
               <span className='text-sm font-medium text-muted-foreground'>
-                {(users as Record<string, string>)[dealData.modified_by] || '—'}
+                {(users as Record<string, string>)[dealData.modified_by] ||
+                  dealData.modified_by ||
+                  '—'}
               </span>
             </FieldRow>
           </div>
