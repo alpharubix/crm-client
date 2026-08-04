@@ -23,6 +23,7 @@ import {
 } from '@/validators/updateContact.schema'
 import { ENV } from '@/conf'
 import { formatExactDate } from '@/utils/date-formatter'
+import users from '@/utils/users.json'
 import {
   Dialog,
   DialogContent,
@@ -30,6 +31,19 @@ import {
   DialogTitle,
   DialogTrigger,
 } from '@/components/ui/dialog'
+
+function resolveUserName(userObj: any, userId: any): string {
+  if (userObj && typeof userObj === 'object' && userObj.full_name) {
+    return userObj.full_name
+  }
+  const id = userId || (userObj && typeof userObj !== 'object' ? userObj : '')
+  if (id) {
+    const matched = (users as Record<string, string>)[String(id)]
+    if (matched) return matched
+    return String(id)
+  }
+  return ''
+}
 
 function mapContactToForm(apiData: any): UpdateContactFormValues {
   return {
@@ -42,8 +56,8 @@ function mapContactToForm(apiData: any): UpdateContactFormValues {
     accountName: apiData.parent_account?.account_name || '',
     email: apiData.email || '',
     secondaryEmail: apiData.secondary_email || '',
-    createdBy: apiData.created_by?.full_name || '',
-    modifiedBy: apiData.modified_by?.full_name || '',
+    createdBy: resolveUserName(apiData.created_by, apiData.created_by_id),
+    modifiedBy: resolveUserName(apiData.modified_by, apiData.modified_by_id),
     street: apiData.street || '',
     state: apiData.state || '',
     pincode: apiData.pincode || '',

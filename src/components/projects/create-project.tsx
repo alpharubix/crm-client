@@ -197,7 +197,7 @@ export default function CreateProjectForm({
                 >
                   <div className='flex items-center gap-2 overflow-hidden'>
                     <LinkIcon size={12} className='text-zinc-400 shrink-0' />
-                    <span className='text-xs truncate max-w-[300px] text-blue-600 hover:underline'>
+                    <span className='text-xs truncate max-w-75 text-blue-600 hover:underline'>
                       <a href={link} target='_blank' rel='noreferrer'>
                         {link}
                       </a>

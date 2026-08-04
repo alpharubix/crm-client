@@ -16,6 +16,9 @@ import ItrAnalysisPage from './pages/itr-page'
 import GstReportPage from './components/gst-reports/GstReportPage'
 import ExistingReports from './pages/cibil/ExistingReports'
 import ViewReport from './pages/cibil/ViewReport'
+import LimitsReportPage from './pages/limitsreport'
+import InvoicingMasterPage from './pages/invoicing-master'
+import DistributorMasterPage from './pages/distributor-master'
 
 // Lazy loaded pages and heavy route components
 const AccountPage = lazy(() => import('./pages/accounts-page'))
@@ -51,6 +54,7 @@ const UpdateRevenue = lazy(() => import('./components/revenue/update-revenue'))
 const BsaAnalysisPage = lazy(() => import('./pages/bsa-analysis-page'))
 const GstAnalysisPage = lazy(() => import('./pages/gst-page'))
 const SupportTicketsPage = lazy(() => import('./pages/support-tickets-page'))
+
 
 
 export default function App() {
@@ -130,7 +134,12 @@ export default function App() {
               <Route path='/projects/:id' element={<Task />} />
               <Route path='/exports' element={<Export />} />
               <Route path='/support-tickets' element={<SupportTicketsPage />} />
+              <Route path='/invoicing-master' element={<InvoicingMasterPage />} />
+              <Route path='/distributer-master' element={<DistributorMasterPage />} />
+              <Route path='/limit-reports' element={<LimitsReportPage />} />
+              
               <Route path='*' element={<NotFoundPage />} />
+
 
             </Route>
           </Routes>
