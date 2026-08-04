@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import {
   Table,
   TableBody,
@@ -291,21 +291,37 @@ export function MuthootRawData() {
     setPage(1);
   };
 
-  // Reset page to 1 when transaction filters change
-  useEffect(() => {
-    if (activeSubTab === "transaction") {
-      setPage(1);
-    }
-  }, [filterBorrowerName, filterInvoiceNumber, filterInvoiceDate, filterPrincipalDpd]);
-
-  // Reset page to 1 when limit filters change
-  useEffect(() => {
-    if (activeSubTab === "limit") {
-      setPage(1);
-    }
-  }, [filterCreditBorrowerName, filterCreditDistributorCode]);
+  const lastFiltersRef = useRef({
+    activeSubTab,
+    filterBorrowerName,
+    filterInvoiceNumber,
+    filterInvoiceDate,
+    filterPrincipalDpd,
+    filterCreditBorrowerName,
+    filterCreditDistributorCode
+  });
 
   useEffect(() => {
+    const currentFilters = {
+      activeSubTab,
+      filterBorrowerName,
+      filterInvoiceNumber,
+      filterInvoiceDate,
+      filterPrincipalDpd,
+      filterCreditBorrowerName,
+      filterCreditDistributorCode
+    };
+
+    const filtersChanged = JSON.stringify(lastFiltersRef.current) !== JSON.stringify(currentFilters);
+
+    if (filtersChanged) {
+      lastFiltersRef.current = currentFilters;
+      if (page !== 1) {
+        setPage(1);
+        return;
+      }
+    }
+
     fetchData(activeSubTab, page, !initialFetched);
     if (!initialFetched) {
       setInitialFetched(true);
@@ -800,8 +816,11 @@ export function MuthootRawData() {
               onClick={() => {
                 setShowSuccessModal(false);
                 if (uploadResult.failedCount === 0) {
-                  setPage(1);
-                  fetchData(activeSubTab, 1, false);
+                  if (page === 1) {
+                    fetchData(activeSubTab, 1, false);
+                  } else {
+                    setPage(1);
+                  }
                   toast.success(uploadResult.message);
                 } else {
                   toast.error("Upload has validation errors. Correct them and try again.");

@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import {
   Table,
   TableBody,
@@ -238,28 +238,41 @@ export function KotakRawDataCKPL() {
     setPage(1);
   };
 
-  // Reset page to 1 when transaction filters change
-  useEffect(() => {
-    if (activeSubTab === "transaction") {
-      setPage(1);
-    }
-  }, [
+  const lastFiltersRef = useRef({
+    activeSubTab,
     filterDealerName,
     filterInvoiceDate,
     filterInvoiceNumber,
     filterDisbursementDate,
     filterOverdueWithinCureInr,
-    filterOverdueBeyondCureInr
-  ]);
+    filterOverdueBeyondCureInr,
+    filterCreditDealerName,
+    filterCreditDistributorCode
+  });
 
-  // Reset page to 1 when limit filters change
   useEffect(() => {
-    if (activeSubTab === "limit") {
-      setPage(1);
+    const currentFilters = {
+      activeSubTab,
+      filterDealerName,
+      filterInvoiceDate,
+      filterInvoiceNumber,
+      filterDisbursementDate,
+      filterOverdueWithinCureInr,
+      filterOverdueBeyondCureInr,
+      filterCreditDealerName,
+      filterCreditDistributorCode
+    };
+
+    const filtersChanged = JSON.stringify(lastFiltersRef.current) !== JSON.stringify(currentFilters);
+
+    if (filtersChanged) {
+      lastFiltersRef.current = currentFilters;
+      if (page !== 1) {
+        setPage(1);
+        return;
+      }
     }
-  }, [filterCreditDealerName, filterCreditDistributorCode]);
 
-  useEffect(() => {
     fetchData(activeSubTab, page, !initialFetched);
     if (!initialFetched) {
       setInitialFetched(true);
@@ -800,8 +813,11 @@ export function KotakRawDataCKPL() {
               onClick={() => {
                 setShowSuccessModal(false);
                 if (uploadResult.failedCount === 0) {
-                  setPage(1);
-                  fetchData(activeSubTab, 1, false);
+                  if (page === 1) {
+                    fetchData(activeSubTab, 1, false);
+                  } else {
+                    setPage(1);
+                  }
                   toast.success(uploadResult.message);
                 } else {
                   toast.error("Upload has validation errors. Correct them and try again.");
