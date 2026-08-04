@@ -47,6 +47,12 @@ export const PROJECT_TYPES: string[] = [
   'Bug',
 ]
 
+export const PROJECT_MODULES: string[] = [
+  'CRM',
+  'Invoice Portal',
+  'Underwriting Tool',
+]
+
 export const PRIORITY_STYLES: Record<Priority, string> = {
   Low: 'bg-emerald-50 text-emerald-700 border-emerald-200',
   Medium: 'bg-amber-50 text-amber-700 border-amber-200',

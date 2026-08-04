@@ -21,10 +21,11 @@ import type {
   Priority,
   Project,
   ProjectFormData,
+  ProjectModule,
   ProjectType,
 } from '@/types/project-types'
 import { emptyForm, validate } from '@/utils/project-utils'
-import { ENV, PRIORITIES, PROJECT_TYPES } from '@/conf'
+import { ENV, PRIORITIES, PROJECT_MODULES, PROJECT_TYPES } from '@/conf'
 import { X, Link as LinkIcon } from 'lucide-react'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import tech_team_users from '@/utils/tech_team_users.json'
@@ -46,10 +47,10 @@ export default function CreateProjectForm({
   >({
     ...emptyForm(),
     approver_id: '',
-    attachment_links: [], // Added
+    attachment_links: [],
   })
   const [errors, setErrors] = useState<FormErrors>({})
-  const [currentLink, setCurrentLink] = useState('') // Local state for link input
+  const [currentLink, setCurrentLink] = useState('')
 
   function set<K extends keyof typeof form>(key: K, value: (typeof form)[K]) {
     setForm((f) => ({ ...f, [key]: value }))
@@ -71,7 +72,6 @@ export default function CreateProjectForm({
     setErrors((e) => ({ ...e, assignees: undefined }))
   }
 
-  // Add Link Handler
   function handleAddLink() {
     if (!currentLink.trim()) return
     setForm((f) => ({
@@ -81,7 +81,6 @@ export default function CreateProjectForm({
     setCurrentLink('')
   }
 
-  // Remove Link Handler
   function handleRemoveLink(index: number) {
     setForm((f) => ({
       ...f,
@@ -105,8 +104,9 @@ export default function CreateProjectForm({
           end_date: body.endDate,
           actioner_ids: body.assignees.map((u) => u.id),
           project_type: body.projectType.toLowerCase(),
+          project_module: body.project_module,
           approver_id: body.approver_id,
-          attachment_links: body.attachment_links, // Passed to backend
+          attachment_links: body.attachment_links,
         }),
       })
       if (!res.ok) throw new Error('Failed to create project')
@@ -162,7 +162,7 @@ export default function CreateProjectForm({
           />
         </div>
 
-        {/* Attachment Links (NEW) */}
+        {/* Attachment Links */}
         <div>
           <Label className='text-xs font-medium'>Attachment Links</Label>
           <div className='flex gap-2 mt-1'>
@@ -216,8 +216,30 @@ export default function CreateProjectForm({
           )}
         </div>
 
-        {/* Priority + Project Type + Approver */}
-        <div className='grid grid-cols-3 gap-3'>
+        {/* Project Module + Priority + Project Type + Approver */}
+        <div className='grid grid-cols-2 gap-3'>
+          <div>
+            <Label className='text-xs font-medium'>
+              Project Module <span className='text-red-500'>*</span>
+            </Label>
+            <Select
+              value={form.project_module}
+              onValueChange={(v) => set('project_module', v as ProjectModule)}
+            >
+              <SelectTrigger className='mt-1 h-8 text-sm'>
+                <SelectValue placeholder='Select Module' />
+              </SelectTrigger>
+              <SelectContent>
+                {PROJECT_MODULES.map((m) => (
+                  <SelectItem key={m} value={m} className='text-sm'>
+                    {m}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <FieldError msg={errors.project_module} />
+          </div>
+
           <div>
             <Label className='text-xs font-medium'>
               Priority <span className='text-red-500'>*</span>
@@ -261,6 +283,7 @@ export default function CreateProjectForm({
             </Select>
             <FieldError msg={errors.projectType} />
           </div>
+
           <div>
             <Label className='text-xs font-medium'>
               Approver <span className='text-red-500'>*</span>
@@ -296,10 +319,10 @@ export default function CreateProjectForm({
         <div className='grid grid-cols-2 gap-3'>
           <div>
             <Label className='text-xs font-medium'>
-              Start Date <span className='text-red-500'>*</span>
+              Start Date & Time <span className='text-red-500'>*</span>
             </Label>
             <Input
-              type='date'
+              type='datetime-local'
               className='mt-1 h-8 text-sm'
               value={form.startDate}
               onChange={(e) => set('startDate', e.target.value)}
@@ -308,10 +331,10 @@ export default function CreateProjectForm({
           </div>
           <div>
             <Label className='text-xs font-medium'>
-              End Date <span className='text-red-500'>*</span>
+              End Date & Time <span className='text-red-500'>*</span>
             </Label>
             <Input
-              type='date'
+              type='datetime-local'
               className='mt-1 h-8 text-sm'
               value={form.endDate}
               onChange={(e) => set('endDate', e.target.value)}

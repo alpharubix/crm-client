@@ -40,6 +40,8 @@ const emptyForm = () => ({
   assignee_id: '',
   start_date: '',
   end_date: '',
+  expected_completion_date: '',
+  task_rating: '',
   attachment_links: [] as string[],
 })
 
@@ -53,7 +55,7 @@ export default function CreateTaskModal({
   const [errors, setErrors] = useState<Record<string, string>>({})
   const [currentLink, setCurrentLink] = useState('')
   const queryClient = useQueryClient()
-  const { user } = useAuth() // <-- Fetch current user
+  const { user } = useAuth()
 
   const { data: projectData } = useQuery({
     queryKey: ['project', projectId],
@@ -79,7 +81,6 @@ export default function CreateTaskModal({
     setErrors((e) => ({ ...e, [key]: '' }))
   }
 
-  // Safely handle arrays in case it's undefined
   function handleAddLink() {
     if (!currentLink.trim()) return
     setForm((f) => ({
@@ -89,7 +90,6 @@ export default function CreateTaskModal({
     setCurrentLink('')
   }
 
-  // Safely handle array filtering
   function handleRemoveLink(index: number) {
     setForm((f) => ({
       ...f,
@@ -124,12 +124,10 @@ export default function CreateTaskModal({
             type: body.type,
             priority: body.priority,
             assignee_id: body.assignee_id ? body.assignee_id : null,
-            start_date: body.start_date
-              ? new Date(body.start_date).toISOString()
-              : null,
-            end_date: body.end_date
-              ? new Date(body.end_date).toISOString()
-              : null,
+            start_date: body.start_date ? body.start_date : null,
+            end_date: body.end_date ? body.end_date : null,
+            expected_completion_date: body.expected_completion_date ? body.expected_completion_date : null,
+            task_rating: body.task_rating ? Number(body.task_rating) : null,
             attachment_links: body.attachment_links,
           }),
         },
@@ -183,7 +181,6 @@ export default function CreateTaskModal({
                 {projectData.name}
               </p>
             )}
-            {/* --- CREATED BY DISPLAY --- */}
             {user?.user_name && (
               <p className='text-xs font-medium text-zinc-500'>
                 Creator: {user.user_name}
@@ -247,7 +244,6 @@ export default function CreateTaskModal({
                 Add
               </Button>
             </div>
-            {/* Added optional chaining here just in case */}
             {form.attachment_links?.length > 0 && (
               <div className='flex flex-col gap-1.5 mt-2'>
                 {form.attachment_links.map((link, idx) => (
@@ -335,9 +331,9 @@ export default function CreateTaskModal({
           {/* Start Date + End Date */}
           <div className='grid grid-cols-2 gap-3'>
             <div>
-              <Label className='text-xs font-medium'>Start Date</Label>
+              <Label className='text-xs font-medium'>Start Date & Time</Label>
               <Input
-                type='date'
+                type='datetime-local'
                 className='mt-1 h-8 text-sm'
                 value={form.start_date}
                 onChange={(e) => set('start_date', e.target.value)}
@@ -346,10 +342,10 @@ export default function CreateTaskModal({
 
             <div>
               <Label className='text-xs font-medium'>
-                Projected Completion
+                End Date & Time
               </Label>
               <Input
-                type='date'
+                type='datetime-local'
                 className='mt-1 h-8 text-sm'
                 value={form.end_date}
                 onChange={(e) => set('end_date', e.target.value)}
@@ -357,6 +353,38 @@ export default function CreateTaskModal({
               {errors.end_date && (
                 <p className='text-xs text-red-500 mt-1'>{errors.end_date}</p>
               )}
+            </div>
+          </div>
+
+          {/* Expected Completion Date + Task Rating */}
+          <div className='grid grid-cols-2 gap-3'>
+            <div>
+              <Label className='text-xs font-medium'>Expected Completion Date & Time</Label>
+              <Input
+                type='datetime-local'
+                className='mt-1 h-8 text-sm'
+                value={form.expected_completion_date}
+                onChange={(e) => set('expected_completion_date', e.target.value)}
+              />
+            </div>
+
+            <div>
+              <Label className='text-xs font-medium'>Task Rating (1-5)</Label>
+              <Select
+                value={String(form.task_rating)}
+                onValueChange={(v) => set('task_rating', v)}
+              >
+                <SelectTrigger className='mt-1 h-8 text-sm'>
+                  <SelectValue placeholder='Rating' />
+                </SelectTrigger>
+                <SelectContent>
+                  {[1, 2, 3, 4, 5].map((r) => (
+                    <SelectItem key={r} value={String(r)} className='text-sm'>
+                      {r} Star{r > 1 ? 's' : ''} ({r})
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
           </div>
 

@@ -94,6 +94,10 @@ const data = {
           title: 'Audit Log',
           url: '/audit-logs',
         },
+        {
+          title: 'Project logs',
+          url: '/project-logs',
+        },
       ],
     },
     {

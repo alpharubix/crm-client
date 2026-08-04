@@ -29,6 +29,7 @@ const UpdateContacts = lazy(
 const NotFoundPage = lazy(() => import('./pages/not-found-page'))
 const CreateContact = lazy(() => import('./components/contacts/create-contact'))
 const AuditLogs = lazy(() => import('./components/log/audit-log'))
+const ProjectLogs = lazy(() => import('./components/log/project-log'))
 const DealsPage = lazy(() => import('./pages/deals-page'))
 const TicketsPage = lazy(() => import('./pages/tickets-page'))
 const UpdateDeals = lazy(() => import('./components/deals/update-deals'))
@@ -124,6 +125,7 @@ export default function App() {
               <Route path='/jr/:jrId' element={<CandidateKanban />} />
               <Route element={<ProtectedLogRoute />}>
                 <Route path='/audit-logs' element={<AuditLogs />} />
+                <Route path='/project-logs' element={<ProjectLogs />} />
               </Route>
 
               <Route path='/projects' element={<Project />} />
