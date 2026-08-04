@@ -24,6 +24,7 @@ import {
   API_TO_STATUS,
   ENV,
   PRIORITIES,
+  PROJECT_MODULES,
   PROJECT_TYPES,
   STATUSES,
   SUPER_APPROVER_IDS,
@@ -32,12 +33,14 @@ import {
 import type {
   Priority,
   Project,
+  ProjectModule,
   ProjectType,
   ProjectUser,
   Status,
 } from '@/types/project-types'
 import { useAuth } from '@/context/auth-context'
 import { STATUS_MAP } from './project-kanban'
+import { toDatetimeLocal } from '@/utils/project-utils'
 
 interface EditProjectModalProps {
   open: boolean
@@ -77,6 +80,7 @@ export default function EditProjectModal({
     startDate: '',
     endDate: '',
     projectType: '',
+    project_module: '' as ProjectModule | '',
     approverId: '',
     attachment_links: [] as string[],
   })
@@ -150,12 +154,13 @@ export default function EditProjectModal({
           id: String(id),
           name: USERS_MAP[String(id)] || String(id),
         })),
-        startDate: (project as any).start_date ?? '',
-        endDate: (project as any).end_date ?? '',
+        startDate: toDatetimeLocal((project as any).start_date),
+        endDate: toDatetimeLocal((project as any).end_date),
         projectType: (project as any).project_type
           ? (project as any).project_type.charAt(0).toUpperCase() +
             (project as any).project_type.slice(1)
           : '',
+        project_module: (project as any).project_module ?? '',
         approverId: String((project as any).approver_id ?? ''),
         attachment_links: (project as any).attachment_links || [],
       })
@@ -177,7 +182,6 @@ export default function EditProjectModal({
   }
 
   function toggleAssignee(uItem: any) {
-    if (!isOwner && !isApprover) return
     const mapped: any = { id: uItem.id, name: uItem.name }
     setForm((f) => {
       const exists = f.assignees.some((u) => u.id === mapped.id)
@@ -238,6 +242,7 @@ export default function EditProjectModal({
             actioner_ids: body.assignees.map((u) => u.id),
             approver_id: body.approverId,
             project_type: body.projectType.toLowerCase(),
+            project_module: body.project_module,
             attachment_links: body.attachment_links,
           }),
         },
@@ -555,6 +560,27 @@ export default function EditProjectModal({
                   )}
                 </div>
                 <div>
+                  <Label className='text-xs font-medium'>Project Module</Label>
+                  <Select
+                    value={form.project_module}
+                    onValueChange={(v) =>
+                      set('project_module', v as ProjectModule)
+                    }
+                    disabled={!isOwner && !isApprover}
+                  >
+                    <SelectTrigger className='mt-1 h-8 text-sm'>
+                      <SelectValue placeholder='Select Module' />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {PROJECT_MODULES.map((m) => (
+                        <SelectItem key={m} value={m} className='text-sm'>
+                          {m}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div>
                   <Label className='text-xs font-medium'>
                     Project Type <span className='text-red-500'>*</span>
                   </Label>
@@ -612,10 +638,10 @@ export default function EditProjectModal({
               <div className='grid grid-cols-2 gap-3'>
                 <div>
                   <Label className='text-xs font-medium'>
-                    Start Date <span className='text-red-500'>*</span>
+                    Start Date & Time <span className='text-red-500'>*</span>
                   </Label>
                   <Input
-                    type='date'
+                    type='datetime-local'
                     className='mt-1 h-8 text-sm'
                     value={form.startDate}
                     onChange={(e) => set('startDate', e.target.value)}
@@ -629,10 +655,10 @@ export default function EditProjectModal({
                 </div>
                 <div>
                   <Label className='text-xs font-medium'>
-                    End Date <span className='text-red-500'>*</span>
+                    End Date & Time <span className='text-red-500'>*</span>
                   </Label>
                   <Input
-                    type='date'
+                    type='datetime-local'
                     className='mt-1 h-8 text-sm'
                     value={form.endDate}
                     onChange={(e) => set('endDate', e.target.value)}
@@ -648,10 +674,10 @@ export default function EditProjectModal({
 
               {/* Assignment Distribution Map List Selection Block */}
               <div>
-                <Label className='text-xs font-medium'>Team Members</Label>
-                <div
-                  className={`mt-1 border rounded-md overflow-hidden divide-y max-h-32 overflow-y-auto ${!isOwner && !isApprover ? 'opacity-70 pointer-events-none' : ''}`}
-                >
+                <Label className='text-xs font-medium'>
+                  Team Members (Actioners)
+                </Label>
+                <div className='mt-1 border rounded-md overflow-hidden divide-y max-h-32 overflow-y-auto'>
                   {projectUsersList.map((uItem) => {
                     const selected = form.assignees.some(
                       (u) => u.id === uItem.id,

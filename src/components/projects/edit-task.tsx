@@ -20,6 +20,7 @@ import {
 } from '../ui/select'
 import { ENV, USERS_MAP } from '@/conf'
 import { X, Link as LinkIcon } from 'lucide-react'
+import { toDatetimeLocal } from '@/utils/project-utils'
 
 interface Task {
   id: string
@@ -30,9 +31,11 @@ interface Task {
   status: string
   assignee_id?: string
   assignee_name?: string
-  created_by?: string // <-- Added
+  created_by?: string
   start_date?: string
   end_date?: string
+  expected_completion_date?: string
+  task_rating?: number
   attachment_links?: string[]
   projectId: string
 }
@@ -77,6 +80,8 @@ export default function EditTaskModal({
     assignee_id: '',
     start_date: '',
     end_date: '',
+    expected_completion_date: '',
+    task_rating: '',
     attachment_links: [] as string[],
   })
   const queryClient = useQueryClient()
@@ -140,8 +145,10 @@ export default function EditTaskModal({
         priority: task.priority.toLowerCase(),
         status: REVERSE_STATUS[task.status] ?? task.status.toLowerCase(),
         assignee_id: task.assignee_id ?? '',
-        start_date: task.start_date ?? '',
-        end_date: task.end_date ?? '',
+        start_date: toDatetimeLocal(task.start_date),
+        end_date: toDatetimeLocal(task.end_date),
+        expected_completion_date: toDatetimeLocal((task as any).expected_completion_date),
+        task_rating: (task as any).task_rating ? String((task as any).task_rating) : '',
         attachment_links: task.attachment_links || [],
       })
       setComment('')
@@ -173,7 +180,6 @@ export default function EditTaskModal({
     setForm((f) => ({ ...f, [key]: value }))
   }
 
-  // Safely handle arrays in case it's undefined
   function handleAddLink() {
     if (!currentLink.trim()) return
     setForm((f) => ({
@@ -193,10 +199,9 @@ export default function EditTaskModal({
       setCurrentLink('')
     }
 
-    mutation.mutate(finalForm) // This handles the actual submission
+    mutation.mutate(finalForm)
   }
 
-  // Safely handle array filtering
   function handleRemoveLink(index: number) {
     setForm((f) => ({
       ...f,
@@ -221,12 +226,10 @@ export default function EditTaskModal({
             priority: body.priority,
             status: body.status,
             assignee_id: body.assignee_id ? body.assignee_id : null,
-            start_date: body.start_date
-              ? new Date(body.start_date).toISOString()
-              : null,
-            end_date: body.end_date
-              ? new Date(body.end_date).toISOString()
-              : null,
+            start_date: body.start_date ? body.start_date : null,
+            end_date: body.end_date ? body.end_date : null,
+            expected_completion_date: body.expected_completion_date ? body.expected_completion_date : null,
+            task_rating: body.task_rating ? Number(body.task_rating) : null,
             attachment_links: body.attachment_links,
           }),
         },
@@ -241,7 +244,6 @@ export default function EditTaskModal({
     },
   })
 
-  // ... (renderLogDetails remains exactly the same as your previous version)
   const renderLogDetails = (log: any) => {
     const changes = log.changes || {}
     const keys = Object.keys(changes)
@@ -390,7 +392,6 @@ export default function EditTaskModal({
 
           {/* Attachment Links */}
           <div>
-            {/* <Label className='text-xs font-medium'>Attachment Links</Label> */}
             <div className='flex gap-2 mt-1'>
               <Input
                 className='h-8 text-sm flex-1'
@@ -414,7 +415,6 @@ export default function EditTaskModal({
                 Add
               </Button>
             </div>
-            {/* Added optional chaining here just in case */}
             {form.attachment_links?.length > 0 && (
               <div className='flex flex-col gap-1.5 mt-2'>
                 {form.attachment_links.map((link, idx) => (
@@ -535,9 +535,9 @@ export default function EditTaskModal({
           {/* Start Date + End Date */}
           <div className='grid grid-cols-2 gap-3'>
             <div>
-              <Label className='text-xs font-medium'>Start Date</Label>
+              <Label className='text-xs font-medium'>Start Date & Time</Label>
               <Input
-                type='date'
+                type='datetime-local'
                 className='mt-1 h-8 text-sm'
                 value={form.start_date}
                 onChange={(e) => set('start_date', e.target.value)}
@@ -546,14 +546,46 @@ export default function EditTaskModal({
 
             <div>
               <Label className='text-xs font-medium'>
-                Projected Completion
+                End Date & Time
               </Label>
               <Input
-                type='date'
+                type='datetime-local'
                 className='mt-1 h-8 text-sm'
                 value={form.end_date}
                 onChange={(e) => set('end_date', e.target.value)}
               />
+            </div>
+          </div>
+
+          {/* Expected Completion Date + Task Rating */}
+          <div className='grid grid-cols-2 gap-3'>
+            <div>
+              <Label className='text-xs font-medium'>Expected Completion Date & Time</Label>
+              <Input
+                type='datetime-local'
+                className='mt-1 h-8 text-sm'
+                value={form.expected_completion_date}
+                onChange={(e) => set('expected_completion_date', e.target.value)}
+              />
+            </div>
+
+            <div>
+              <Label className='text-xs font-medium'>Task Rating (1-5)</Label>
+              <Select
+                value={String(form.task_rating)}
+                onValueChange={(v) => set('task_rating', v)}
+              >
+                <SelectTrigger className='mt-1 h-8 text-sm'>
+                  <SelectValue placeholder='Rating' />
+                </SelectTrigger>
+                <SelectContent>
+                  {[1, 2, 3, 4, 5].map((r) => (
+                    <SelectItem key={r} value={String(r)} className='text-sm'>
+                      {r} Star{r > 1 ? 's' : ''} ({r})
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
           </div>
 

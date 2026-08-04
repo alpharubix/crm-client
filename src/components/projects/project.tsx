@@ -5,7 +5,7 @@ import CreateProjectForm from './create-project'
 import type { Project } from '@/types/project-types'
 import ProjectList from './project-list'
 import ProjectKanban, { type ProjectFilters } from './project-kanban'
-import { FilterX, Search } from 'lucide-react'
+import { FilterX, Search, Layers } from 'lucide-react'
 import {
   Select,
   SelectContent,
@@ -13,8 +13,9 @@ import {
   SelectTrigger,
   SelectValue,
 } from '../ui/select'
-import { PROJECT_TYPES, USERS_MAP } from '@/conf'
+import { PROJECT_MODULES, PROJECT_TYPES, USERS_MAP } from '@/conf'
 import { Input } from '../ui/input'
+import { Label } from '../ui/label'
 
 const defaultFilters: ProjectFilters = {
   search: '',
@@ -22,8 +23,15 @@ const defaultFilters: ProjectFilters = {
   start_date: '',
   end_date: '',
   project_type: 'all',
+  project_module: 'all',
   status: 'all',
 }
+
+const MODULE_OPTIONS = [
+  { label: 'All Modules', value: 'all' },
+  ...PROJECT_MODULES.map((m) => ({ label: m, value: m })),
+]
+
 const STATUS_OPTIONS = [
   { label: 'Planning', value: 'planning' },
   { label: 'Active', value: 'active' },
@@ -34,21 +42,26 @@ const STATUS_OPTIONS = [
   { label: 'Pending Review', value: 'pending_for_review' },
   { label: 'Rejected', value: 'rejected' },
 ]
+
 export default function Project() {
   const [projects, setProjects] = useState<Project[]>([])
   const [modalState, setModalState] = useState<'closed' | 'create' | 'detail'>(
-    'closed'
+    'closed',
   )
   const [selectedProject, setSelectedProject] = useState<Project | null>(null)
-  const [viewMode, setViewMode] = useState<'list' | 'kanban'>('list')
-  // const [filters, setFilters] = useState<ProjectFilters>(defaultFilters)
-  // UI binds to this (no API calls)
+  const [selectedModule, setSelectedModule] = useState<string>('all')
+
   const [localFilters, setLocalFilters] =
     useState<ProjectFilters>(defaultFilters)
 
-  // useQuery in the child components listens to this
   const [appliedFilters, setAppliedFilters] =
     useState<ProjectFilters>(defaultFilters)
+
+  function handleModuleSelect(moduleValue: string) {
+    setSelectedModule(moduleValue)
+    setLocalFilters((prev) => ({ ...prev, project_module: moduleValue }))
+    setAppliedFilters((prev) => ({ ...prev, project_module: moduleValue }))
+  }
 
   function setFilter(key: keyof ProjectFilters, value: string) {
     setLocalFilters((prev) => ({ ...prev, [key]: value }))
@@ -59,9 +72,11 @@ export default function Project() {
   }
 
   function clearFilters() {
-    setLocalFilters(defaultFilters)
-    setAppliedFilters(defaultFilters)
+    const reset = { ...defaultFilters, project_module: selectedModule }
+    setLocalFilters(reset)
+    setAppliedFilters(reset)
   }
+
   function openCreate() {
     setSelectedProject(null)
     setModalState('create')
@@ -69,11 +84,6 @@ export default function Project() {
 
   function handleCreated(project: Project) {
     setProjects((prev) => [project, ...prev])
-    setSelectedProject(project)
-    setModalState('detail')
-  }
-
-  function handleSelectProject(project: Project) {
     setSelectedProject(project)
     setModalState('detail')
   }
@@ -86,33 +96,43 @@ export default function Project() {
   return (
     <div className='w-full h-full p-4 flex flex-col max-w-[1240px] mx-auto'>
       <div className='flex flex-col flex-1 min-h-0'>
-        <div className='flex items-center justify-between mb-6 shrink-0'>
+        {/* TOP MODULE SELECTOR BAR */}
+        <div className='flex flex-wrap items-center justify-between gap-4 mb-4 shrink-0'>
           <div>
-            <h1 className='text-lg font-semibold'>Projects</h1>
-            <p className='text-xs mt-0.5'>{/* {projects.length} projects */}</p>
+            <h1 className='text-lg font-semibold flex items-center gap-2'>
+              <Layers className='w-5 h-5 text-primary' /> Projects
+            </h1>
+            <p className='text-xs text-muted-foreground mt-0.5'>
+              Select a module to view its projects in Kanban board
+            </p>
           </div>
           <div className='flex items-center gap-3'>
-            {/* <div className="flex bg-muted p-1 rounded-md border">
-              <button
-                onClick={() => setViewMode('list')}
-                className={`flex items-center justify-center px-2 py-1.5 rounded-sm transition-colors ${viewMode === 'list' ? 'bg-background shadow-sm text-foreground' : 'text-muted-foreground hover:text-foreground'}`}
-                title="List View"
-              >
-                <KanbanSquare className="w-4 h-4" />
-              </button>
-              <button
-                onClick={() => setViewMode('kanban')}
-                className={`flex items-center justify-center px-2 py-1.5 rounded-sm transition-colors ${viewMode === 'kanban' ? 'bg-background shadow-sm text-foreground' : 'text-muted-foreground hover:text-foreground'}`}
-                title="Kanban View"
-              >
-                <LayoutList className="w-4 h-4" />
-              </button>
-            </div> */}
             <Button size='sm' onClick={openCreate}>
               + New Project
             </Button>
           </div>
         </div>
+
+        {/* PROJECT MODULE TABS / SELECTOR */}
+        <div className='flex items-center gap-2 mb-4 p-1.5 bg-muted/60 rounded-lg border shrink-0 overflow-x-auto'>
+          {MODULE_OPTIONS.map((m) => {
+            const active = selectedModule === m.value
+            return (
+              <button
+                key={m.value}
+                onClick={() => handleModuleSelect(m.value)}
+                className={`px-3.5 py-1.5 text-xs font-semibold rounded-md transition-all whitespace-nowrap cursor-pointer ${
+                  active
+                    ? 'bg-background text-foreground shadow-sm border border-border'
+                    : 'text-muted-foreground hover:text-foreground hover:bg-background/50'
+                }`}
+              >
+                {m.label}
+              </button>
+            )
+          })}
+        </div>
+
         {/* FILTER BAR */}
         <div className='flex flex-wrap items-center justify-between gap-3 mb-6 p-2 bg-card border rounded-lg shadow-sm'>
           <div className='flex flex-wrap items-center gap-2 flex-1'>
@@ -187,15 +207,15 @@ export default function Project() {
             {/* Date Range */}
             <div className='flex items-center gap-1 rounded-md px-1.5 h-8 shadow-sm'>
               <Input
-                type='date'
-                className='h-6 text-[11px] w-[105px] border-0 bg-transparent p-0 focus-visible:ring-0 shadow-none'
+                type='datetime-local'
+                className='h-6 text-[11px] w-[140px] border-0 bg-transparent p-0 focus-visible:ring-0 shadow-none'
                 value={localFilters.start_date}
                 onChange={(e) => setFilter('start_date', e.target.value)}
               />
               <span className='text-zinc-300 text-xs'>→</span>
               <Input
-                type='date'
-                className='h-6 text-[11px] w-[105px] border-0 bg-transparent p-0 focus-visible:ring-0 shadow-none'
+                type='datetime-local'
+                className='h-6 text-[11px] w-[140px] border-0 bg-transparent p-0 focus-visible:ring-0 shadow-none'
                 value={localFilters.end_date}
                 onChange={(e) => setFilter('end_date', e.target.value)}
               />
