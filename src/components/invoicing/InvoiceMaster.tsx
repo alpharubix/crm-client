@@ -158,7 +158,7 @@ export function InvoiceMaster() {
       if (filterStatusReason) params.append("status_reason", filterStatusReason);
 
       const res = await fetch(
-        `${ENV.VITE_BACKEND_BASE_URL}/invoice/?${params.toString()}`,
+        `${ENV.VITE_BACKEND_BASE_URL}/invoice?${params.toString()}`,
         {
           credentials: "include",
           cache: "no-store",
@@ -319,7 +319,7 @@ export function InvoiceMaster() {
       if (filterStatusReason) params.append("status_reason", filterStatusReason);
       params.append("is_export", "true");
 
-      const url = `${ENV.VITE_BACKEND_BASE_URL}/invoice/?${params.toString()}`;
+      const url = `${ENV.VITE_BACKEND_BASE_URL}/invoice?${params.toString()}`;
       const res = await fetch(url, { credentials: "include" });
       if (!res.ok) throw new Error("Failed to fetch export data");
       const csvText = await res.text();
