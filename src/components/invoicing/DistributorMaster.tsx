@@ -149,7 +149,6 @@ export function DistributorMaster({ forcedTab, allowedTabs }: DistributorMasterP
 
       const params = new URLSearchParams();
       params.append("page", String(pageNumber));
-      params.append("_t", String(Date.now()));
       if (filterAnchor) params.append("anchor", filterAnchor);
       if (filterRegion) params.append("region", filterRegion);
       if (filterState) params.append("state", filterState);
