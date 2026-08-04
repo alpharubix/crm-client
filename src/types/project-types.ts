@@ -10,7 +10,9 @@ export type Status =
   | 'Pending Review'
   | 'Rejected'
 
-export type ProjectType = 'New' | 'Upgradation' | 'Modification'
+export type ProjectType = 'New' | 'Upgradation' | 'Modification' | 'Bug'
+
+export type ProjectModule = 'CRM' | 'Invoice Portal' | 'Underwriting Tool'
 
 export interface ProjectUser {
   id: string
@@ -24,6 +26,7 @@ export interface ProjectFormData {
   priority: Priority | ''
   status: Status | ''
   projectType: ProjectType | ''
+  project_module: ProjectModule | ''
   approver_id: string
   assignees: ProjectUser[]
   startDate: string
@@ -34,6 +37,8 @@ export interface ProjectFormData {
 export interface Project extends ProjectFormData {
   id: string
   createdAt: string
+  project_type?: string
+  actioner_ids?: string[]
 }
 
 export type FormErrors = Partial<Record<keyof ProjectFormData, string>>

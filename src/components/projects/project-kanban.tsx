@@ -5,7 +5,16 @@ import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import EditProjectModal from './edit-project'
 import { Card, CardContent } from '../ui/card'
-import { Pencil } from 'lucide-react'
+import {
+  Pencil,
+  User,
+  Users,
+  Calendar,
+  AlertCircle,
+  CheckCircle2,
+  XCircle,
+  Folder,
+} from 'lucide-react'
 import {
   DndContext,
   DragOverlay,
@@ -26,6 +35,7 @@ export interface ProjectFilters {
   start_date: string
   end_date: string
   project_type: string
+  project_module?: string
   status: string
 }
 export const STATUS_MAP: Record<string, string> = {
@@ -37,6 +47,25 @@ export const STATUS_MAP: Record<string, string> = {
   'Pending Approve': 'pending_for_approve',
   'Pending Review': 'pending_for_review',
   Rejected: 'rejected',
+}
+
+const PRIORITY_ACCENTS: Record<string, { border: string; badge: string }> = {
+  critical: {
+    border: 'border-l-rose-500',
+    badge: 'bg-rose-50 text-rose-700 border-rose-200',
+  },
+  high: {
+    border: 'border-l-orange-500',
+    badge: 'bg-orange-50 text-orange-700 border-orange-200',
+  },
+  medium: {
+    border: 'border-l-amber-500',
+    badge: 'bg-amber-50 text-amber-700 border-amber-200',
+  },
+  low: {
+    border: 'border-l-emerald-500',
+    badge: 'bg-emerald-50 text-emerald-700 border-emerald-200',
+  },
 }
 
 const COLUMN_STYLES: Record<string, { header: string; dot: string }> = {
@@ -158,83 +187,106 @@ function DraggableProjectCard({
       body: JSON.stringify({ status: toStatus }),
     })
   }
+  const prioKey = (project.priority || 'low').toLowerCase()
+  const accent = PRIORITY_ACCENTS[prioKey] || PRIORITY_ACCENTS.low
+
   return (
     <div
       ref={setNodeRef}
       {...(canDrag ? listeners : {})}
       {...(canDrag ? attributes : {})}
-      className={isDragging ? 'opacity-50' : ''}
+      className={isDragging ? 'opacity-50 scale-[0.98]' : ''}
     >
       <Card
-        className={`transition-colors py-0 gap-0 overflow-hidden border ${
-          canDrag ? 'cursor-grab' : 'cursor-default'
-        } ${overdue ? '' : 'hover:shadow-sm'}`}
+        className={`transition-all duration-200 py-0 gap-0 overflow-hidden border border-l-4 ${accent.border} ${
+          canDrag ? 'cursor-grab active:cursor-grabbing' : 'cursor-default'
+        } ${
+          overdue
+            ? 'border-red-200 bg-red-50/20 hover:shadow-md'
+            : 'hover:shadow-md hover:border-zinc-300 bg-card'
+        }`}
         onClick={() => {
           if (isOwner || isApprover || isAssigneeOnly)
             navigate(`/projects/${project.id}`)
         }}
       >
-        <CardContent className='p-3 flex flex-col gap-3'>
+        <CardContent className='p-3.5 flex flex-col gap-3'>
           {/* Header */}
           <div className='flex justify-between items-start gap-2'>
-            <h3 className='font-semibold text-sm leading-snug line-clamp-2'>
+            <h3 className='font-semibold text-sm leading-snug line-clamp-2 text-foreground group-hover:text-primary transition-colors'>
               {project.name}
             </h3>
-            {/* {(isOwner || isApprover) && ( */}
             <button
               onPointerDown={(e) => e.stopPropagation()}
               onClick={(e) => {
                 e.stopPropagation()
                 onEdit(project)
               }}
-              className='cursor-pointer transition-colors shrink-0 p-0.5 rounded '
+              className='cursor-pointer transition-all shrink-0 p-1 rounded-full text-muted-foreground hover:text-foreground hover:bg-muted/80'
+              title='Edit Project'
             >
               <Pencil className='w-3.5 h-3.5' />
             </button>
-            {/* )} */}
           </div>
 
-          {/* Metadata */}
-          <div className='flex flex-col gap-1.5 text-xs'>
-            <div className='flex items-center justify-between'>
-              <span className='font-medium'>Initiator</span>
+          {/* Metadata Grid */}
+          <div className='flex flex-col gap-1.5 text-xs text-muted-foreground bg-muted/30 p-2.5 rounded-md border border-muted/50'>
+            <div className='flex items-center justify-between gap-1'>
+              <span className='flex items-center gap-1.5 text-[11px] font-medium text-zinc-500'>
+                <User className='w-3 h-3 text-zinc-400 shrink-0' /> Initiator
+              </span>
               <span
-                className='font-medium  truncate max-w-[140px]'
+                className='font-semibold text-[11px] text-foreground truncate max-w-[130px]'
                 title={USERS_MAP[project.created_by] || project.created_by}
               >
                 {USERS_MAP[project.created_by] || 'Unknown'}
               </span>
             </div>
-            <div className='flex items-center justify-between'>
-              <span className='font-medium'>Actioner</span>
+            <div className='flex items-center justify-between gap-1'>
+              <span className='flex items-center gap-1.5 text-[11px] font-medium text-zinc-500'>
+                <Users className='w-3 h-3 text-zinc-400 shrink-0' /> Actioner
+              </span>
               <span
-                className='font-medium  truncate max-w-[140px]'
+                className='font-semibold text-[11px] text-foreground truncate max-w-[130px]'
                 title={actionerNames}
               >
                 {actionerNames || '-'}
               </span>
             </div>
-            <div className='flex items-center justify-between'>
-              <span className='font-medium'>Timeline</span>
-              <span className='font-medium '>
-                {project.start_date || '-'} → {project.end_date || '-'}
-              </span>
-            </div>
+            {project.start_date || project.end_date ? (
+              <div className='flex items-center justify-between gap-1 pt-0.5 border-t border-muted/40'>
+                <span className='flex items-center gap-1.5 text-[10px] font-medium text-zinc-400'>
+                  <Calendar className='w-3 h-3 text-zinc-400 shrink-0' /> Schedule
+                </span>
+                <span className='font-mono text-[10px] text-foreground/80 font-medium truncate max-w-[150px]'>
+                  {project.start_date || '-'} → {project.end_date || '-'}
+                </span>
+              </div>
+            ) : null}
           </div>
 
           {/* Footer Badges */}
-          <div className='flex items-center justify-between pt-2.5 border-t border-zinc-100'>
-            <div className='flex items-center gap-1.5'>
-              <span className='text-[10px] uppercase tracking-wide font-bold px-1.5 py-0.5 rounded bg-zinc-100 text-zinc-600'>
-                {project.project_type || '-'}
-              </span>
-              <span className='text-[10px] uppercase tracking-wide font-bold px-1.5 py-0.5 rounded bg-blue-50 text-blue-700 border border-blue-100'>
-                {project.priority || '-'}
-              </span>
+          <div className='flex items-center justify-between pt-1 gap-1.5 flex-wrap'>
+            <div className='flex items-center gap-1.5 flex-wrap'>
+              {project.project_module && (
+                <span className='text-[10px] uppercase tracking-wider font-bold px-2 py-0.5 rounded-full bg-indigo-50 text-indigo-700 border border-indigo-200/80 shadow-2xs'>
+                  {project.project_module}
+                </span>
+              )}
+              {project.project_type && (
+                <span className='text-[10px] uppercase tracking-wider font-semibold px-2 py-0.5 rounded-full bg-zinc-100 text-zinc-600 border border-zinc-200'>
+                  {project.project_type}
+                </span>
+              )}
+              {project.priority && (
+                <span className={`text-[10px] uppercase tracking-wider font-bold px-2 py-0.5 rounded-full border shadow-2xs ${accent.badge}`}>
+                  {project.priority}
+                </span>
+              )}
             </div>
             {overdue && (
-              <span className='text-[10px] font-bold px-1.5 py-0.5 rounded bg-red-50 text-red-600 border border-red-100'>
-                OVERDUE
+              <span className='text-[10px] font-bold px-2 py-0.5 rounded-full bg-rose-50 text-rose-600 border border-rose-200 animate-pulse flex items-center gap-1'>
+                <AlertCircle className='w-3 h-3' /> OVERDUE
               </span>
             )}
           </div>
@@ -243,7 +295,7 @@ function DraggableProjectCard({
           {isApprover &&
             (project.status === 'pending_for_approve' ||
               project.status === 'pending_for_review') && (
-              <div className='flex gap-2 pt-2'>
+              <div className='flex gap-2 pt-2 border-t border-muted/60'>
                 <button
                   onPointerDown={(e) => e.stopPropagation()}
                   onClick={(e) =>
@@ -254,16 +306,16 @@ function DraggableProjectCard({
                         : 'completed',
                     )
                   }
-                  className='flex-1 text-[11px] font-bold py-1.5 rounded bg-emerald-50 text-emerald-700 hover:bg-emerald-100 border border-emerald-200 transition-colors'
+                  className='flex-1 text-[11px] font-bold py-1.5 rounded-md bg-emerald-600 text-white hover:bg-emerald-700 shadow-2xs flex items-center justify-center gap-1 transition-all'
                 >
-                  Approve
+                  <CheckCircle2 className='w-3.5 h-3.5' /> Approve
                 </button>
                 <button
                   onPointerDown={(e) => e.stopPropagation()}
                   onClick={(e) => handleAction(e, 'rejected')}
-                  className='flex-1 text-[11px] font-bold py-1.5 rounded bg-red-50 text-red-700 hover:bg-red-100 border border-red-200 transition-colors'
+                  className='flex-1 text-[11px] font-bold py-1.5 rounded-md bg-rose-50 text-rose-700 hover:bg-rose-100 border border-rose-200 flex items-center justify-center gap-1 transition-all'
                 >
-                  Reject
+                  <XCircle className='w-3.5 h-3.5' /> Reject
                 </button>
               </div>
             )}
@@ -362,6 +414,8 @@ export default function ProjectKanban({
       if (filters.end_date) params.append('end_date', filters.end_date)
       if (filters.project_type !== 'all')
         params.append('project_type', filters.project_type)
+      if (filters.project_module && filters.project_module !== 'all')
+        params.append('project_module', filters.project_module)
       if (filters.status !== 'all') params.append('status', filters.status)
 
       const res = await fetch(

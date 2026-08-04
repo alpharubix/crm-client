@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
-import { ArrowLeft, LinkIcon, Pencil } from 'lucide-react'
+import { ArrowLeft, LinkIcon, Pencil, Clock, Star, User } from 'lucide-react'
 import {
   DndContext,
   DragOverlay,
@@ -31,6 +31,8 @@ interface Task {
   status: TaskStatus
   assignee: string
   assignee_id?: string
+  expected_completion_date?: string
+  task_rating?: number
   projectId: string
 }
 
@@ -51,18 +53,30 @@ const COLUMN_STYLES: Record<TaskStatus, { header: string; dot: string }> = {
   },
 }
 
-const PRIORITY_STYLES: Record<string, string> = {
-  Low: 'text-emerald-600',
-  Medium: 'text-amber-600',
-  High: 'text-orange-600',
-  Critical: 'text-red-600',
+const PRIORITY_STYLES: Record<string, { badge: string; dot: string }> = {
+  Low: {
+    badge: 'bg-emerald-50 text-emerald-700 border-emerald-200',
+    dot: 'bg-emerald-500',
+  },
+  Medium: {
+    badge: 'bg-amber-50 text-amber-700 border-amber-200',
+    dot: 'bg-amber-500',
+  },
+  High: {
+    badge: 'bg-orange-50 text-orange-700 border-orange-200',
+    dot: 'bg-orange-500',
+  },
+  Critical: {
+    badge: 'bg-rose-50 text-rose-700 border-rose-200',
+    dot: 'bg-rose-500',
+  },
 }
 
 const TYPE_STYLES: Record<string, string> = {
-  Feature: 'bg-blue-50 text-blue-600',
-  Bug: 'bg-red-50 text-red-600',
-  Enhancement: 'bg-violet-50 text-violet-600',
-  Research: 'bg-amber-50 text-amber-600',
+  Feature: 'bg-sky-50 text-sky-700 border-sky-200',
+  Bug: 'bg-rose-50 text-rose-700 border-rose-200',
+  Enhancement: 'bg-violet-50 text-violet-700 border-violet-200',
+  Research: 'bg-amber-50 text-amber-700 border-amber-200',
 }
 
 // ── TaskCard ───────────────────────────────────────────────────────────────
@@ -76,33 +90,74 @@ function TaskCard({
   isDragging?: boolean
   onClick?: () => void
 }) {
+  const prioKey =
+    task.priority ? task.priority.charAt(0).toUpperCase() + task.priority.slice(1).toLowerCase() : 'Low'
+  const prioConfig = PRIORITY_STYLES[prioKey] || PRIORITY_STYLES.Low
+  const typeFormatted =
+    task.type ? task.type.charAt(0).toUpperCase() + task.type.slice(1).toLowerCase() : 'Task'
+
   return (
     <div
-      className={` border rounded-md p-3 transition-shadow
-      ${isDragging ? 'shadow-lg  opacity-90 rotate-1' : 'hover:shadow-sm cursor-grab'}`}
+      className={`rounded-xl p-3.5 bg-card border border-border/80 transition-all duration-200
+      ${
+        isDragging
+          ? 'shadow-xl opacity-90 rotate-1 border-primary/50'
+          : 'hover:shadow-md hover:border-zinc-300 cursor-grab active:cursor-grabbing'
+      }`}
     >
-      <p className='text-sm font-medium leading-snug mb-2'>{task.title}</p>
-      <div className='flex items-center gap-1.5 flex-wrap'>
+      <p className='text-sm font-semibold text-foreground leading-snug mb-2.5 line-clamp-3'>
+        {task.title}
+      </p>
+
+      {/* Badges Bar */}
+      <div className='flex items-center gap-1.5 flex-wrap mb-2.5'>
         <span
-          className={`text-[10px] px-1.5 py-0.5 rounded font-medium ${TYPE_STYLES[task.type] ?? 'bg-zinc-100 text-zinc-500'}`}
+          className={`text-[10px] uppercase tracking-wider font-bold px-2 py-0.5 rounded-full border shadow-2xs ${TYPE_STYLES[typeFormatted] ?? 'bg-zinc-100 text-zinc-600 border-zinc-200'}`}
         >
-          {task.type}
+          {typeFormatted}
         </span>
+
         <span
-          className={`text-[10px] font-medium ${PRIORITY_STYLES[task.priority]}`}
+          className={`text-[10px] uppercase tracking-wider font-bold px-2 py-0.5 rounded-full border shadow-2xs flex items-center gap-1 ${prioConfig.badge}`}
         >
+          <span className={`w-1.5 h-1.5 rounded-full ${prioConfig.dot}`} />
           {task.priority}
         </span>
+
+        {task.task_rating && (
+          <span className='text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-50 text-amber-700 border border-amber-200/90 flex items-center gap-1 shadow-2xs'>
+            <Star className='w-3 h-3 fill-amber-400 text-amber-500' />
+            {task.task_rating}/5
+          </span>
+        )}
       </div>
-      <div className='flex items-center justify-between mt-2'>
-        <p className='text-[11px] text-zinc-400'>{task.assignee}</p>
+
+      {/* Expected Completion Date */}
+      {task.expected_completion_date && (
+        <div className='flex items-center gap-1 text-[11px] text-muted-foreground font-medium my-2 bg-muted/40 px-2 py-1 rounded-md border border-muted/60'>
+          <Clock className='w-3 h-3 text-zinc-400 shrink-0' />
+          <span className='truncate'>Exp: {task.expected_completion_date}</span>
+        </div>
+      )}
+
+      {/* Footer Assignee */}
+      <div className='flex items-center justify-between pt-2 border-t border-border/50 mt-1'>
+        <div className='flex items-center gap-1.5 min-w-0'>
+          <div className='w-5 h-5 rounded-full bg-zinc-200 text-zinc-700 font-bold flex items-center justify-center text-[10px] shrink-0 uppercase'>
+            {task.assignee ? task.assignee[0] : '?'}
+          </div>
+          <p className='text-[11px] font-medium text-muted-foreground truncate max-w-[130px]'>
+            {task.assignee || 'Unassigned'}
+          </p>
+        </div>
         {onClick && (
           <button
             onPointerDown={(e) => e.stopPropagation()}
             onClick={onClick}
-            className='text-zinc-300 hover:text-zinc-500 transition-colors'
+            className='cursor-pointer p-1 rounded-full text-muted-foreground hover:text-foreground hover:bg-muted transition-all shrink-0'
+            title='Edit Task'
           >
-            <Pencil size={11} />
+            <Pencil size={12} />
           </button>
         )}
       </div>
