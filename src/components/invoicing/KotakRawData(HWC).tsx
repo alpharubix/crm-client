@@ -193,7 +193,6 @@ export function KotakRawDataHWC() {
 
       const params = new URLSearchParams();
       params.append("page", String(pageNumber));
-      params.append("_t", String(Date.now()));
 
       if (subTab === "transaction") {
         if (filterDealerName) params.append("dealer_name", filterDealerName);

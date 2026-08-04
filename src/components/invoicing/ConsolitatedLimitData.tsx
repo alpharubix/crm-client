@@ -72,7 +72,7 @@ export function ConsolitatedLimitData() {
   const [filterAnchorId, setFilterAnchorId] = useState("");
   const [filterBillingStatus, setFilterBillingStatus] = useState("");
 
-  // File upload state for Distributor Master import fallback
+  // File upload state for Consolidated Limit Report import
   const [uploadLoading, setUploadLoading] = useState(false);
   const [showSuccessModal, setShowSuccessModal] = useState(false);
   const [uploadResult, setUploadResult] = useState<{
@@ -89,7 +89,6 @@ export function ConsolitatedLimitData() {
 
       const params = new URLSearchParams();
       params.append("page", String(pageNumber));
-      params.append("_t", String(Date.now()));
       if (filterCompanyName) params.append("company_name", filterCompanyName);
       if (filterDistributorCode) params.append("distributor_code", filterDistributorCode);
       if (filterState) params.append("state", filterState);
@@ -159,7 +158,7 @@ export function ConsolitatedLimitData() {
       const formData = new FormData();
       formData.append("file", file);
 
-      const url = `${ENV.VITE_BACKEND_BASE_URL}/invoice/upload-distributor-master`;
+      const url = `${ENV.VITE_BACKEND_BASE_URL}/invoice/consolidated-limit-report`;
 
       const res = await fetch(url, {
         method: "POST",
@@ -451,7 +450,7 @@ export function ConsolitatedLimitData() {
         <div className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-black/40 backdrop-blur-xs animate-in fade-in duration-200">
           <div className="bg-white rounded-xl shadow-lg border border-slate-200 p-6 flex flex-col items-center gap-4">
             <Loader2 className="h-8 w-8 animate-spin text-blue-600" />
-            <span className="text-sm font-semibold text-slate-700">Uploading and processing distributor master file...</span>
+            <span className="text-sm font-semibold text-slate-700">Uploading and processing consolidated limit report file...</span>
           </div>
         </div>
       )}

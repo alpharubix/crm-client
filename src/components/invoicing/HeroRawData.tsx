@@ -180,7 +180,6 @@ export function HeroRawData() {
 
       const params = new URLSearchParams();
       params.append("page", String(pageNumber));
-      params.append("_t", String(Date.now()));
 
       if (subTab === "transaction") {
         if (filterClientName) params.append("client_name", filterClientName);

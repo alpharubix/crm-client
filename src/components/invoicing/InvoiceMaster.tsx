@@ -145,7 +145,6 @@ export function InvoiceMaster() {
 
       const params = new URLSearchParams();
       params.append("page", String(pageNumber));
-      params.append("_t", String(Date.now()));
       if (filterAnchor) params.append("anchor", filterAnchor);
       if (filterProcessedBy) params.append("processed_by", filterProcessedBy);
       if (filterWorkingDate && isValidDDMMYYYY(filterWorkingDate)) params.append("working_date", filterWorkingDate.replace(/\//g, "-"));
