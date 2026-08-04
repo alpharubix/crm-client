@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import {
   Table,
   TableBody,
@@ -187,19 +187,33 @@ export function DistributorMaster({ forcedTab, allowedTabs }: DistributorMasterP
     }
   }, [forcedTab]);
 
-  // Reset to page 1 when filters change
-  useEffect(() => {
-    setPage(1);
-  }, [
+  const lastFiltersRef = useRef({
     filterAnchor,
     filterRegion,
     filterState,
     filterDivision,
     filterDistType,
-   
-  ]);
+  });
 
   useEffect(() => {
+    const currentFilters = {
+      filterAnchor,
+      filterRegion,
+      filterState,
+      filterDivision,
+      filterDistType,
+    };
+
+    const filtersChanged = JSON.stringify(lastFiltersRef.current) !== JSON.stringify(currentFilters);
+
+    if (filtersChanged) {
+      lastFiltersRef.current = currentFilters;
+      if (page !== 1) {
+        setPage(1);
+        return;
+      }
+    }
+
     fetchDistributors(page, !initialFetched);
     if (!initialFetched) {
       setInitialFetched(true);
@@ -211,7 +225,6 @@ export function DistributorMaster({ forcedTab, allowedTabs }: DistributorMasterP
     filterState,
     filterDivision,
     filterDistType,
-    
   ]);
 
   async function performUpload(file: File) {
@@ -704,8 +717,11 @@ export function DistributorMaster({ forcedTab, allowedTabs }: DistributorMasterP
               onClick={() => {
                 setShowSuccessModal(false);
                 if (uploadResult.failedCount === 0) {
-                  setPage(1);
-                  fetchDistributors(1);
+                  if (page === 1) {
+                    fetchDistributors(1);
+                  } else {
+                    setPage(1);
+                  }
                   toast.success(uploadResult.message);
                 } else {
                   toast.error("Upload has validation errors. Correct them and try again.");

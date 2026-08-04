@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Badge } from "@/components/ui/badge";
 import {
   Table,
@@ -158,7 +158,7 @@ export function InvoiceMaster() {
       if (filterStatusReason) params.append("status_reason", filterStatusReason);
 
       const res = await fetch(
-        `${ENV.VITE_BACKEND_BASE_URL}/invoice?${params.toString()}`,
+        `${ENV.VITE_BACKEND_BASE_URL}/invoice/?${params.toString()}`,
         {
           credentials: "include",
           cache: "no-store",
@@ -182,10 +182,7 @@ export function InvoiceMaster() {
     }
   }
 
-  // Reset to page 1 when filters change
-  useEffect(() => {
-    setPage(1);
-  }, [
+  const lastFiltersRef = useRef({
     filterAnchor,
     filterProcessedBy,
     filterWorkingDate,
@@ -197,9 +194,33 @@ export function InvoiceMaster() {
     filterUtr,
     filterStatus,
     filterStatusReason
-  ]);
+  });
 
   useEffect(() => {
+    const currentFilters = {
+      filterAnchor,
+      filterProcessedBy,
+      filterWorkingDate,
+      filterLenderName,
+      filterDistributorName,
+      filterDistributorCode,
+      filterInvoiceNo,
+      filterDisbursementDate,
+      filterUtr,
+      filterStatus,
+      filterStatusReason
+    };
+
+    const filtersChanged = JSON.stringify(lastFiltersRef.current) !== JSON.stringify(currentFilters);
+
+    if (filtersChanged) {
+      lastFiltersRef.current = currentFilters;
+      if (page !== 1) {
+        setPage(1);
+        return;
+      }
+    }
+
     fetchInvoices(page, !initialFetched);
     if (!initialFetched) {
       setInitialFetched(true);
@@ -298,7 +319,7 @@ export function InvoiceMaster() {
       if (filterStatusReason) params.append("status_reason", filterStatusReason);
       params.append("is_export", "true");
 
-      const url = `${ENV.VITE_BACKEND_BASE_URL}/invoice?${params.toString()}`;
+      const url = `${ENV.VITE_BACKEND_BASE_URL}/invoice/?${params.toString()}`;
       const res = await fetch(url, { credentials: "include" });
       if (!res.ok) throw new Error("Failed to fetch export data");
       const csvText = await res.text();
@@ -676,8 +697,11 @@ export function InvoiceMaster() {
             <button
               onClick={() => {
                 setShowSuccessModal(false);
-                setPage(1);
-                fetchInvoices(1);
+                if (page === 1) {
+                  fetchInvoices(1);
+                } else {
+                  setPage(1);
+                }
                 toast.success(uploadResult.message);
               }}
               className="w-full bg-slate-900 text-white rounded-lg py-2.5 font-semibold text-sm hover:bg-slate-800 transition-colors shadow-sm focus:outline-none cursor-pointer"

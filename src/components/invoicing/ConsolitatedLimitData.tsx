@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import {
   Table,
   TableBody,
@@ -139,12 +139,35 @@ export function ConsolitatedLimitData() {
     }
   }
 
-  // Reset to page 1 when filters change
-  useEffect(() => {
-    setPage(1);
-  }, [filterCompanyName, filterDistributorCode, filterState, filterLender, filterAnchorId, filterBillingStatus]);
+  const lastFiltersRef = useRef({
+    filterCompanyName,
+    filterDistributorCode,
+    filterState,
+    filterLender,
+    filterAnchorId,
+    filterBillingStatus,
+  });
 
   useEffect(() => {
+    const currentFilters = {
+      filterCompanyName,
+      filterDistributorCode,
+      filterState,
+      filterLender,
+      filterAnchorId,
+      filterBillingStatus,
+    };
+
+    const filtersChanged = JSON.stringify(lastFiltersRef.current) !== JSON.stringify(currentFilters);
+
+    if (filtersChanged) {
+      lastFiltersRef.current = currentFilters;
+      if (page !== 1) {
+        setPage(1);
+        return;
+      }
+    }
+
     fetchConsolidatedLimits(page, !initialFetched);
     if (!initialFetched) {
       setInitialFetched(true);
@@ -528,8 +551,11 @@ export function ConsolitatedLimitData() {
               onClick={() => {
                 setShowSuccessModal(false);
                 if (uploadResult.failedCount === 0) {
-                  setPage(1);
-                  fetchConsolidatedLimits(1, false);
+                  if (page === 1) {
+                    fetchConsolidatedLimits(1, false);
+                  } else {
+                    setPage(1);
+                  }
                   toast.success(uploadResult.message);
                 } else {
                   toast.error("Upload has validation errors. Correct them and try again.");
