@@ -70,7 +70,7 @@ function formatUser(userId: any): string {
 }
 
 function mapBackendToDistributor(d: any): Distributor {
-  return {
+  const base = {
     id: d._id || d.id || d.distributor_code || crypto.randomUUID(),
     anchor: d.anchor || "",
     dataReceived: d.data_received || "",
@@ -90,23 +90,23 @@ function mapBackendToDistributor(d: any): Distributor {
     phoneNo: d.phone_number || "",
     gstNo: d.gst_number || "",
     panNo: d.pan_number || "",
-    salesApr25: parseNumber(d.salesApr25 ?? d["Sales Apr'25"] ?? d["Sales - Apr'25"] ?? d["sales - apr'25"] ?? d["Sales-Apr25"] ?? 0),
-    salesMonth2: parseNumber(d.salesMonth2 ?? d["Sales - Month2"] ?? d["sales - month2"] ?? d["Sales-Month2"] ?? 0),
-    salesMonth3: parseNumber(d.salesMonth3 ?? d["Sales - Month3"] ?? d["sales - month3"] ?? d["Sales-Month3"] ?? 0),
-    salesMonth4: parseNumber(d.salesMonth4 ?? d["Sales - Month4"] ?? d["sales - month4"] ?? d["Sales-Month4"] ?? 0),
-    salesMonth5: parseNumber(d.salesMonth5 ?? d["Sales - Month5"] ?? d["sales - month5"] ?? d["Sales-Month5"] ?? 0),
-    salesMonth6: parseNumber(d.salesMonth6 ?? d["Sales - Month6"] ?? d["sales - month6"] ?? d["Sales-Month6"] ?? 0),
-    salesMonth7: parseNumber(d.salesMonth7 ?? d["Sales - Month7"] ?? d["sales - month7"] ?? d["Sales-Month7"] ?? 0),
-    salesMonth8: parseNumber(d.salesMonth8 ?? d["Sales - Month8"] ?? d["sales - month8"] ?? d["Sales-Month8"] ?? 0),
-    salesMonth9: parseNumber(d.salesMonth9 ?? d["Sales - Month9"] ?? d["sales - month9"] ?? d["Sales-Month9"] ?? 0),
-    salesMonth10: parseNumber(d.salesMonth10 ?? d["Sales - Month10"] ?? d["sales - month10"] ?? d["Sales-Month10"] ?? 0),
-    salesMonth11: parseNumber(d.salesMonth11 ?? d["Sales - Month11"] ?? d["sales - month11"] ?? d["Sales-Month11"] ?? 0),
-    salesMonth12: parseNumber(d.salesMonth12 ?? d["Sales - Month12"] ?? d["sales - month12"] ?? d["Sales-Month12"] ?? 0),
     createdAt: d.created_at || "",
     updatedAt: d.updated_at || "",
     createdBy: d.created_by || "",
     updatedBy: d.updated_by || "",
   };
+
+  const salesFields: Record<string, number> = {};
+  Object.keys(d).forEach((key) => {
+    if (key.toLowerCase().startsWith("sales")) {
+      salesFields[key] = parseNumber(d[key]);
+    }
+  });
+
+  return {
+    ...base,
+    ...salesFields,
+  } as any;
 }
 
 export function DistributorMaster({ forcedTab, allowedTabs }: DistributorMasterProps) {
@@ -142,6 +142,47 @@ export function DistributorMaster({ forcedTab, allowedTabs }: DistributorMasterP
   } | null>(null);
 
   const [initialFetched, setInitialFetched] = useState(false);
+
+  // Define sorting helper for sales month keys (chronological & numerical order)
+  const monthsOrder = ["jan", "feb", "mar", "apr", "may", "jun", "jul", "aug", "sep", "oct", "nov", "dec"];
+  const sortSalesKeys = (keys: string[]) => {
+    return [...keys].sort((a, b) => {
+      const getMonthAndYear = (key: string) => {
+        const lower = key.toLowerCase();
+        for (let i = 0; i < monthsOrder.length; i++) {
+          if (lower.includes(monthsOrder[i])) {
+            const yearMatch = lower.match(/\d+/);
+            const year = yearMatch ? parseInt(yearMatch[0], 10) : 0;
+            return { monthIndex: i, year };
+          }
+        }
+        const monthNumMatch = lower.match(/month\s*(\d+)/);
+        if (monthNumMatch) {
+          return { monthIndex: parseInt(monthNumMatch[1], 10), year: 0 };
+        }
+        return { monthIndex: 999, year: 999 };
+      };
+
+      const infoA = getMonthAndYear(a);
+      const infoB = getMonthAndYear(b);
+
+      if (infoA.year !== infoB.year) {
+        return infoA.year - infoB.year;
+      }
+      return infoA.monthIndex - infoB.monthIndex;
+    });
+  };
+
+  // Dynamically extract all sales keys present in the loaded rows and sort them
+  const salesKeys = sortSalesKeys(
+    Array.from(
+      new Set(
+        rows.flatMap((row) =>
+          Object.keys(row).filter((key) => key.toLowerCase().startsWith("sales"))
+        )
+      )
+    )
+  );
 
   async function fetchDistributors(pageNumber: number, silent = false) {
     try {
@@ -247,14 +288,18 @@ export function DistributorMaster({ forcedTab, allowedTabs }: DistributorMasterP
 
       if (!res.ok) {
         let errDetails = "Server responded with an error status.";
+        let backendMessage = data.message || data.error || (typeof data.detail === "string" ? data.detail : "") || "Failed to upload file";
+
         if (data.data && Array.isArray(data.data)) {
           errDetails = "Mismatched headers: " + data.data.join(", ");
         } else if (data.error) {
           errDetails = data.error;
+        } else if (data.detail) {
+          errDetails = typeof data.detail === "string" ? data.detail : JSON.stringify(data.detail);
         }
 
         setUploadResult({
-          message: data.message || "Failed to upload file",
+          message: backendMessage,
           created: 0,
           updated: 0,
           failedCount: 1,
@@ -271,7 +316,7 @@ export function DistributorMaster({ forcedTab, allowedTabs }: DistributorMasterP
 
       setUploadResult({
         message: data.message || "Upload Complete",
-        created: data.total_rows_craeted || 0,
+        created: data.total_rows_created ?? data.total_rows_craeted ?? 0,
         updated: data.total_rows_updated || 0,
         failedCount: data.failed_rows?.length || 0,
         failedRows: data.failed_rows || [],
@@ -544,13 +589,15 @@ export function DistributorMaster({ forcedTab, allowedTabs }: DistributorMasterP
                 <TableHead>Distributor Code</TableHead>
                 <TableHead>Distributor Name</TableHead>
                 <TableHead>Anchor</TableHead>
-                <TableHead className="text-right">Sales Apr'25</TableHead>
+                {salesKeys.map((key) => (
+                  <TableHead key={key} className="text-right">{key}</TableHead>
+                ))}
               </TableRow>
             </TableHeader>
             <TableBody>
               {loading || !initialFetched ? (
                 <TableRow>
-                  <TableCell colSpan={4} className="text-center py-12">
+                  <TableCell colSpan={3 + salesKeys.length} className="text-center py-12">
                     <div className="flex items-center justify-center gap-2 text-slate-500">
                       <Loader2 className="h-5 w-5 animate-spin" />
                       <span>Loading sales info...</span>
@@ -559,17 +606,21 @@ export function DistributorMaster({ forcedTab, allowedTabs }: DistributorMasterP
                 </TableRow>
               ) : filteredRows.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={4} className="text-center text-muted-foreground py-8">
+                  <TableCell colSpan={3 + salesKeys.length} className="text-center text-muted-foreground py-8">
                     No distributors yet matching filters.
                   </TableCell>
                 </TableRow>
               ) : (
-                filteredRows.map((row) => (
+                filteredRows.map((row: any) => (
                   <TableRow key={row.id}>
                     <TableCell className="font-medium text-slate-800">{row.distributorCode}</TableCell>
                     <TableCell className="font-semibold">{row.name}</TableCell>
                     <TableCell>{row.anchor || "-"}</TableCell>
-                    <TableCell className="text-right font-medium text-blue-600">{formatCurrency(row.salesApr25)}</TableCell>
+                    {salesKeys.map((key) => (
+                      <TableCell key={key} className="text-right font-medium text-blue-600">
+                        {formatCurrency(row[key] || 0)}
+                      </TableCell>
+                    ))}
                   </TableRow>
                 ))
               )}
@@ -654,9 +705,7 @@ export function DistributorMaster({ forcedTab, allowedTabs }: DistributorMasterP
                   </svg>
                 </div>
                 <h3 className="text-lg font-bold text-slate-900">
-                  {uploadResult.created === 0 && uploadResult.updated === 0
-                    ? uploadResult.message
-                    : "Upload Completed with Errors"}
+                  {uploadResult.message}
                 </h3>
               </div>
             ) : (
@@ -716,15 +765,17 @@ export function DistributorMaster({ forcedTab, allowedTabs }: DistributorMasterP
             <button
               onClick={() => {
                 setShowSuccessModal(false);
+                // Always refresh list to show newly created/updated rows
+                if (page === 1) {
+                  fetchDistributors(1);
+                } else {
+                  setPage(1);
+                }
+                
                 if (uploadResult.failedCount === 0) {
-                  if (page === 1) {
-                    fetchDistributors(1);
-                  } else {
-                    setPage(1);
-                  }
                   toast.success(uploadResult.message);
                 } else {
-                  toast.error("Upload has validation errors. Correct them and try again.");
+                  toast.error(uploadResult.message || "Upload has validation errors. Correct them and try again.");
                 }
               }}
               className="w-full bg-slate-900 text-white rounded-lg py-2.5 font-semibold text-sm hover:bg-slate-800 transition-colors shadow-sm focus:outline-none cursor-pointer"
