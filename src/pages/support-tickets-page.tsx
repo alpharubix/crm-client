@@ -64,6 +64,8 @@ interface SupportTicket {
   status: string
   created_at: string
   user_id: number
+  user_name?: string
+  user_email?: string
 }
 
 const SERVICES = [
@@ -221,7 +223,8 @@ export default function SupportTicketsPage() {
       const matchesSearch =
         t.ticket_id.toLowerCase().includes(searchQuery.toLowerCase()) ||
         t.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        t.service.toLowerCase().includes(searchQuery.toLowerCase())
+        t.service.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        (t.user_name && t.user_name.toLowerCase().includes(searchQuery.toLowerCase()))
 
       const matchesStatus = statusFilter === 'ALL' || t.status.toUpperCase() === statusFilter.toUpperCase()
       const matchesPriority = priorityFilter === 'ALL' || t.priority.toLowerCase() === priorityFilter.toLowerCase()
@@ -616,7 +619,7 @@ export default function SupportTicketsPage() {
                                 {t.title}
                               </span>
                               <span className="text-xs text-slate-400 block mt-0.5">
-                                {t.created_at ? t.created_at.split(' ')[0] : 'N/A'}
+                                {t.created_at ? t.created_at.split(' ')[0] : 'N/A'} {t.user_name ? `• Raised by: ${t.user_name}` : ''}
                               </span>
                             </TableCell>
                             <TableCell className="text-slate-600 text-xs py-3.5 font-medium">
@@ -688,7 +691,7 @@ export default function SupportTicketsPage() {
                 {selectedTicket.title}
               </DialogTitle>
               <DialogDescription className="text-xs text-slate-500">
-                Created on {selectedTicket.created_at || 'N/A'} • User ID: {selectedTicket.user_id}
+                Created on {selectedTicket.created_at || 'N/A'} • Raised by: <span className="font-semibold text-slate-700">{selectedTicket.user_name || `User #${selectedTicket.user_id}`}</span> {selectedTicket.user_email ? `(${selectedTicket.user_email})` : ''}
               </DialogDescription>
             </DialogHeader>
 

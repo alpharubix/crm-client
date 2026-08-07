@@ -97,6 +97,7 @@ export function ConsolitatedLimitData() {
       if (filterBillingStatus) params.append("billing_status", filterBillingStatus);
 
       const url = `${ENV.VITE_BACKEND_BASE_URL}/invoice/consolidated-limit-report?${params.toString()}`;
+      console.log({url});
       const res = await fetch(url, { credentials: "include" });
       if (!res.ok) throw new Error("Failed to fetch consolidated limits list");
       const json = await res.json();
@@ -182,6 +183,7 @@ export function ConsolitatedLimitData() {
       formData.append("file", file);
 
       const url = `${ENV.VITE_BACKEND_BASE_URL}/invoice/consolidated-limit-report`;
+      console.log({url})
 
       const res = await fetch(url, {
         method: "POST",
@@ -260,6 +262,7 @@ export function ConsolitatedLimitData() {
       params.append("is_export", "true");
 
       const url = `${ENV.VITE_BACKEND_BASE_URL}/invoice/consolidated-limit-report?${params.toString()}`;
+      console.log({url})
       const res = await fetch(url, { credentials: "include" });
       if (!res.ok) throw new Error("Failed to fetch export data");
       const csvText = await res.text();
