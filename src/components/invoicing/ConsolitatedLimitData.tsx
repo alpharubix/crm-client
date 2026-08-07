@@ -101,7 +101,7 @@ export function ConsolitatedLimitData() {
       if (!res.ok) throw new Error("Failed to fetch consolidated limits list");
       const json = await res.json();
       
-      const distributors = json.data?.consolidated_limits || json.data?.distributors || [];
+      const distributors = json.data?.consolidated_limit_report || json.data?.consolidated_limits || json.data?.distributors || [];
       const pg = json.data?.page_info;
 
       setTotalRecords(pg?.total_records || 0);
@@ -126,8 +126,8 @@ export function ConsolitatedLimitData() {
         fundingType: d.distribution_type || d.funding_type || d.fundingType || "-",
         billingStatus: d.billing_status || d.billingStatus || "-",
         anchorId: d.anchor || d.anchor_id || d.anchorId || "-",
-        distributorPhone: d.mobile_number || d.phone_number || d.distributorPhone || "-",
-        distributorEmail: d.email || d.distributorEmail || "-",
+        distributorPhone: d.mobile_number || d.phone_number || d.distributor_phone || d.distributorPhone || "-",
+        distributorEmail: d.email || d.distributor_email || d.distributorEmail || "-",
       }));
 
       setRows(mapped);
