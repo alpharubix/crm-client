@@ -62,9 +62,9 @@ export default function UpdateAccountTaskModal({
   const notesData = (taskData as any)?.notes || []
 
   useEffect(() => {
-    if (taskData) {
-      setTaskType(taskData.task_type)
-      setTaskStatus(taskData.task_status)
+    if (taskData && isOpen) {
+      setTaskType(taskData.task_type as TaskType)
+      setTaskStatus(taskData.task_status as TaskStatus)
       setTaskDescription(taskData.task_description || '')
 
       if (taskData.task_assigned_date_time) {
@@ -81,7 +81,7 @@ export default function UpdateAccountTaskModal({
         setTaskDueDateTime('')
       }
     }
-  }, [taskData])
+  }, [taskData, isOpen, taskId])
 
   const updateMutation = useMutation({
     mutationFn: async () => {
@@ -206,7 +206,11 @@ export default function UpdateAccountTaskModal({
 
                 <div className='grid grid-cols-4 items-center gap-4'>
                   <Label className='text-right font-medium'>Task Type *</Label>
-                  <Select value={taskType} onValueChange={(val: TaskType) => setTaskType(val)}>
+                  <Select
+                    key={`task-type-${taskId}-${taskType}`}
+                    value={taskType}
+                    onValueChange={(val: TaskType) => setTaskType(val)}
+                  >
                     <SelectTrigger className='col-span-3'>
                       <SelectValue placeholder='Select Task Type' />
                     </SelectTrigger>
@@ -221,7 +225,11 @@ export default function UpdateAccountTaskModal({
 
                 <div className='grid grid-cols-4 items-center gap-4'>
                   <Label className='text-right font-medium'>Task Status *</Label>
-                  <Select value={taskStatus} onValueChange={(val: TaskStatus) => setTaskStatus(val)}>
+                  <Select
+                    key={`task-status-${taskId}-${taskStatus}`}
+                    value={taskStatus}
+                    onValueChange={(val: TaskStatus) => setTaskStatus(val)}
+                  >
                     <SelectTrigger className='col-span-3'>
                       <SelectValue placeholder='Select Task Status' />
                     </SelectTrigger>

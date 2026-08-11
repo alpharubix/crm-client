@@ -24,9 +24,11 @@ import {
 } from '@/components/ui/select'
 import {
   useQuery,
+  useMutation,
   useQueryClient,
   keepPreviousData,
 } from '@tanstack/react-query'
+import { toast } from 'sonner'
 import { Skeleton } from '@/components/ui/skeleton'
 
 import { Spinner } from '@/components/ui/spinner'
@@ -39,6 +41,7 @@ import type { Option } from '@/components/ui/multi-select'
 import { useManageColumns } from '@/hooks/use-manage-columns'
 import { ManageColumnsDialog } from '@/components/shared/manage-columns'
 import { MultiSelect } from '@/components/ui/multi-select'
+import { Checkbox } from '@/components/ui/checkbox'
 
 const ACCOUNT_STATUS_OPTIONS: Option[] = [
   { value: 'Yet to be dialed', label: 'Yet to be dialed' },
@@ -294,6 +297,66 @@ export default function AccountsPage() {
 
   const accounts = data?.data || []
   const pageInfo = data?.page_info || { page: 1, total_pages: 1 }
+
+  // Page-level checkbox selection state
+  const [selectedAccountIds, setSelectedAccountIds] = useState<number[]>([])
+
+  // Clear selection whenever page or applied filters change
+  useEffect(() => {
+    setSelectedAccountIds([])
+  }, [currentPage, appliedFilters])
+
+  const isAllOnPageSelected =
+    accounts.length > 0 &&
+    accounts.every((acc: any) => selectedAccountIds.includes(acc.id))
+
+  const isSomeOnPageSelected =
+    accounts.some((acc: any) => selectedAccountIds.includes(acc.id)) &&
+    !isAllOnPageSelected
+
+  const handleToggleSelectAll = () => {
+    if (isAllOnPageSelected) {
+      setSelectedAccountIds([])
+    } else {
+      setSelectedAccountIds(accounts.map((acc: any) => acc.id))
+    }
+  }
+
+  const handleToggleSelectRow = (accId: number, e?: React.MouseEvent) => {
+    if (e) e.stopPropagation()
+    setSelectedAccountIds((prev) =>
+      prev.includes(accId)
+        ? prev.filter((id) => id !== accId)
+        : [...prev, accId],
+    )
+  }
+
+  const bulkCreateTasksMutation = useMutation({
+    mutationFn: async (accountIds: number[]) => {
+      const res = await fetch(`${ENV.VITE_BACKEND_BASE_URL}/account-tasks/bulk`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ account_ids: accountIds }),
+      })
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}))
+        throw new Error(err.detail || 'Failed to bulk create tasks')
+      }
+      return res.json()
+    },
+    onSuccess: (data) => {
+      toast.success(
+        data.message || `Created ${data.tasks_created} tasks for ${data.accounts_count} account(s)!`,
+      )
+      setSelectedAccountIds([])
+      queryClient.invalidateQueries({ queryKey: ['account-tasks-list'] })
+      queryClient.invalidateQueries({ queryKey: ['accounts'] })
+    },
+    onError: (err: Error) => {
+      toast.error(err.message || 'Error creating tasks for selected accounts')
+    },
+  })
 
   const handleFilterChange = (key: string, value: any) => {
     setFilters((prev) => ({ ...prev, [key]: value }))
@@ -657,10 +720,61 @@ export default function AccountsPage() {
             </div>
           ) : (
             <>
+              {selectedAccountIds.length > 0 && (
+                <div className='flex items-center justify-between bg-primary/10 border border-primary/20 text-primary px-3.5 py-2 rounded-md text-xs font-medium shrink-0 shadow-xs'>
+                  <div className='flex items-center gap-2'>
+                    <span>
+                      Selected {selectedAccountIds.length} of {accounts.length} accounts on this page
+                    </span>
+                    <span className='text-muted-foreground/60'>|</span>
+                    <span className='font-normal text-muted-foreground'>
+                      Will generate {selectedAccountIds.length * 4} tasks (4 types per account)
+                    </span>
+                  </div>
+                  <div className='flex items-center gap-2'>
+                    <Button
+                      size='sm'
+                      onClick={() => bulkCreateTasksMutation.mutate(selectedAccountIds)}
+                      disabled={bulkCreateTasksMutation.isPending}
+                      className='h-7 text-xs px-3 cursor-pointer shadow-xs'
+                    >
+                      {bulkCreateTasksMutation.isPending ? (
+                        <>
+                          <Spinner className='mr-1.5 h-3.5 w-3.5' />
+                          Creating Tasks...
+                        </>
+                      ) : (
+                        `Create Tasks (${selectedAccountIds.length * 4})`
+                      )}
+                    </Button>
+                    <Button
+                      variant='ghost'
+                      size='sm'
+                      onClick={() => setSelectedAccountIds([])}
+                      className='h-7 text-xs px-2 hover:bg-primary/20 cursor-pointer'
+                    >
+                      Clear Selection
+                    </Button>
+                  </div>
+                </div>
+              )}
               <div className='border rounded-md flex-1 overflow-auto relative'>
                 <table className='w-full caption-bottom text-sm'>
                   <TableHeader>
                     <TableRow className='sticky top-0 z-10 bg-background hover:bg-accent'>
+                      <TableHead className='w-[40px] px-3 text-center'>
+                        <Checkbox
+                          checked={
+                            isAllOnPageSelected
+                              ? true
+                              : isSomeOnPageSelected
+                              ? 'indeterminate'
+                              : false
+                          }
+                          onCheckedChange={handleToggleSelectAll}
+                          aria-label='Select all accounts on current page'
+                        />
+                      </TableHead>
                       {visibleColumns.map((col: any) => (
                         <TableHead key={col.id}>{col.label}</TableHead>
                       ))}
@@ -670,17 +784,31 @@ export default function AccountsPage() {
                   <TableBody>
                     {accounts.length === 0 ? (
                       <TableRow>
-                        <TableCell colSpan={8} className='text-center h-24'>
+                        <TableCell colSpan={visibleColumns.length + 1} className='text-center h-24'>
                           No accounts found.
                         </TableCell>
                       </TableRow>
                     ) : (
-                      accounts.map((acc: any) => (
-                        <TableRow
-                          key={acc.id}
-                          className='cursor-pointer hover:bg-accent'
-                          onClick={() => handleRowClick(acc.id)}
-                        >
+                      accounts.map((acc: any) => {
+                        const isSelected = selectedAccountIds.includes(acc.id)
+                        return (
+                          <TableRow
+                            key={acc.id}
+                            className={`cursor-pointer hover:bg-accent ${
+                              isSelected ? 'bg-muted/50' : ''
+                            }`}
+                            onClick={() => handleRowClick(acc.id)}
+                          >
+                            <TableCell
+                              className='w-[40px] px-3 text-center'
+                              onClick={(e) => e.stopPropagation()}
+                            >
+                              <Checkbox
+                                checked={isSelected}
+                                onCheckedChange={() => handleToggleSelectRow(acc.id)}
+                                aria-label={`Select account ${acc.account_name}`}
+                              />
+                            </TableCell>
                           {visibleColumns.map((col: any) => {
                             switch (col.id) {
                               case 'account_name':
@@ -857,8 +985,9 @@ export default function AccountsPage() {
                             }
                           })}
                         </TableRow>
-                      ))
-                    )}
+                      )
+                    })
+                  )}
                   </TableBody>
                 </table>
               </div>
