@@ -50,12 +50,14 @@ import {
   BarChart3,
   ExternalLink,
   LayoutDashboard,
+  CheckSquare,
 } from 'lucide-react'
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs'
 import { formatAmount } from '@/utils/number-formatter'
 import UpdateDeals from '@/components/deals/update-deals'
 import UpdateContacts from '@/components/contacts/update-contacts'
 import UpdateKanbanTicket from '@/components/tickets/update-kanban-tickets'
+import AccountTasksTab from '@/components/accounts/account-tasks-tab'
 import { CitySelector } from '../shared/city-selector'
 import { StateSelector } from '../shared/state-selector'
 import { PincodeSelector } from '../shared/pincode-selector'
@@ -1010,6 +1012,14 @@ export default function UpdateAccounts() {
                   <BarChart3 className='h-4 w-4 text-rose-500' />
                   <span>Analysis</span>
                 </TabsTrigger>
+
+                <TabsTrigger
+                  value='tasks'
+                  className='data-[state=active]:bg-background data-[state=active]:shadow-sm border border-transparent data-[state=active]:border-border rounded-lg px-4 py-2 flex items-center gap-2 text-sm font-medium transition-all'
+                >
+                  <CheckSquare className='h-4 w-4 text-blue-600' />
+                  <span>Account Tasks</span>
+                </TabsTrigger>
               </TabsList>
             </div>
 
@@ -1445,6 +1455,11 @@ export default function UpdateAccounts() {
                     Cibil Analysis
                   </Button>
                 </div>
+              </TabsContent>
+
+              {/* ===== ACCOUNT TASKS TAB ===== */}
+              <TabsContent value='tasks' className='space-y-4 m-0'>
+                <AccountTasksTab accountId={Number(id)} accountName={data.accountName || ''} />
               </TabsContent>
 
               {/* ===== OVERVIEW TAB ===== */}
