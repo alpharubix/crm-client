@@ -208,7 +208,7 @@ function mapAccountToForm(apiData: any): UpdateAccountFormValues {
     wabaInterested: apiData.waba_interested ?? false,
     callBackDate: apiData.call_back_date_time
       ? new Date(apiData.call_back_date_time)
-      : new Date(),
+      : undefined,
     accountStatus: apiData.account_status ?? '',
     accountStage: apiData.account_stage ?? '',
     businessStatus: apiData.business_status ?? '',

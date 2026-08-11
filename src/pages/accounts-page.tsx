@@ -106,6 +106,34 @@ const INDUSTRY_OPTIONS: Option[] = [
   { value: 'DVG Dist Petroleum', label: 'DVG Dist Petroleum' },
 ]
 
+const SOURCE_TYPE_OPTIONS: Option[] = [
+  { value: 'Direct', label: 'Direct' },
+  { value: 'Referral', label: 'Referral' },
+  { value: 'Partner', label: 'Partner' },
+  { value: 'Website', label: 'Website' },
+  { value: 'Other', label: 'Other' },
+]
+
+const ACCOUNT_STAGE_OPTIONS: Option[] = [
+  { value: 'Initial Pitch', label: 'Initial Pitch' },
+  { value: 'Product Offering', label: 'Product Offering' },
+  { value: 'Doc List Shared to Cust', label: 'Doc List Shared to Cust' },
+  { value: 'Partial Docs Rec', label: 'Partial Docs Rec' },
+  { value: 'Yet To Review', label: 'Yet To Review' },
+  { value: 'Under Internal Review', label: 'Under Internal Review' },
+  { value: 'In Review with Lender', label: 'In Review with Lender' },
+  { value: 'Interested', label: 'Interested' },
+  { value: 'Commercial NI', label: 'Commercial NI' },
+  { value: 'Location not doable', label: 'Location not doable' },
+  { value: 'No Requirement', label: 'No Requirement' },
+]
+
+const BUSINESS_STATUS_OPTIONS: Option[] = [
+  { value: 'Active', label: 'Active' },
+  { value: 'Inactive', label: 'Inactive' },
+  { value: 'Not sure', label: 'Not sure' },
+]
+
 const DEFAULT_COLUMNS = [
   { id: 'account_name', label: 'Account Name', selected: true },
   { id: 'account_owner', label: 'Account Owner', selected: true },
@@ -137,6 +165,16 @@ export default function AccountsPage() {
     city: searchParams.get('city') || '',
     state: searchParams.get('state') || '',
     accountOwnerId: [] as Option[],
+    sourceType: [] as Option[],
+    accountStage: [] as Option[],
+    businessStatus: [] as Option[],
+    wabaInterested: 'all',
+    isPriorityAccount: 'all',
+    cbCondition: 'Is',
+    cbUsers: [] as Option[],
+    cbDateCondition: 'all',
+    cbFromDate: '',
+    cbToDate: '',
     bsaFromDate: searchParams.get('bsaFromDate') || (searchParams.get('module') === 'bsa' ? searchParams.get('from_date') || '' : ''),
     bsaToDate: searchParams.get('bsaToDate') || (searchParams.get('module') === 'bsa' ? searchParams.get('to_date') || '' : ''),
     gstFromDate: searchParams.get('gstFromDate') || (searchParams.get('module') === 'gst' ? searchParams.get('from_date') || '' : ''),
@@ -264,6 +302,42 @@ export default function AccountsPage() {
         appliedFilters.accountOwnerId.forEach((o: Option) =>
           params.append('account_owner_id', o.value),
         )
+      }
+      if (appliedFilters.sourceType && appliedFilters.sourceType.length > 0) {
+        appliedFilters.sourceType.forEach((o: Option) =>
+          params.append('source_type', o.value),
+        )
+      }
+      if (appliedFilters.accountStage && appliedFilters.accountStage.length > 0) {
+        appliedFilters.accountStage.forEach((o: Option) =>
+          params.append('account_stage', o.value),
+        )
+      }
+      if (appliedFilters.businessStatus && appliedFilters.businessStatus.length > 0) {
+        appliedFilters.businessStatus.forEach((o: Option) =>
+          params.append('business_status', o.value),
+        )
+      }
+      if (appliedFilters.wabaInterested && appliedFilters.wabaInterested !== 'all') {
+        params.set('waba_interested', appliedFilters.wabaInterested)
+      }
+      if (appliedFilters.isPriorityAccount && appliedFilters.isPriorityAccount !== 'all') {
+        params.set('is_priority_account', appliedFilters.isPriorityAccount)
+      }
+      if (appliedFilters.cbCondition) {
+        params.set('cb_condition', appliedFilters.cbCondition)
+      }
+      if (appliedFilters.cbUsers && appliedFilters.cbUsers.length > 0) {
+        appliedFilters.cbUsers.forEach((o: Option) =>
+          params.append('cb_users', o.value),
+        )
+      }
+      if (appliedFilters.cbDateCondition && appliedFilters.cbDateCondition !== 'all') {
+        params.set('cb_date_condition', appliedFilters.cbDateCondition)
+      }
+      if (appliedFilters.cbDateCondition === 'Due Dates') {
+        if (appliedFilters.cbFromDate) params.set('cb_from_date', appliedFilters.cbFromDate)
+        if (appliedFilters.cbToDate) params.set('cb_to_date', appliedFilters.cbToDate)
       }
       // --- Underwriting Tool Backend Module Filters (BSA, GST, CIBIL, ITR) ---
       if (appliedFilters.bsaFromDate || appliedFilters.bsaToDate) {
@@ -422,6 +496,16 @@ export default function AccountsPage() {
       city: '',
       state: '',
       accountOwnerId: [] as Option[],
+      sourceType: [] as Option[],
+      accountStage: [] as Option[],
+      businessStatus: [] as Option[],
+      wabaInterested: 'all',
+      isPriorityAccount: 'all',
+      cbCondition: 'Is',
+      cbUsers: [] as Option[],
+      cbDateCondition: 'all',
+      cbFromDate: '',
+      cbToDate: '',
       bsaFromDate: '',
       bsaToDate: '',
       gstFromDate: '',
@@ -586,6 +670,154 @@ export default function AccountsPage() {
             />
           </div>
 
+          <div className='space-y-2'>
+            <Label>Source Type</Label>
+            <MultiSelect
+              options={SOURCE_TYPE_OPTIONS}
+              value={filters.sourceType}
+              onChange={(val) => handleFilterChange('sourceType', val)}
+              placeholder='Select Source Type...'
+            />
+          </div>
+
+          <div className='space-y-2'>
+            <Label>Account Stage</Label>
+            <MultiSelect
+              options={ACCOUNT_STAGE_OPTIONS}
+              value={filters.accountStage}
+              onChange={(val) => handleFilterChange('accountStage', val)}
+              placeholder='Select Stage...'
+            />
+          </div>
+
+          <div className='space-y-2'>
+            <Label>Business Status</Label>
+            <MultiSelect
+              options={BUSINESS_STATUS_OPTIONS}
+              value={filters.businessStatus}
+              onChange={(val) => handleFilterChange('businessStatus', val)}
+              placeholder='Select Business Status...'
+            />
+          </div>
+
+          <div className='space-y-2'>
+            <Label>WABA Interested</Label>
+            <Select
+              value={filters.wabaInterested}
+              onValueChange={(val) => handleFilterChange('wabaInterested', val)}
+            >
+              <SelectTrigger className='h-9 text-xs'>
+                <SelectValue placeholder='Select WABA Interested' />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value='all'>All</SelectItem>
+                <SelectItem value='Yes'>Yes</SelectItem>
+                <SelectItem value='No'>No</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className='space-y-2'>
+            <Label>Priority Account</Label>
+            <Select
+              value={filters.isPriorityAccount}
+              onValueChange={(val) => handleFilterChange('isPriorityAccount', val)}
+            >
+              <SelectTrigger className='h-9 text-xs'>
+                <SelectValue placeholder='Select Priority Account' />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value='all'>All</SelectItem>
+                <SelectItem value='Yes'>Yes</SelectItem>
+                <SelectItem value='No'>No</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          <hr className='my-4 border-border' />
+
+          {/* Advanced Call Back Date & Time Filter Section */}
+          <div className='space-y-3 p-3 bg-muted/30 rounded-md border'>
+            <Label className='font-semibold text-xs text-foreground block border-b pb-1'>
+              Call Back Date / Time Filter
+            </Label>
+
+            <div className='space-y-1.5'>
+              <Label className='text-[11px] text-muted-foreground'>Logical Condition</Label>
+              <Select
+                value={filters.cbCondition}
+                onValueChange={(val) => handleFilterChange('cbCondition', val)}
+              >
+                <SelectTrigger className='h-8 text-xs bg-background'>
+                  <SelectValue placeholder='Condition' />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value='Is'>Is (Matches)</SelectItem>
+                  <SelectItem value='Not'>Not (Negates)</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className='space-y-1.5'>
+              <Label className='text-[11px] text-muted-foreground'>Users (Assignee / Owner)</Label>
+              <MultiSelect
+                options={owners.map((owner: any) => ({
+                  label: owner.full_name,
+                  value: owner.id.toString(),
+                }))}
+                value={filters.cbUsers}
+                onChange={(val) => handleFilterChange('cbUsers', val)}
+                placeholder='Select Users...'
+                className='bg-background text-xs'
+              />
+            </div>
+
+            <div className='space-y-1.5'>
+              <Label className='text-[11px] text-muted-foreground'>Field Condition</Label>
+              <Select
+                value={filters.cbDateCondition}
+                onValueChange={(val) => handleFilterChange('cbDateCondition', val)}
+              >
+                <SelectTrigger className='h-8 text-xs bg-background'>
+                  <SelectValue placeholder='Select Condition' />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value='all'>All Date Conditions</SelectItem>
+                  <SelectItem value='Blank'>Blank</SelectItem>
+                  <SelectItem value='Overdue'>Overdue</SelectItem>
+                  <SelectItem value='Due Today'>Due Today</SelectItem>
+                  <SelectItem value='Due Tomorrow'>Due Tomorrow</SelectItem>
+                  <SelectItem value='Due This Week'>Due This Week</SelectItem>
+                  <SelectItem value='Due Next Week'>Due Next Week</SelectItem>
+                  <SelectItem value='Due Dates'>Due Dates</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            {filters.cbDateCondition === 'Due Dates' && (
+              <div className='space-y-2 pt-1'>
+                <div>
+                  <Label className='text-[11px] text-muted-foreground'>From Date</Label>
+                  <Input
+                    type='date'
+                    value={filters.cbFromDate}
+                    onChange={(e) => handleFilterChange('cbFromDate', e.target.value)}
+                    className='h-8 text-xs bg-background'
+                  />
+                </div>
+                <div>
+                  <Label className='text-[11px] text-muted-foreground'>To Date</Label>
+                  <Input
+                    type='date'
+                    value={filters.cbToDate}
+                    onChange={(e) => handleFilterChange('cbToDate', e.target.value)}
+                    className='h-8 text-xs bg-background'
+                  />
+                </div>
+              </div>
+            )}
+          </div>
+
           <hr className='my-4 border-border' />
 
           {/* BSA Filter (Year, Month) */}
@@ -728,7 +960,7 @@ export default function AccountsPage() {
                     </span>
                     <span className='text-muted-foreground/60'>|</span>
                     <span className='font-normal text-muted-foreground'>
-                      Will generate {selectedAccountIds.length * 4} tasks (4 types per account)
+                      Will generate {selectedAccountIds.length} task(s) (1 task per account)
                     </span>
                   </div>
                   <div className='flex items-center gap-2'>
@@ -744,7 +976,7 @@ export default function AccountsPage() {
                           Creating Tasks...
                         </>
                       ) : (
-                        `Create Tasks (${selectedAccountIds.length * 4})`
+                        `Create Tasks (${selectedAccountIds.length})`
                       )}
                     </Button>
                     <Button

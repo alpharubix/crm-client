@@ -18,46 +18,53 @@ export type Option = {
 }
 
 interface MultiSelectProps {
-  options: Option[]
-  value: Option[]
+  options?: Option[]
+  value?: Option[]
+  selected?: Option[]
   onChange: (value: Option[]) => void
   placeholder?: string
+  className?: string
 }
 
 export function MultiSelect({
-  options,
+  options = [],
   value,
+  selected,
   onChange,
   placeholder = 'Select...',
+  className,
 }: MultiSelectProps) {
   const inputRef = React.useRef<HTMLInputElement>(null)
 
   const [open, setOpen] = React.useState(false)
   const [inputValue, setInputValue] = React.useState('')
 
+  const selectedList = value || selected || []
+  const safeOptions = options || []
+
   const handleUnselect = (option: Option) => {
-    onChange(value.filter((item) => item.value !== option.value))
+    onChange(selectedList.filter((item) => item.value !== option.value))
   }
 
   const selectables = React.useMemo(() => {
-    return options
+    return safeOptions
       .filter(
         (option) =>
-          !value.some((item) => item.value === option.value) &&
-          option.label.toLowerCase().includes(inputValue.toLowerCase()),
+          !selectedList.some((item) => item.value === option.value) &&
+          (option.label || '').toLowerCase().includes(inputValue.toLowerCase()),
       )
       .slice(0, 20)
-  }, [options, value, inputValue])
+  }, [safeOptions, selectedList, inputValue])
 
   return (
     <Command className='overflow-visible bg-transparent'>
-      <div className='group rounded-md border border-input px-1 py-1 text-xs h-9 flex items-center focus-within:ring-2 focus-within:ring-ring focus-within:ring-offset-2 overflow-hidden bg-white dark:bg-input/30'>
+      <div className={`group rounded-md border border-input px-1 py-1 text-xs h-9 flex items-center focus-within:ring-2 focus-within:ring-ring focus-within:ring-offset-2 overflow-hidden bg-white dark:bg-input/30 ${className || ''}`}>
         <div
           className='flex flex-nowrap overflow-x-auto gap-1 w-full items-center'
           style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
         >
           <style>{`.group div::-webkit-scrollbar { display: none; }`}</style>
-          {value.map((item) => (
+          {selectedList.map((item) => (
             <Badge
               key={item.value}
               variant='secondary'
@@ -100,7 +107,7 @@ export function MultiSelect({
                       e.preventDefault()
                     }}
                     onSelect={() => {
-                      onChange([...value, option])
+                      onChange([...selectedList, option])
                       setInputValue('')
                     }}
                   >
