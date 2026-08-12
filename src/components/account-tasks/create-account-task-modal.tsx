@@ -25,7 +25,7 @@ import type { TaskType, TaskStatus } from '@/types/account-task'
 interface CreateAccountTaskModalProps {
   isOpen: boolean
   onClose: () => void
-  fixedAccountId?: number
+  fixedAccountId?: string | number
   fixedAccountName?: string
 }
 
@@ -37,7 +37,7 @@ export default function CreateAccountTaskModal({
 }: CreateAccountTaskModalProps) {
   const queryClient = useQueryClient()
 
-  const [accountId, setAccountId] = useState<number | undefined>(fixedAccountId)
+  const [accountId, setAccountId] = useState<string | number | undefined>(fixedAccountId)
   const [accountSearch, setAccountSearch] = useState<string>(fixedAccountName || '')
   const [selectedAccountName, setSelectedAccountName] = useState<string>(fixedAccountName || '')
   const [taskType, setTaskType] = useState<TaskType>('Call')

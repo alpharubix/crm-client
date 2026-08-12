@@ -23,10 +23,11 @@ import {
 } from '@/components/ui/select'
 import { ENV } from '@/conf'
 import type { AccountTask, TaskType, TaskStatus } from '@/types/account-task'
-import { MessageSquare, Plus, Send } from 'lucide-react'
+import { MessageSquare, Plus, Send, CheckCircle2 } from 'lucide-react'
+import { useAuth } from '@/context/auth-context'
 
 interface UpdateAccountTaskModalProps {
-  taskId: number | null
+  taskId: string | number | null
   isOpen: boolean
   onClose: () => void
 }
@@ -37,6 +38,10 @@ export default function UpdateAccountTaskModal({
   onClose,
 }: UpdateAccountTaskModalProps) {
   const queryClient = useQueryClient()
+  const { user } = useAuth()
+  const role = String(user?.role || '').toLowerCase()
+  const canEditFields = ['super_admin', 'admin', 'manager'].includes(role)
+
   const [taskType, setTaskType] = useState<TaskType>('Call')
   const [taskStatus, setTaskStatus] = useState<TaskStatus>('Unassigned')
   const [taskDescription, setTaskDescription] = useState('')
@@ -111,6 +116,30 @@ export default function UpdateAccountTaskModal({
     },
   })
 
+  const markAsCompletedMutation = useMutation({
+    mutationFn: async () => {
+      if (!taskId) return
+      const res = await fetch(`${ENV.VITE_BACKEND_BASE_URL}/account-tasks/${taskId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ task_status: 'Completed' }),
+      })
+
+      if (!res.ok) throw new Error('Failed to mark task as completed')
+      return res.json()
+    },
+    onSuccess: () => {
+      toast.success('Task marked as Completed!')
+      queryClient.invalidateQueries({ queryKey: ['account-tasks'] })
+      queryClient.invalidateQueries({ queryKey: ['account-task-detail', taskId] })
+      onClose()
+    },
+    onError: () => {
+      toast.error('Failed to mark task as completed')
+    },
+  })
+
   const handleAddNote = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!newNote.trim() || !taskId) return
@@ -141,11 +170,15 @@ export default function UpdateAccountTaskModal({
       setIsAddingNote(false)
     }
   }
-
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
     updateMutation.mutate()
   }
+
+  const currentUserId = user?.user_id || (user as any)?.id
+  const isAccountOwner = Boolean(
+    taskData?.account_owner_id && String(taskData.account_owner_id) === String(currentUserId)
+  )
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
@@ -206,6 +239,7 @@ export default function UpdateAccountTaskModal({
                     key={`task-type-${taskId}-${taskType}`}
                     value={taskType}
                     onValueChange={(val: TaskType) => setTaskType(val)}
+                    disabled={!canEditFields}
                   >
                     <SelectTrigger className='col-span-3'>
                       <SelectValue placeholder='Select Task Type' />
@@ -225,6 +259,7 @@ export default function UpdateAccountTaskModal({
                     key={`task-status-${taskId}-${taskStatus}`}
                     value={taskStatus}
                     onValueChange={(val: TaskStatus) => setTaskStatus(val)}
+                    disabled={!canEditFields}
                   >
                     <SelectTrigger className='col-span-3'>
                       <SelectValue placeholder='Select Task Status' />
@@ -247,6 +282,7 @@ export default function UpdateAccountTaskModal({
                     type='datetime-local'
                     value={taskAssignedDateTime}
                     onChange={(e) => setTaskAssignedDateTime(e.target.value)}
+                    disabled={!canEditFields}
                     className='col-span-3'
                   />
                 </div>
@@ -257,6 +293,7 @@ export default function UpdateAccountTaskModal({
                     type='datetime-local'
                     value={taskDueDateTime}
                     onChange={(e) => setTaskDueDateTime(e.target.value)}
+                    disabled={!canEditFields}
                     className='col-span-3'
                   />
                 </div>
@@ -266,18 +303,34 @@ export default function UpdateAccountTaskModal({
                   <Textarea
                     value={taskDescription}
                     onChange={(e) => setTaskDescription(e.target.value)}
+                    disabled={!canEditFields}
                     rows={3}
                     className='col-span-3'
                   />
                 </div>
 
-                <DialogFooter className='pt-2'>
+                <DialogFooter className='pt-2 gap-2 flex-wrap'>
                   <Button type='button' variant='outline' onClick={onClose}>
                     Close
                   </Button>
-                  <Button type='submit' disabled={updateMutation.isPending}>
-                    {updateMutation.isPending ? 'Saving...' : 'Save Changes'}
-                  </Button>
+
+                  {taskStatus !== 'Completed' && isAccountOwner && (
+                    <Button
+                      type='button'
+                      className='bg-green-600 hover:bg-green-700 text-white'
+                      onClick={() => markAsCompletedMutation.mutate()}
+                      disabled={markAsCompletedMutation.isPending}
+                    >
+                      <CheckCircle2 className='w-4 h-4 mr-1.5' />
+                      {markAsCompletedMutation.isPending ? 'Marking...' : 'Mark as Completed'}
+                    </Button>
+                  )}
+
+                  {canEditFields && (
+                    <Button type='submit' disabled={updateMutation.isPending}>
+                      {updateMutation.isPending ? 'Saving...' : 'Save Changes'}
+                    </Button>
+                  )}
                 </DialogFooter>
               </form>
             </TabsContent>
