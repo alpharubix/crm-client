@@ -19,6 +19,7 @@ import { Spinner } from '@/components/ui/spinner'
 import Pagination from '@/components/shared/pagination'
 import { MultiSelect, type Option } from '@/components/ui/multi-select'
 import { formatExactDate } from '@/utils/date-formatter'
+import { useAuth } from '@/context/auth-context'
 import { ENV } from '@/conf'
 import type { AccountTask, TaskStatus, CallBackDateStatus } from '@/types/account-task'
 import CreateAccountTaskModal from '@/components/account-tasks/create-account-task-modal'
@@ -26,6 +27,9 @@ import UpdateAccountTaskModal from '@/components/account-tasks/update-account-ta
 
 export default function AccountTasksPage() {
   const queryClient = useQueryClient()
+  const { user } = useAuth()
+  const role = String(user?.role || '').toLowerCase()
+  const canViewOwnerFilter = ['super_admin', 'admin', 'manager'].includes(role)
 
   // Draft Filter state
   const [filters, setFilters] = useState({
@@ -45,7 +49,7 @@ export default function AccountTasksPage() {
   const [selectedTaskId, setSelectedTaskId] = useState<number | null>(null)
   const [isUpdateModalOpen, setIsUpdateModalOpen] = useState(false)
 
-  // Fetch Account Owners for MultiSelect Filter
+  // Fetch Account Owners for MultiSelect Filter (only for super_admin, admin, manager)
   const { data: ownerResponse } = useQuery({
     queryKey: ['account-owners'],
     queryFn: async () => {
@@ -55,6 +59,7 @@ export default function AccountTasksPage() {
       if (!res.ok) return []
       return res.json()
     },
+    enabled: canViewOwnerFilter,
     retry: false,
   })
 
@@ -200,15 +205,17 @@ export default function AccountTasksPage() {
             </div>
 
             {/* Account Owner */}
-            <div className='space-y-1.5'>
-              <Label className='text-xs'>Account Owner</Label>
-              <MultiSelect
-                options={ownerOptions}
-                value={filters.accountOwnerId}
-                onChange={(val) => handleFilterChange('accountOwnerId', val)}
-                placeholder='Select Owner...'
-              />
-            </div>
+            {canViewOwnerFilter && (
+              <div className='space-y-1.5'>
+                <Label className='text-xs'>Account Owner</Label>
+                <MultiSelect
+                  options={ownerOptions}
+                  value={filters.accountOwnerId}
+                  onChange={(val) => handleFilterChange('accountOwnerId', val)}
+                  placeholder='Select Owner...'
+                />
+              </div>
+            )}
 
             {/* Task Status */}
             <div className='space-y-1.5'>
