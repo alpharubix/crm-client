@@ -61,25 +61,21 @@ export default function UpdateAccountTaskModal({
 
   const notesData = (taskData as any)?.notes || []
 
+  const toLocalISOString = (dateStr?: string | null) => {
+    if (!dateStr) return ''
+    const dt = new Date(dateStr)
+    if (isNaN(dt.getTime())) return ''
+    const offset = dt.getTimezoneOffset() * 60000
+    return new Date(dt.getTime() - offset).toISOString().slice(0, 16)
+  }
+
   useEffect(() => {
     if (taskData && isOpen) {
       setTaskType(taskData.task_type as TaskType)
       setTaskStatus(taskData.task_status as TaskStatus)
       setTaskDescription(taskData.task_description || '')
-
-      if (taskData.task_assigned_date_time) {
-        const dt = new Date(taskData.task_assigned_date_time)
-        setTaskAssignedDateTime(dt.toISOString().slice(0, 16))
-      } else {
-        setTaskAssignedDateTime('')
-      }
-
-      if (taskData.task_due_date_time) {
-        const dt = new Date(taskData.task_due_date_time)
-        setTaskDueDateTime(dt.toISOString().slice(0, 16))
-      } else {
-        setTaskDueDateTime('')
-      }
+      setTaskAssignedDateTime(toLocalISOString(taskData.task_assigned_date_time))
+      setTaskDueDateTime(toLocalISOString(taskData.task_due_date_time))
     }
   }, [taskData, isOpen, taskId])
 
@@ -312,7 +308,7 @@ export default function UpdateAccountTaskModal({
                           {note.Owner?.first_name || note.Created_By?.name || 'User'}
                         </span>
                         <span>
-                          {note.Created_Time ? new Date(note.Created_Time).toLocaleString() : ''}
+                          {note.Created_Time || ''}
                         </span>
                       </div>
                       <p className='text-foreground whitespace-pre-wrap'>{note.Note_Content}</p>

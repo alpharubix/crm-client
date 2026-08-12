@@ -14,6 +14,7 @@ import {
   TableRow,
 } from '@/components/ui/table'
 import { Skeleton } from '@/components/ui/skeleton'
+import { formatExactDate } from '@/utils/date-formatter'
 import { ENV } from '@/conf'
 import type { AccountTask, TaskStatus, CallBackDateStatus } from '@/types/account-task'
 import CreateAccountTaskModal from '@/components/account-tasks/create-account-task-modal'
@@ -171,12 +172,12 @@ export default function AccountTasksTab({ accountId, accountName }: AccountTasks
                   </TableCell>
                   <TableCell className='text-xs text-muted-foreground whitespace-nowrap'>
                     {task.task_assigned_date_time
-                      ? new Date(task.task_assigned_date_time).toLocaleString(undefined, { dateStyle: 'short', timeStyle: 'short' })
+                      ? formatExactDate(task.task_assigned_date_time, 'dd MMM yyyy, hh:mm a')
                       : '-'}
                   </TableCell>
                   <TableCell className='text-xs text-muted-foreground whitespace-nowrap'>
                     {task.task_due_date_time
-                      ? new Date(task.task_due_date_time).toLocaleString(undefined, { dateStyle: 'short', timeStyle: 'short' })
+                      ? formatExactDate(task.task_due_date_time, 'dd MMM yyyy, hh:mm a')
                       : '-'}
                   </TableCell>
                   <TableCell>
