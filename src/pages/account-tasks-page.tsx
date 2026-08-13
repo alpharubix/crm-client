@@ -123,6 +123,8 @@ export default function AccountTasksPage() {
     accountOwnerId: [] as Option[],
     assignedFromDate: '',
     assignedToDate: '',
+    createdFromDate: '',
+    createdToDate: '',
   })
 
   // Applied Filter state (triggered when clicking "Search" button)
@@ -178,6 +180,8 @@ export default function AccountTasksPage() {
 
       if (appliedFilters.assignedFromDate) params.set('assigned_from_date', appliedFilters.assignedFromDate)
       if (appliedFilters.assignedToDate) params.set('assigned_to_date', appliedFilters.assignedToDate)
+      if (appliedFilters.createdFromDate) params.set('created_from_date', appliedFilters.createdFromDate)
+      if (appliedFilters.createdToDate) params.set('created_to_date', appliedFilters.createdToDate)
 
       if (appliedFilters.accountOwnerId && appliedFilters.accountOwnerId.length > 0) {
         appliedFilters.accountOwnerId.forEach((o) => params.append('account_owner_id', o.value))
@@ -268,17 +272,17 @@ export default function AccountTasksPage() {
   const getCallBackBadge = (cbStatus?: CallBackDateStatus) => {
     switch (cbStatus) {
       case 'Overdue':
-        return <Badge variant='destructive' className='text-[10px] py-0'>{cbStatus}</Badge>
+        return <Badge variant='destructive' className='text-xs px-2 py-0.5'>{cbStatus}</Badge>
       case 'Due Today':
-        return <Badge className='bg-amber-500 text-[10px] py-0'>{cbStatus}</Badge>
+        return <Badge className='bg-amber-500 text-xs px-2 py-0.5'>{cbStatus}</Badge>
       case 'Due Tomorrow':
-        return <Badge className='bg-blue-500 text-[10px] py-0'>{cbStatus}</Badge>
+        return <Badge className='bg-blue-500 text-xs px-2 py-0.5'>{cbStatus}</Badge>
       case 'Due This Week':
-        return <Badge variant='secondary' className='text-[10px] py-0'>{cbStatus}</Badge>
+        return <Badge variant='secondary' className='text-xs px-2 py-0.5'>{cbStatus}</Badge>
       case 'Due Next Week':
-        return <Badge variant='outline' className='text-[10px] py-0'>{cbStatus}</Badge>
+        return <Badge variant='outline' className='text-xs px-2 py-0.5'>{cbStatus}</Badge>
       default:
-        return <span className='text-xs text-muted-foreground'>Blank</span>
+        return <span className='text-sm text-muted-foreground'>Blank</span>
     }
   }
 
@@ -454,7 +458,7 @@ export default function AccountTasksPage() {
 
             {/* Assigned Date Range Filter */}
             <div className='space-y-2'>
-              <Label className='text-xs font-semibold'>Assigned Date Filter</Label>
+              <Label className='text-xs font-semibold'>Assigned Task Filter</Label>
               <div className='grid grid-cols-2 gap-2'>
                 <div>
                   <Label className='text-[11px] text-muted-foreground'>From Date</Label>
@@ -471,6 +475,31 @@ export default function AccountTasksPage() {
                     type='date'
                     value={filters.assignedToDate}
                     onChange={(e) => handleFilterChange('assignedToDate', e.target.value)}
+                    className='h-8 text-xs bg-background'
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* Created Date Range Filter */}
+            <div className='space-y-2'>
+              <Label className='text-xs font-semibold'>Created Task Filter</Label>
+              <div className='grid grid-cols-2 gap-2'>
+                <div>
+                  <Label className='text-[11px] text-muted-foreground'>From Date</Label>
+                  <Input
+                    type='date'
+                    value={filters.createdFromDate}
+                    onChange={(e) => handleFilterChange('createdFromDate', e.target.value)}
+                    className='h-8 text-xs bg-background'
+                  />
+                </div>
+                <div>
+                  <Label className='text-[11px] text-muted-foreground'>To Date</Label>
+                  <Input
+                    type='date'
+                    value={filters.createdToDate}
+                    onChange={(e) => handleFilterChange('createdToDate', e.target.value)}
                     className='h-8 text-xs bg-background'
                   />
                 </div>
@@ -520,10 +549,11 @@ export default function AccountTasksPage() {
                       <th className='h-10 px-3 text-left align-middle font-medium text-muted-foreground text-xs whitespace-nowrap'>Task Type</th>
                       <th className='h-10 px-3 text-left align-middle font-medium text-muted-foreground text-xs whitespace-nowrap'>Account Status</th>
                       <th className='h-10 px-3 text-left align-middle font-medium text-muted-foreground text-xs whitespace-nowrap'>Account Stage</th>
-                      <th className='h-10 px-3 text-left align-middle font-medium text-muted-foreground text-xs whitespace-nowrap min-w-[140px]'>Call Back Date/Time</th>
+                      <th className='h-10 px-3 text-left align-middle font-semibold text-foreground text-xs whitespace-nowrap min-w-[150px]'>Call Back Date/Time</th>
                       <th className='h-10 px-3 text-left align-middle font-medium text-muted-foreground text-xs whitespace-nowrap min-w-[200px]'>Task Description</th>
-                      <th className='h-10 px-3 text-left align-middle font-medium text-muted-foreground text-xs whitespace-nowrap'>Assigned Date/Time</th>
-                      <th className='h-10 px-3 text-left align-middle font-medium text-muted-foreground text-xs whitespace-nowrap'>Due Date/Time</th>
+                      <th className='h-10 px-3 text-left align-middle font-semibold text-foreground text-xs whitespace-nowrap min-w-[150px]'>Created At</th>
+                      <th className='h-10 px-3 text-left align-middle font-semibold text-foreground text-xs whitespace-nowrap min-w-[150px]'>Assigned Date/Time</th>
+                      <th className='h-10 px-3 text-left align-middle font-semibold text-foreground text-xs whitespace-nowrap min-w-[150px]'>Due Date/Time</th>
                       <th className='h-10 px-3 text-left align-middle font-medium text-muted-foreground text-xs whitespace-nowrap'>Task Status</th>
                       <th className='h-10 px-3 text-right align-middle font-medium text-muted-foreground text-xs whitespace-nowrap'>Actions</th>
                     </tr>
@@ -531,7 +561,7 @@ export default function AccountTasksPage() {
                   <tbody>
                     {tasks.length === 0 ? (
                       <tr>
-                        <td colSpan={13} className='text-center py-12 text-muted-foreground text-sm'>
+                        <td colSpan={14} className='text-center py-12 text-muted-foreground text-sm'>
                           No account tasks found matching your filter parameters.
                         </td>
                       </tr>
@@ -602,10 +632,13 @@ export default function AccountTasksPage() {
                             <td className='p-3 text-sm max-w-[250px] truncate' title={task.task_description}>
                               {task.task_description || <span className='text-muted-foreground italic text-xs'>No description</span>}
                             </td>
-                            <td className='p-3 text-xs text-muted-foreground whitespace-nowrap'>
+                            <td className='p-3 text-sm font-semibold text-foreground whitespace-nowrap'>
+                              {formatISTDateTime(task.created_at)}
+                            </td>
+                            <td className='p-3 text-sm font-semibold text-foreground whitespace-nowrap'>
                               {formatISTDateTime(task.task_assigned_date_time)}
                             </td>
-                            <td className='p-3 text-xs text-muted-foreground whitespace-nowrap'>
+                            <td className='p-3 text-sm font-semibold text-foreground whitespace-nowrap'>
                               {formatISTDateTime(task.task_due_date_time)}
                             </td>
                             <td className='p-3 whitespace-nowrap'>
