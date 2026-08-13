@@ -228,84 +228,88 @@ export default function UpdateAccountTaskModal({
               </div>
 
               <form onSubmit={handleSubmit} className='space-y-4'>
-                <div className='grid grid-cols-4 items-center gap-4'>
-                  <Label className='text-right font-medium'>Module Name</Label>
-                  <Input value='Account' disabled className='col-span-3 bg-muted' />
+                <div className='grid grid-cols-2 gap-4'>
+                  <div className='space-y-1.5'>
+                    <Label className='text-xs font-medium'>Module Name</Label>
+                    <Input value='Account' disabled className='h-9 text-xs bg-muted' />
+                  </div>
+
+                  <div className='space-y-1.5'>
+                    <Label className='text-xs font-medium'>Task Type *</Label>
+                    <Select
+                      key={`task-type-${taskId}-${taskType}`}
+                      value={taskType}
+                      onValueChange={(val: TaskType) => setTaskType(val)}
+                      disabled={!canEditFields}
+                    >
+                      <SelectTrigger className='h-9 text-xs'>
+                        <SelectValue placeholder='Select Task Type' />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value='Call'>Call</SelectItem>
+                        <SelectItem value='Update Record'>Update Record</SelectItem>
+                        <SelectItem value='Email'>Email</SelectItem>
+                        <SelectItem value='Move Status'>Move Status</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
                 </div>
 
-                <div className='grid grid-cols-4 items-center gap-4'>
-                  <Label className='text-right font-medium'>Task Type *</Label>
-                  <Select
-                    key={`task-type-${taskId}-${taskType}`}
-                    value={taskType}
-                    onValueChange={(val: TaskType) => setTaskType(val)}
-                    disabled={!canEditFields}
-                  >
-                    <SelectTrigger className='col-span-3'>
-                      <SelectValue placeholder='Select Task Type' />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value='Call'>Call</SelectItem>
-                      <SelectItem value='Update Record'>Update Record</SelectItem>
-                      <SelectItem value='Email'>Email</SelectItem>
-                      <SelectItem value='Move Status'>Move Status</SelectItem>
-                    </SelectContent>
-                  </Select>
+                <div className='grid grid-cols-2 gap-4'>
+                  <div className='space-y-1.5'>
+                    <Label className='text-xs font-medium'>Task Status *</Label>
+                    <Select
+                      key={`task-status-${taskId}-${taskStatus}`}
+                      value={taskStatus}
+                      onValueChange={(val: TaskStatus) => setTaskStatus(val)}
+                      disabled={!canEditFields}
+                    >
+                      <SelectTrigger className='h-9 text-xs'>
+                        <SelectValue placeholder='Select Task Status' />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value='Unassigned'>Unassigned</SelectItem>
+                        <SelectItem value='Assigned'>Assigned</SelectItem>
+                        <SelectItem value='Pending'>Pending</SelectItem>
+                        <SelectItem value='In Progress'>In Progress</SelectItem>
+                        <SelectItem value='Completed'>Completed</SelectItem>
+                        <SelectItem value='Verified'>Verified</SelectItem>
+                        <SelectItem value='Overdue'>Overdue</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div className='space-y-1.5'>
+                    <Label className='text-xs font-medium'>Assigned Date/Time</Label>
+                    <Input
+                      type='datetime-local'
+                      value={taskAssignedDateTime}
+                      onChange={(e) => setTaskAssignedDateTime(e.target.value)}
+                      disabled={!canEditFields}
+                      className='h-9 text-xs'
+                    />
+                  </div>
                 </div>
 
-                <div className='grid grid-cols-4 items-center gap-4'>
-                  <Label className='text-right font-medium'>Task Status *</Label>
-                  <Select
-                    key={`task-status-${taskId}-${taskStatus}`}
-                    value={taskStatus}
-                    onValueChange={(val: TaskStatus) => setTaskStatus(val)}
-                    disabled={!canEditFields}
-                  >
-                    <SelectTrigger className='col-span-3'>
-                      <SelectValue placeholder='Select Task Status' />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value='Unassigned'>Unassigned</SelectItem>
-                      <SelectItem value='Assigned'>Assigned</SelectItem>
-                      <SelectItem value='Pending'>Pending</SelectItem>
-                      <SelectItem value='In Progress'>In Progress</SelectItem>
-                      <SelectItem value='Completed'>Completed</SelectItem>
-                      <SelectItem value='Verified'>Verified</SelectItem>
-                      <SelectItem value='Overdue'>Overdue</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div className='grid grid-cols-4 items-center gap-4'>
-                  <Label className='text-right font-medium text-xs'>Assigned Date/Time</Label>
-                  <Input
-                    type='datetime-local'
-                    value={taskAssignedDateTime}
-                    onChange={(e) => setTaskAssignedDateTime(e.target.value)}
-                    disabled={!canEditFields}
-                    className='col-span-3'
-                  />
-                </div>
-
-                <div className='grid grid-cols-4 items-center gap-4'>
-                  <Label className='text-right font-medium text-xs'>Due Date/Time</Label>
+                <div className='space-y-1.5'>
+                  <Label className='text-xs font-medium'>Due Date/Time</Label>
                   <Input
                     type='datetime-local'
                     value={taskDueDateTime}
                     onChange={(e) => setTaskDueDateTime(e.target.value)}
                     disabled={!canEditFields}
-                    className='col-span-3'
+                    className='h-9 text-xs'
                   />
                 </div>
 
-                <div className='grid grid-cols-4 items-start gap-4'>
-                  <Label className='text-right font-medium pt-2'>Description</Label>
+                <div className='space-y-1.5'>
+                  <Label className='text-xs font-medium'>Description</Label>
                   <Textarea
                     value={taskDescription}
                     onChange={(e) => setTaskDescription(e.target.value)}
                     disabled={!canEditFields}
                     rows={3}
-                    className='col-span-3'
+                    className='text-xs resize-none'
                   />
                 </div>
 

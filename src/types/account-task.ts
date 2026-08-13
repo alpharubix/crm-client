@@ -35,6 +35,7 @@ export interface AccountTask {
   assigned_to_id?: string | number
   assigned_to_name?: string
   created_by_id?: string | number
+  created_by_name?: string
   modified_by_id?: string | number
   created_at: string
   updated_at: string

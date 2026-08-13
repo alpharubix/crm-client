@@ -139,132 +139,142 @@ export default function CreateAccountTaskModal({
         </DialogHeader>
 
         <form onSubmit={handleSubmit} className='space-y-4 py-2'>
-          {/* Module Name Field (Default Account) */}
-          <div className='grid grid-cols-4 items-center gap-4'>
-            <Label className='text-right font-medium'>Module Name</Label>
-            <Input value='Account' disabled className='col-span-3 bg-muted' />
-          </div>
+          {/* Module Name & Account Selection in 2 Columns */}
+          <div className='grid grid-cols-2 gap-4'>
+            <div className='space-y-1.5'>
+              <Label className='text-xs font-medium'>Module Name</Label>
+              <Input value='Account' disabled className='h-9 text-xs bg-muted' />
+            </div>
 
-          {/* Account Selection */}
-          <div className='grid grid-cols-4 items-center gap-4 relative'>
-            <Label className='text-right font-medium'>Account *</Label>
-            {fixedAccountId ? (
-              <Input value={fixedAccountName || `Account #${fixedAccountId}`} disabled className='col-span-3 bg-muted' />
-            ) : (
-              <div className='col-span-3 relative'>
+            <div className='space-y-1.5 relative'>
+              <Label className='text-xs font-medium'>Account *</Label>
+              {fixedAccountId ? (
                 <Input
-                  placeholder='Search Account Name...'
-                  value={accountSearch}
-                  onChange={(e) => {
-                    setAccountSearch(e.target.value)
-                    setIsSearchingAccount(true)
-                    setAccountId(undefined)
-                    setSelectedAccountName('')
-                  }}
-                  onFocus={() => setIsSearchingAccount(true)}
+                  value={fixedAccountName || `Account #${fixedAccountId}`}
+                  disabled
+                  className='h-9 text-xs bg-muted'
                 />
-                {selectedAccountName && (
-                  <span className='text-xs text-green-600 block mt-1'>
-                    Selected: {selectedAccountName} (ID: {accountId})
-                  </span>
-                )}
-                {isSearchingAccount && accountSearchResults && accountSearchResults.length > 0 && (
-                  <div className='absolute z-50 w-full mt-1 bg-popover border rounded-md shadow-lg max-h-48 overflow-y-auto'>
-                    {accountSearchResults.map((acc: any) => (
-                      <div
-                        key={acc.id}
-                        className='p-2 text-sm hover:bg-accent cursor-pointer'
-                        onClick={() => {
-                          setAccountId(acc.id)
-                          setSelectedAccountName(acc.account_name || `Account #${acc.id}`)
-                          setAccountSearch(acc.account_name || `Account #${acc.id}`)
-                          setIsSearchingAccount(false)
-                        }}
-                      >
-                        <div className='font-medium'>{acc.account_name || 'Unnamed Account'}</div>
-                        <div className='text-xs text-muted-foreground'>Status: {acc.account_status || 'N/A'} | Stage: {acc.account_stage || 'N/A'}</div>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-            )}
+              ) : (
+                <div className='relative'>
+                  <Input
+                    placeholder='Search Account Name...'
+                    value={accountSearch}
+                    onChange={(e) => {
+                      setAccountSearch(e.target.value)
+                      setIsSearchingAccount(true)
+                      setAccountId(undefined)
+                      setSelectedAccountName('')
+                    }}
+                    onFocus={() => setIsSearchingAccount(true)}
+                    className='h-9 text-xs'
+                  />
+                  {selectedAccountName && (
+                    <span className='text-[11px] text-green-600 block mt-1 font-medium'>
+                      Selected: {selectedAccountName}
+                    </span>
+                  )}
+                  {isSearchingAccount && accountSearchResults && accountSearchResults.length > 0 && (
+                    <div className='absolute z-50 w-full mt-1 bg-popover border rounded-md shadow-lg max-h-48 overflow-y-auto'>
+                      {accountSearchResults.map((acc: any) => (
+                        <div
+                          key={acc.id}
+                          className='p-2 text-xs hover:bg-accent cursor-pointer border-b last:border-0'
+                          onClick={() => {
+                            setAccountId(acc.id)
+                            setSelectedAccountName(acc.account_name || `Account #${acc.id}`)
+                            setAccountSearch(acc.account_name || `Account #${acc.id}`)
+                            setIsSearchingAccount(false)
+                          }}
+                        >
+                          <div className='font-medium text-foreground'>{acc.account_name || 'Unnamed Account'}</div>
+                          <div className='text-[11px] text-muted-foreground'>
+                            Status: {acc.account_status || 'N/A'} | Stage: {acc.account_stage || 'N/A'}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
           </div>
 
-          {/* Task Type Dropdown */}
-          <div className='grid grid-cols-4 items-center gap-4'>
-            <Label className='text-right font-medium'>Task Type *</Label>
-            <Select value={taskType} onValueChange={(val: TaskType) => setTaskType(val)}>
-              <SelectTrigger className='col-span-3'>
-                <SelectValue placeholder='Select Task Type' />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value='Call'>Call</SelectItem>
-                <SelectItem value='Update Record'>Update Record</SelectItem>
-                <SelectItem value='Email'>Email</SelectItem>
-                <SelectItem value='Move Status'>Move Status</SelectItem>
-              </SelectContent>
-            </Select>
+          {/* Task Type & Task Status in 2 Columns */}
+          <div className='grid grid-cols-2 gap-4'>
+            <div className='space-y-1.5'>
+              <Label className='text-xs font-medium'>Task Type *</Label>
+              <Select value={taskType} onValueChange={(val: TaskType) => setTaskType(val)}>
+                <SelectTrigger className='h-9 text-xs'>
+                  <SelectValue placeholder='Select Task Type' />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value='Call'>Call</SelectItem>
+                  <SelectItem value='Update Record'>Update Record</SelectItem>
+                  <SelectItem value='Email'>Email</SelectItem>
+                  <SelectItem value='Move Status'>Move Status</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className='space-y-1.5'>
+              <Label className='text-xs font-medium'>Task Status *</Label>
+              <Select value={taskStatus} onValueChange={(val: TaskStatus) => setTaskStatus(val)}>
+                <SelectTrigger className='h-9 text-xs'>
+                  <SelectValue placeholder='Select Task Status' />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value='Unassigned'>Unassigned</SelectItem>
+                  <SelectItem value='Assigned'>Assigned</SelectItem>
+                  <SelectItem value='Pending'>Pending</SelectItem>
+                  <SelectItem value='In Progress'>In Progress</SelectItem>
+                  <SelectItem value='Completed'>Completed</SelectItem>
+                  <SelectItem value='Verified'>Verified</SelectItem>
+                  <SelectItem value='Overdue'>Overdue</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
           </div>
 
-          {/* Task Status Dropdown */}
-          <div className='grid grid-cols-4 items-center gap-4'>
-            <Label className='text-right font-medium'>Task Status *</Label>
-            <Select value={taskStatus} onValueChange={(val: TaskStatus) => setTaskStatus(val)}>
-              <SelectTrigger className='col-span-3'>
-                <SelectValue placeholder='Select Task Status' />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value='Unassigned'>Unassigned</SelectItem>
-                <SelectItem value='Assigned'>Assigned</SelectItem>
-                <SelectItem value='Pending'>Pending</SelectItem>
-                <SelectItem value='In Progress'>In Progress</SelectItem>
-                <SelectItem value='Completed'>Completed</SelectItem>
-                <SelectItem value='Verified'>Verified</SelectItem>
-                <SelectItem value='Overdue'>Overdue</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
+          {/* Assigned & Due Dates in 2 Columns */}
+          <div className='grid grid-cols-2 gap-4'>
+            <div className='space-y-1.5'>
+              <Label className='text-xs font-medium'>Assigned Date/Time</Label>
+              <Input
+                type='datetime-local'
+                value={taskAssignedDateTime}
+                onChange={(e) => setTaskAssignedDateTime(e.target.value)}
+                className='h-9 text-xs'
+              />
+            </div>
 
-          {/* Task Assigned Date & Time */}
-          <div className='grid grid-cols-4 items-center gap-4'>
-            <Label className='text-right font-medium text-xs'>Assigned Date/Time</Label>
-            <Input
-              type='datetime-local'
-              value={taskAssignedDateTime}
-              onChange={(e) => setTaskAssignedDateTime(e.target.value)}
-              className='col-span-3'
-            />
-          </div>
-
-          {/* Task Due Date & Time */}
-          <div className='grid grid-cols-4 items-center gap-4'>
-            <Label className='text-right font-medium text-xs'>Due Date/Time</Label>
-            <Input
-              type='datetime-local'
-              value={taskDueDateTime}
-              onChange={(e) => setTaskDueDateTime(e.target.value)}
-              className='col-span-3'
-            />
+            <div className='space-y-1.5'>
+              <Label className='text-xs font-medium'>Due Date/Time</Label>
+              <Input
+                type='datetime-local'
+                value={taskDueDateTime}
+                onChange={(e) => setTaskDueDateTime(e.target.value)}
+                className='h-9 text-xs'
+              />
+            </div>
           </div>
 
           {/* Task Description */}
-          <div className='grid grid-cols-4 items-start gap-4'>
-            <Label className='text-right font-medium pt-2'>Description</Label>
+          <div className='space-y-1.5'>
+            <Label className='text-xs font-medium'>Description</Label>
             <Textarea
               placeholder='Enter task details or description...'
               value={taskDescription}
               onChange={(e) => setTaskDescription(e.target.value)}
               rows={3}
-              className='col-span-3'
+              className='text-xs resize-none'
             />
           </div>
 
-          <DialogFooter>
-            <Button type='button' variant='outline' onClick={onClose}>
+          <DialogFooter className='pt-2'>
+            <Button type='button' variant='outline' className='h-9 text-xs cursor-pointer' onClick={onClose}>
               Cancel
             </Button>
-            <Button type='submit' disabled={createMutation.isPending}>
+            <Button type='submit' className='h-9 text-xs cursor-pointer' disabled={createMutation.isPending}>
               {createMutation.isPending ? 'Creating...' : 'Create Task'}
             </Button>
           </DialogFooter>

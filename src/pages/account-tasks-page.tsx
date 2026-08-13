@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useMemo } from 'react'
 import { useQuery, useMutation, useQueryClient, keepPreviousData } from '@tanstack/react-query'
 import { Pencil, Trash2, CheckCircle2, Filter, Plus, Search, RefreshCw } from 'lucide-react'
 import { toast } from 'sonner'
@@ -25,6 +25,34 @@ import type { AccountTask, TaskStatus, CallBackDateStatus } from '@/types/accoun
 import CreateAccountTaskModal from '@/components/account-tasks/create-account-task-modal'
 import UpdateAccountTaskModal from '@/components/account-tasks/update-account-task-modal'
 
+const formatISTDateTime = (dateStr?: string | null) => {
+  if (!dateStr) return '-'
+  try {
+    const dt = new Date(dateStr)
+    if (isNaN(dt.getTime())) return '-'
+    const parts = new Intl.DateTimeFormat('en-IN', {
+      timeZone: 'Asia/Kolkata',
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: true,
+    }).formatToParts(dt)
+
+    const d = parts.find((p) => p.type === 'day')?.value || ''
+    const m = parts.find((p) => p.type === 'month')?.value || ''
+    const y = parts.find((p) => p.type === 'year')?.value || ''
+    const hr = parts.find((p) => p.type === 'hour')?.value || ''
+    const min = parts.find((p) => p.type === 'minute')?.value || ''
+    const dayPeriod = parts.find((p) => p.type === 'dayPeriod')?.value?.toUpperCase() || ''
+
+    return `${d}/${m}/${y}, ${hr}:${min} ${dayPeriod}`
+  } catch {
+    return dateStr || '-'
+  }
+}
+
 export default function AccountTasksPage() {
   const queryClient = useQueryClient()
   const { user } = useAuth()
@@ -32,22 +60,26 @@ export default function AccountTasksPage() {
   const canViewOwnerFilter = ['super_admin', 'admin', 'manager'].includes(role)
 
   const quickCompleteMutation = useMutation({
-    mutationFn: async (taskId: number) => {
+    mutationFn: async (taskId: string | number) => {
       const res = await fetch(`${ENV.VITE_BACKEND_BASE_URL}/account-tasks/${taskId}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
         body: JSON.stringify({ task_status: 'Completed' }),
       })
-      if (!res.ok) throw new Error('Failed to mark task as completed')
+      if (!res.ok) {
+        const err = await res.json()
+        throw new Error(err.detail || 'Failed to mark task as completed')
+      }
       return res.json()
     },
     onSuccess: () => {
       toast.success('Task marked as Completed!')
       queryClient.invalidateQueries({ queryKey: ['account-tasks'] })
+      queryClient.invalidateQueries({ queryKey: ['account-tasks-list'] })
     },
-    onError: () => {
-      toast.error('Failed to mark task as completed')
+    onError: (err: any) => {
+      toast.error(err.message || 'Failed to mark task as completed')
     },
   })
 
@@ -75,6 +107,7 @@ export default function AccountTasksPage() {
       toast.success(data.message || 'Tasks status updated successfully')
       setSelectedTaskIds([])
       queryClient.invalidateQueries({ queryKey: ['account-tasks'] })
+      queryClient.invalidateQueries({ queryKey: ['account-tasks-list'] })
     },
     onError: (err: any) => {
       toast.error(err.message || 'Failed to mass update tasks')
@@ -88,6 +121,8 @@ export default function AccountTasksPage() {
     taskType: 'all',
     callBackStatus: 'all',
     accountOwnerId: [] as Option[],
+    assignedFromDate: '',
+    assignedToDate: '',
   })
 
   // Applied Filter state (triggered when clicking "Search" button)
@@ -113,16 +148,20 @@ export default function AccountTasksPage() {
     retry: false,
   })
 
-  const rawOwners = Array.isArray(ownerResponse)
-    ? ownerResponse
-    : Array.isArray(ownerResponse?.data)
-      ? ownerResponse.data
-      : []
+  const rawOwners = useMemo(() => {
+    return Array.isArray(ownerResponse)
+      ? ownerResponse
+      : Array.isArray(ownerResponse?.data)
+        ? ownerResponse.data
+        : []
+  }, [ownerResponse])
 
-  const ownerOptions: Option[] = rawOwners.map((u: any) => ({
-    value: (u.id || u.user_id || '').toString(),
-    label: u.full_name || u.first_name || u.email || `User #${u.id}`,
-  }))
+  const ownerOptions: Option[] = useMemo(() => {
+    return rawOwners.map((u: any) => ({
+      value: (u.id || u.user_id || '').toString(),
+      label: u.full_name || u.first_name || u.email || `User #${u.id}`,
+    }))
+  }, [rawOwners])
 
   // React Query fetch for Account Tasks list
   const { data, isLoading, refetch } = useQuery({
@@ -136,6 +175,9 @@ export default function AccountTasksPage() {
       if (appliedFilters.taskStatus !== 'all') params.set('task_status', appliedFilters.taskStatus)
       if (appliedFilters.taskType !== 'all') params.set('task_type', appliedFilters.taskType)
       if (appliedFilters.callBackStatus !== 'all') params.set('call_back_status', appliedFilters.callBackStatus)
+
+      if (appliedFilters.assignedFromDate) params.set('assigned_from_date', appliedFilters.assignedFromDate)
+      if (appliedFilters.assignedToDate) params.set('assigned_to_date', appliedFilters.assignedToDate)
 
       if (appliedFilters.accountOwnerId && appliedFilters.accountOwnerId.length > 0) {
         appliedFilters.accountOwnerId.forEach((o) => params.append('account_owner_id', o.value))
@@ -198,6 +240,8 @@ export default function AccountTasksPage() {
       taskType: 'all',
       callBackStatus: 'all',
       accountOwnerId: [] as Option[],
+      assignedFromDate: '',
+      assignedToDate: '',
     }
     setFilters(empty)
     setAppliedFilters(empty)
@@ -259,7 +303,7 @@ export default function AccountTasksPage() {
             </div>
           )}
 
-          <Button onClick={() => setIsCreateModalOpen(true)}>
+          <Button className='cursor-pointer' onClick={() => setIsCreateModalOpen(true)}>
             + Create Account Task
           </Button>
         </div>
@@ -407,6 +451,31 @@ export default function AccountTasksPage() {
                 </SelectContent>
               </Select>
             </div>
+
+            {/* Assigned Date Range Filter */}
+            <div className='space-y-2'>
+              <Label className='text-xs font-semibold'>Assigned Date Filter</Label>
+              <div className='grid grid-cols-2 gap-2'>
+                <div>
+                  <Label className='text-[11px] text-muted-foreground'>From Date</Label>
+                  <Input
+                    type='date'
+                    value={filters.assignedFromDate}
+                    onChange={(e) => handleFilterChange('assignedFromDate', e.target.value)}
+                    className='h-8 text-xs bg-background'
+                  />
+                </div>
+                <div>
+                  <Label className='text-[11px] text-muted-foreground'>To Date</Label>
+                  <Input
+                    type='date'
+                    value={filters.assignedToDate}
+                    onChange={(e) => handleFilterChange('assignedToDate', e.target.value)}
+                    className='h-8 text-xs bg-background'
+                  />
+                </div>
+              </div>
+            </div>
           </div>
 
           {/* Bottom Action Buttons inside Filter Sidebar */}
@@ -534,14 +603,10 @@ export default function AccountTasksPage() {
                               {task.task_description || <span className='text-muted-foreground italic text-xs'>No description</span>}
                             </td>
                             <td className='p-3 text-xs text-muted-foreground whitespace-nowrap'>
-                              {task.task_assigned_date_time
-                                ? formatExactDate(task.task_assigned_date_time, 'dd MMM yyyy, hh:mm a')
-                                : '-'}
+                              {formatISTDateTime(task.task_assigned_date_time)}
                             </td>
                             <td className='p-3 text-xs text-muted-foreground whitespace-nowrap'>
-                              {task.task_due_date_time
-                                ? formatExactDate(task.task_due_date_time, 'dd MMM yyyy, hh:mm a')
-                                : '-'}
+                              {formatISTDateTime(task.task_due_date_time)}
                             </td>
                             <td className='p-3 whitespace-nowrap'>
                               <div className='flex items-center gap-2'>

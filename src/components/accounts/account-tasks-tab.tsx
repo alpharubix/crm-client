@@ -26,6 +26,34 @@ interface AccountTasksTabProps {
   accountName?: string
 }
 
+const formatISTDateTime = (dateStr?: string | null) => {
+  if (!dateStr) return '-'
+  try {
+    const dt = new Date(dateStr)
+    if (isNaN(dt.getTime())) return '-'
+    const parts = new Intl.DateTimeFormat('en-IN', {
+      timeZone: 'Asia/Kolkata',
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: true,
+    }).formatToParts(dt)
+
+    const d = parts.find((p) => p.type === 'day')?.value || ''
+    const m = parts.find((p) => p.type === 'month')?.value || ''
+    const y = parts.find((p) => p.type === 'year')?.value || ''
+    const hr = parts.find((p) => p.type === 'hour')?.value || ''
+    const min = parts.find((p) => p.type === 'minute')?.value || ''
+    const dayPeriod = parts.find((p) => p.type === 'dayPeriod')?.value?.toUpperCase() || ''
+
+    return `${d}/${m}/${y}, ${hr}:${min} ${dayPeriod}`
+  } catch {
+    return dateStr || '-'
+  }
+}
+
 export default function AccountTasksTab({ accountId, accountName }: AccountTasksTabProps) {
   const queryClient = useQueryClient()
   const { user } = useAuth()
@@ -214,14 +242,10 @@ export default function AccountTasksTab({ accountId, accountName }: AccountTasks
                     {getCallBackBadge(task.call_back_date_status)}
                   </TableCell>
                   <TableCell className='text-xs text-muted-foreground whitespace-nowrap'>
-                    {task.task_assigned_date_time
-                      ? formatExactDate(task.task_assigned_date_time, 'dd MMM yyyy, hh:mm a')
-                      : '-'}
+                    {formatISTDateTime(task.task_assigned_date_time)}
                   </TableCell>
                   <TableCell className='text-xs text-muted-foreground whitespace-nowrap'>
-                    {task.task_due_date_time
-                      ? formatExactDate(task.task_due_date_time, 'dd MMM yyyy, hh:mm a')
-                      : '-'}
+                    {formatISTDateTime(task.task_due_date_time)}
                   </TableCell>
                   <TableCell>
                     <div className='flex items-center gap-2'>

@@ -57,7 +57,7 @@ export function MultiSelect({
   }, [safeOptions, selectedList, inputValue])
 
   return (
-    <Command className='overflow-visible bg-transparent'>
+    <Command shouldFilter={false} className='overflow-visible bg-transparent'>
       <div className={`group rounded-md border border-input px-1 py-1 text-xs h-9 flex items-center focus-within:ring-2 focus-within:ring-ring focus-within:ring-offset-2 overflow-hidden bg-white dark:bg-input/30 ${className || ''}`}>
         <div
           className='flex flex-nowrap overflow-x-auto gap-1 w-full items-center'
