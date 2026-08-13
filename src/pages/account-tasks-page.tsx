@@ -210,17 +210,17 @@ export default function AccountTasksPage() {
   }
 
   const userCreatedTasks = tasks.filter(isCreatorOrAdmin)
-  const isAllSelected = userCreatedTasks.length > 0 && userCreatedTasks.every((t) => selectedTaskIds.includes(t.id))
+  const isAllSelected = userCreatedTasks.length > 0 && userCreatedTasks.every((t) => selectedTaskIds.includes(String(t.id)))
 
   const handleSelectAll = (checked: boolean) => {
     if (checked) {
-      setSelectedTaskIds(userCreatedTasks.map((t) => t.id))
+      setSelectedTaskIds(userCreatedTasks.map((t) => String(t.id)))
     } else {
       setSelectedTaskIds([])
     }
   }
 
-  const handleSelectTask = (taskId: number, checked: boolean) => {
+  const handleSelectTask = (taskId: string, checked: boolean) => {
     if (checked) {
       setSelectedTaskIds((prev) => [...prev, taskId])
     } else {
@@ -582,7 +582,10 @@ export default function AccountTasksPage() {
                             !['Completed', 'Verified'].includes(task.task_status))
 
                         const isAccOwner = Boolean(
-                          task.account_owner_id && String(task.account_owner_id) === String(currentUserId)
+                          (task.account_owner_id && String(task.account_owner_id) === String(currentUserId)) ||
+                          (task.assigned_to_id && String(task.assigned_to_id) === String(currentUserId)) ||
+                          (task.created_by_id && String(task.created_by_id) === String(currentUserId)) ||
+                          ['super_admin', 'admin', 'manager'].includes(role)
                         )
 
                         return (
