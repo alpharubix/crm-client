@@ -246,6 +246,8 @@ export default function AccountTasksPage() {
       accountOwnerId: [] as Option[],
       assignedFromDate: '',
       assignedToDate: '',
+      createdFromDate: '',
+      createdToDate: '',
     }
     setFilters(empty)
     setAppliedFilters(empty)
