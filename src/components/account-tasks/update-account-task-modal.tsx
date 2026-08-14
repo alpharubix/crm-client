@@ -175,10 +175,23 @@ export default function UpdateAccountTaskModal({
     updateMutation.mutate()
   }
 
-  const currentUserId = user?.user_id || (user as any)?.id
+  const currentUserId = user?.user_id || (user as any)?.id || (user as any)?.zuid
   const isAccountOwner = Boolean(
-    taskData?.account_owner_id && String(taskData.account_owner_id) === String(currentUserId)
+    (taskData?.account_owner_id && String(taskData.account_owner_id) === String(currentUserId)) ||
+    (taskData?.assigned_to_id && String(taskData.assigned_to_id) === String(currentUserId))
   )
+  const isAdminOrManager = ['super_admin', 'admin', 'manager'].includes(role)
+
+  const canEditStatus = isAccountOwner || isAdminOrManager
+  const canEditOtherFields = isAdminOrManager && !isAccountOwner
+
+  const allowedStatuses: TaskStatus[] = isAccountOwner
+    ? ['Pending', 'In Progress', 'Completed', 'Verified']
+    : ['Unassigned', 'Assigned', 'Pending', 'In Progress', 'Completed', 'Verified', 'Overdue']
+
+  const statusOptions = isAccountOwner && !allowedStatuses.includes(taskStatus)
+    ? [{ value: taskStatus, disabled: true }, ...allowedStatuses.map((s) => ({ value: s, disabled: false }))]
+    : allowedStatuses.map((s) => ({ value: s, disabled: false }))
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
@@ -240,7 +253,7 @@ export default function UpdateAccountTaskModal({
                       key={`task-type-${taskId}-${taskType}`}
                       value={taskType}
                       onValueChange={(val: TaskType) => setTaskType(val)}
-                      disabled={!canEditFields}
+                      disabled={!canEditOtherFields}
                     >
                       <SelectTrigger className='h-9 text-xs'>
                         <SelectValue placeholder='Select Task Type' />
@@ -262,19 +275,17 @@ export default function UpdateAccountTaskModal({
                       key={`task-status-${taskId}-${taskStatus}`}
                       value={taskStatus}
                       onValueChange={(val: TaskStatus) => setTaskStatus(val)}
-                      disabled={!canEditFields}
+                      disabled={!canEditStatus}
                     >
                       <SelectTrigger className='h-9 text-xs'>
                         <SelectValue placeholder='Select Task Status' />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value='Unassigned'>Unassigned</SelectItem>
-                        <SelectItem value='Assigned'>Assigned</SelectItem>
-                        <SelectItem value='Pending'>Pending</SelectItem>
-                        <SelectItem value='In Progress'>In Progress</SelectItem>
-                        <SelectItem value='Completed'>Completed</SelectItem>
-                        <SelectItem value='Verified'>Verified</SelectItem>
-                        <SelectItem value='Overdue'>Overdue</SelectItem>
+                        {statusOptions.map((opt) => (
+                          <SelectItem key={opt.value} value={opt.value} disabled={opt.disabled}>
+                            {opt.value}
+                          </SelectItem>
+                        ))}
                       </SelectContent>
                     </Select>
                   </div>
@@ -285,7 +296,7 @@ export default function UpdateAccountTaskModal({
                       type='datetime-local'
                       value={taskAssignedDateTime}
                       onChange={(e) => setTaskAssignedDateTime(e.target.value)}
-                      disabled={!canEditFields}
+                      disabled={!canEditOtherFields}
                       className='h-9 text-xs'
                     />
                   </div>
@@ -297,7 +308,7 @@ export default function UpdateAccountTaskModal({
                     type='datetime-local'
                     value={taskDueDateTime}
                     onChange={(e) => setTaskDueDateTime(e.target.value)}
-                    disabled={!canEditFields}
+                    disabled={!canEditOtherFields}
                     className='h-9 text-xs'
                   />
                 </div>
@@ -307,7 +318,7 @@ export default function UpdateAccountTaskModal({
                   <Textarea
                     value={taskDescription}
                     onChange={(e) => setTaskDescription(e.target.value)}
-                    disabled={!canEditFields}
+                    disabled={!canEditOtherFields}
                     rows={3}
                     className='text-xs resize-none'
                   />
@@ -330,12 +341,13 @@ export default function UpdateAccountTaskModal({
                     </Button>
                   )}
 
-                  {canEditFields && (
+                  {canEditStatus && (
                     <Button type='submit' disabled={updateMutation.isPending}>
                       {updateMutation.isPending ? 'Saving...' : 'Save Changes'}
                     </Button>
                   )}
                 </DialogFooter>
+
               </form>
             </TabsContent>
 

@@ -189,6 +189,12 @@ export default function AccountTasksTab({
             {cbStatus}
           </Badge>
         );
+      case 'Due Dates':
+        return (
+          <Badge variant='outline' className='text-xs px-2 py-0.5'>
+            {cbStatus}
+          </Badge>
+        );
       default:
         return <span className='text-sm text-muted-foreground'>Blank</span>;
     }
@@ -230,11 +236,15 @@ export default function AccountTasksTab({
                 Task Description
               </TableHead>
               <TableHead className='font-semibold'>Call Back Status</TableHead>
-              <TableHead className='font-semibold text-foreground min-w-[150px]'>Created At</TableHead>
+              <TableHead className='font-semibold text-foreground min-w-[150px]'>
+                Created At
+              </TableHead>
               <TableHead className='font-semibold text-foreground min-w-[150px]'>
                 Assigned Date/Time
               </TableHead>
-              <TableHead className='font-semibold text-foreground min-w-[150px]'>Due Date/Time</TableHead>
+              <TableHead className='font-semibold text-foreground min-w-[150px]'>
+                Due Date/Time
+              </TableHead>
               <TableHead className='font-semibold'>Task Status</TableHead>
               <TableHead className='font-semibold text-right'>
                 Actions
@@ -274,12 +284,16 @@ export default function AccountTasksTab({
                     new Date(task.task_due_date_time) < new Date() &&
                     !['Completed', 'Verified'].includes(task.task_status));
 
-                const currentUserId = user?.user_id || (user as any)?.id || (user as any)?.zuid;
+                const currentUserId =
+                  user?.user_id || (user as any)?.id || (user as any)?.zuid;
                 const isAccOwner = Boolean(
-                  (task.account_owner_id && String(task.account_owner_id) === String(currentUserId)) ||
-                  (task.assigned_to_id && String(task.assigned_to_id) === String(currentUserId)) ||
-                  (task.created_by_id && String(task.created_by_id) === String(currentUserId)) ||
-                  ['super_admin', 'admin', 'manager'].includes(role)
+                  (task.account_owner_id &&
+                    String(task.account_owner_id) === String(currentUserId)) ||
+                  (task.assigned_to_id &&
+                    String(task.assigned_to_id) === String(currentUserId)) ||
+                  (task.created_by_id &&
+                    String(task.created_by_id) === String(currentUserId)) ||
+                  ['super_admin', 'admin', 'manager'].includes(role),
                 );
 
                 return (
