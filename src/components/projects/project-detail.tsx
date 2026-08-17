@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import type { Priority, Project, Status } from '@/types/project-types'
 import { Button } from '../ui/button'
 import {
@@ -7,6 +8,8 @@ import {
   DialogTitle,
 } from '../ui/dialog'
 import { PRIORITY_STYLES, STATUS_STYLES } from '@/conf'
+import { Copy, Check, Hash } from 'lucide-react'
+import { toast } from 'sonner'
 
 export default function ProjectDetail({
   project,
@@ -17,13 +20,62 @@ export default function ProjectDetail({
 }) {
   const p = project.priority as Priority
   const s = project.status as Status
+  const [copiedId, setCopiedId] = useState(false)
+  const [copiedBoth, setCopiedBoth] = useState(false)
+
+  const handleCopyIdOnly = () => {
+    const textToCopy = String(project.id)
+    navigator.clipboard.writeText(textToCopy)
+    toast.success(`Copied Project ID "${textToCopy}" to clipboard!`)
+    setCopiedId(true)
+    setTimeout(() => setCopiedId(false), 2000)
+  }
+
+  const handleCopyBoth = () => {
+    const textToCopy = `ID: #${project.id} - ${project.name}`
+    navigator.clipboard.writeText(textToCopy)
+    toast.success(`Copied "${textToCopy}" to clipboard!`)
+    setCopiedBoth(true)
+    setTimeout(() => setCopiedBoth(false), 2000)
+  }
 
   return (
     <DialogContent className='max-w-md'>
       <DialogHeader>
-        <p className='text-[11px] font-mono text-zinc-400 mb-0.5'>
-          {project.id}
-        </p>
+        <div className='flex items-center justify-between gap-2 pr-4'>
+          <button
+            onClick={handleCopyIdOnly}
+            className='text-[11px] font-mono text-zinc-500 hover:text-foreground flex items-center gap-1 cursor-pointer bg-zinc-100 hover:bg-zinc-200 px-1.5 py-0.5 rounded transition-colors border border-transparent'
+            title='Click to copy Project ID only'
+          >
+            <span>ID: #{project.id}</span>
+            {copiedId ? (
+              <Check className='w-3 h-3 text-green-600' />
+            ) : (
+              <Hash className='w-3 h-3 text-zinc-400' />
+            )}
+          </button>
+
+          <Button
+            variant='ghost'
+            size='sm'
+            className='h-7 text-xs flex items-center gap-1 text-muted-foreground hover:text-foreground cursor-pointer'
+            onClick={handleCopyBoth}
+            title='Copy Project ID & Name'
+          >
+            {copiedBoth ? (
+              <>
+                <Check className='w-3.5 h-3.5 text-green-600' />
+                <span className='text-green-600'>Copied Both</span>
+              </>
+            ) : (
+              <>
+                <Copy className='w-3.5 h-3.5' />
+                <span>Copy Both</span>
+              </>
+            )}
+          </Button>
+        </div>
         <DialogTitle className='text-base font-semibold leading-tight'>
           {project.name}
         </DialogTitle>

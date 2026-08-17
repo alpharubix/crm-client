@@ -15,7 +15,11 @@ import {
   CheckCircle2,
   XCircle,
   Folder,
+  Copy,
+  Check,
+  Hash,
 } from 'lucide-react'
+import { toast } from 'sonner'
 import {
   DndContext,
   DragOverlay,
@@ -181,6 +185,27 @@ function DraggableProjectCard({
   const isInitiator =
     user && String(user.user_id) === String(project.created_by)
 
+  const [copiedId, setCopiedId] = useState(false)
+  const [copiedBoth, setCopiedBoth] = useState(false)
+
+  const handleCopyIdOnly = (e: React.MouseEvent) => {
+    e.stopPropagation()
+    const textToCopy = String(project.id)
+    navigator.clipboard.writeText(textToCopy)
+    toast.success(`Copied Project ID "${textToCopy}" to clipboard!`)
+    setCopiedId(true)
+    setTimeout(() => setCopiedId(false), 2000)
+  }
+
+  const handleCopyBoth = (e: React.MouseEvent) => {
+    e.stopPropagation()
+    const textToCopy = `ID: #${project.id} - ${project.name}`
+    navigator.clipboard.writeText(textToCopy)
+    toast.success(`Copied "${textToCopy}" to clipboard!`)
+    setCopiedBoth(true)
+    setTimeout(() => setCopiedBoth(false), 2000)
+  }
+
   const handleAction = async (e: React.MouseEvent, toStatus: string) => {
     e.stopPropagation()
     onStatusChange(project.id, toStatus)
@@ -218,24 +243,50 @@ function DraggableProjectCard({
           {/* Header */}
           <div className='flex justify-between items-start gap-2'>
             <div className='flex flex-col gap-0.5 min-w-0 flex-1'>
-              <span className='text-[10px] font-mono font-bold text-muted-foreground/80 tracking-wide'>
-                ID: #{project.id}
-              </span>
+              <div className='flex items-center gap-1.5'>
+                <button
+                  onPointerDown={(e) => e.stopPropagation()}
+                  onClick={handleCopyIdOnly}
+                  className='text-[10px] font-mono font-bold text-muted-foreground/90 hover:text-foreground tracking-wide flex items-center gap-1 cursor-pointer hover:bg-muted/80 px-1 py-0.5 rounded transition-colors border border-transparent hover:border-muted'
+                  title='Click to copy Project ID only'
+                >
+                  <span>ID: #{project.id}</span>
+                  {copiedId ? (
+                    <Check className='w-3 h-3 text-green-600' />
+                  ) : (
+                    <Hash className='w-3 h-3 text-muted-foreground/60' />
+                  )}
+                </button>
+              </div>
               <h3 className='font-semibold text-sm leading-snug line-clamp-2 text-foreground group-hover:text-primary transition-colors'>
                 {project.name}
               </h3>
             </div>
-            <button
-              onPointerDown={(e) => e.stopPropagation()}
-              onClick={(e) => {
-                e.stopPropagation()
-                onEdit(project)
-              }}
-              className='cursor-pointer transition-all shrink-0 p-1 rounded-full text-muted-foreground hover:text-foreground hover:bg-muted/80'
-              title='Edit Project'
-            >
-              <Pencil className='w-3.5 h-3.5' />
-            </button>
+            <div className='flex items-center gap-1 shrink-0'>
+              <button
+                onPointerDown={(e) => e.stopPropagation()}
+                onClick={handleCopyBoth}
+                className='cursor-pointer transition-all shrink-0 p-1.5 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted/80'
+                title='Copy Project ID & Name'
+              >
+                {copiedBoth ? (
+                  <Check className='w-3.5 h-3.5 text-green-600' />
+                ) : (
+                  <Copy className='w-3.5 h-3.5' />
+                )}
+              </button>
+              <button
+                onPointerDown={(e) => e.stopPropagation()}
+                onClick={(e) => {
+                  e.stopPropagation()
+                  onEdit(project)
+                }}
+                className='cursor-pointer transition-all shrink-0 p-1.5 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted/80'
+                title='Edit Project'
+              >
+                <Pencil className='w-3.5 h-3.5' />
+              </button>
+            </div>
           </div>
 
           {/* Metadata Grid */}

@@ -4,6 +4,8 @@ import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import EditProjectModal from './edit-project'
+import { Copy } from 'lucide-react'
+import { toast } from 'sonner'
 
 export default function ProjectList() {
   const [editProject, setEditProject] = useState<Project | null>(null)
@@ -45,9 +47,17 @@ export default function ProjectList() {
             className={`grid grid-cols-[1fr_2fr_1fr_1fr_1fr_1fr] px-4 py-3 cursor-pointer  transition-colors items-center ${i !== projects.length - 1 ? 'border-b ' : ''}`}
           >
             <div>
-              <p className='text-xs font-medium  uppercase tracking-wide'>
-                {p.id}
-              </p>
+              <button
+                onClick={(e) => {
+                  e.stopPropagation()
+                  navigator.clipboard.writeText(String(p.id))
+                  toast.success(`Copied Project ID "${p.id}" to clipboard!`)
+                }}
+                className='text-xs font-medium font-mono uppercase tracking-wide hover:text-foreground hover:bg-muted/80 px-1.5 py-0.5 rounded cursor-pointer transition-colors'
+                title='Click to copy ID only'
+              >
+                #{p.id}
+              </button>
             </div>
             <div className=''>
               <p className='text-sm font-medium  leading-none'>
@@ -77,7 +87,19 @@ export default function ProjectList() {
               <p className='text-xs '>{p.startDate}</p>
               <p className='text-xs '>→ {p.endDate}</p>
             </div>
-            <div className='flex -space-x-1.5'>
+            <div className='flex items-center gap-2'>
+              <button
+                onClick={(e) => {
+                  e.stopPropagation()
+                  const textToCopy = `ID: #${p.id} - ${p.name}`
+                  navigator.clipboard.writeText(textToCopy)
+                  toast.success(`Copied "${textToCopy}" to clipboard!`)
+                }}
+                className='text-xs text-muted-foreground hover:text-foreground transition-colors p-1 rounded hover:bg-muted/80'
+                title='Copy Project ID & Name'
+              >
+                <Copy className='w-3.5 h-3.5' />
+              </button>
               <button
                 onClick={(e) => {
                   e.stopPropagation()
