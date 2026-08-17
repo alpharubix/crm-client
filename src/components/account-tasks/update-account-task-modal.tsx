@@ -23,8 +23,22 @@ import {
 } from '@/components/ui/select'
 import { ENV } from '@/conf'
 import type { AccountTask, TaskType, TaskStatus } from '@/types/account-task'
-import { MessageSquare, Plus, Send, CheckCircle2 } from 'lucide-react'
+import { MessageSquare, Plus, Send, CheckCircle2, Building2 } from 'lucide-react'
 import { useAuth } from '@/context/auth-context'
+
+function formatDate(dateStr?: string | null): string {
+  if (!dateStr) return 'N/A'
+  const dt = new Date(dateStr)
+  if (isNaN(dt.getTime())) return dateStr
+  return dt.toLocaleString('en-IN', {
+    day: '2-digit',
+    month: 'short',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: true,
+  })
+}
 
 interface UpdateAccountTaskModalProps {
   taskId: string | number | null
@@ -65,6 +79,25 @@ export default function UpdateAccountTaskModal({
   })
 
   const notesData = (taskData as any)?.notes || []
+
+  // Query Account notes directly for the Account Information panel
+  const accountIdForNotes = taskData?.account_id
+  const { data: accountNotesRes } = useQuery({
+    queryKey: ['account-direct-notes', accountIdForNotes],
+    queryFn: async () => {
+      if (!accountIdForNotes) return []
+      const res = await fetch(
+        `${ENV.VITE_BACKEND_BASE_URL}/notes/${accountIdForNotes}`,
+        { credentials: 'include' },
+      )
+      if (!res.ok) return []
+      const data = await res.json()
+      return data.data || []
+    },
+    enabled: !!accountIdForNotes && isOpen,
+  })
+
+  const lastAccountNote = accountNotesRes && accountNotesRes.length > 0 ? accountNotesRes[0] : null
 
   const toLocalISOString = (dateStr?: string | null) => {
     if (!dateStr) return ''
@@ -220,23 +253,89 @@ export default function UpdateAccountTaskModal({
 
             {/* Overview / Edit Tab */}
             <TabsContent value='details' className='pt-3 space-y-4'>
-              {/* Linked Account Readonly Summary */}
-              <div className='bg-muted/50 p-3 rounded-lg grid grid-cols-2 gap-2 text-sm border'>
-                <div>
-                  <span className='text-muted-foreground text-xs block'>Account Name</span>
-                  <span className='font-medium'>{taskData?.account_name || 'N/A'}</span>
+              {/* Linked Account Readonly Summary Panel with 9 Fields */}
+              <div className='bg-gradient-to-br from-card via-muted/30 to-muted/50 p-3.5 rounded-xl border shadow-xs space-y-3'>
+                <div className='flex items-center justify-between border-b border-border/60 pb-2'>
+                  <div className='flex items-center gap-2'>
+                    <Building2 className='w-4 h-4 text-primary' />
+                    <span className='font-semibold text-xs uppercase tracking-wider text-muted-foreground'>
+                      Account Information
+                    </span>
+                  </div>
+                  <div className='flex items-center gap-1.5 flex-wrap'>
+                    <Badge variant='outline' className='text-[10px] font-mono bg-background/80'>
+                      Record #{taskData?.account_id || 'N/A'}
+                    </Badge>
+                    <Badge variant='secondary' className='text-[10px] font-mono'>
+                      Module: {taskData?.module_name || 'Account'}
+                    </Badge>
+                  </div>
                 </div>
-                <div>
-                  <span className='text-muted-foreground text-xs block'>Account Owner</span>
-                  <span className='font-medium'>{taskData?.account_owner || 'Unassigned'}</span>
+
+                <div className='grid grid-cols-2 sm:grid-cols-3 gap-2.5 text-xs'>
+                  <div>
+                    <span className='text-muted-foreground text-[11px] font-medium block'>Account Name</span>
+                    <span className='font-semibold text-foreground truncate block' title={taskData?.account_name}>
+                      {taskData?.account_name || 'N/A'}
+                    </span>
+                  </div>
+
+                  <div>
+                    <span className='text-muted-foreground text-[11px] font-medium block'>Account Owner</span>
+                    <span className='font-semibold text-foreground truncate block' title={taskData?.account_owner}>
+                      {taskData?.account_owner || 'Unassigned'}
+                    </span>
+                  </div>
+
+                  <div>
+                    <span className='text-muted-foreground text-[11px] font-medium block'>Assigned Date & Time</span>
+                    <span className='font-medium text-foreground/90 truncate block' title={formatDate(taskData?.account_assigned_date_time)}>
+                      {formatDate(taskData?.account_assigned_date_time)}
+                    </span>
+                  </div>
+
+                  <div>
+                    <span className='text-muted-foreground text-[11px] font-medium block'>Account Status</span>
+                    <Badge variant='outline' className='mt-0.5 text-[10px] font-medium bg-blue-50/60 text-blue-700 border-blue-200'>
+                      {taskData?.account_status || 'N/A'}
+                    </Badge>
+                  </div>
+
+                  <div>
+                    <span className='text-muted-foreground text-[11px] font-medium block'>Account Stage</span>
+                    <Badge variant='outline' className='mt-0.5 text-[10px] font-medium bg-purple-50/60 text-purple-700 border-purple-200'>
+                      {taskData?.account_stage || 'N/A'}
+                    </Badge>
+                  </div>
+
+                  <div>
+                    <span className='text-muted-foreground text-[11px] font-medium block'>Call Back Date</span>
+                    <span className='font-medium text-foreground/90 truncate block' title={formatDate(taskData?.call_back_date_time) !== 'N/A' ? formatDate(taskData?.call_back_date_time) : taskData?.call_back_date_status}>
+                      {formatDate(taskData?.call_back_date_time) !== 'N/A'
+                        ? formatDate(taskData?.call_back_date_time)
+                        : (taskData?.call_back_date_status || 'N/A')}
+                    </span>
+                  </div>
                 </div>
-                <div>
-                  <span className='text-muted-foreground text-xs block'>Account Status</span>
-                  <span className='font-medium'>{taskData?.account_status || 'N/A'}</span>
-                </div>
-                <div>
-                  <span className='text-muted-foreground text-xs block'>Account Stage</span>
-                  <span className='font-medium'>{taskData?.account_stage || 'N/A'}</span>
+
+                {/* Last Account Note Section */}
+                <div className='mt-2.5 pt-2.5 border-t border-border/60 bg-background/90 p-2.5 rounded-lg border space-y-1.5'>
+                  <div className='flex items-center justify-between text-[11px] text-muted-foreground'>
+                    <span className='font-semibold flex items-center gap-1.5 text-foreground'>
+                      <MessageSquare className='w-3.5 h-3.5 text-primary' /> Last Account Note
+                      {lastAccountNote?.Owner?.first_name || lastAccountNote?.Created_By?.name ? (
+                        <span className='font-normal text-muted-foreground'>
+                          by {lastAccountNote?.Owner?.first_name || lastAccountNote?.Created_By?.name}
+                        </span>
+                      ) : null}
+                    </span>
+                    <span className='font-mono text-[10px] font-semibold text-primary bg-primary/10 px-2 py-0.5 rounded border border-primary/20'>
+                      {lastAccountNote?.Created_Time || lastAccountNote?.Modified_Time || 'Date N/A'}
+                    </span>
+                  </div>
+                  <p className='text-xs text-foreground/90 line-clamp-3 italic bg-muted/20 p-2 rounded border border-muted/40'>
+                    {lastAccountNote?.Note_Content ? `"${lastAccountNote.Note_Content}"` : 'No notes recorded for this account yet.'}
+                  </p>
                 </div>
               </div>
 

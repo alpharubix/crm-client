@@ -10,6 +10,7 @@ import {
   User,
   Users,
   Calendar,
+  Clock,
   AlertCircle,
   CheckCircle2,
   XCircle,
@@ -31,7 +32,10 @@ import { useAuth } from '@/context/auth-context'
 // 1. Add this interface at the top
 export interface ProjectFilters {
   search: string
+  project_id?: string
   assignee_id: string
+  created_by?: string
+  priority?: string
   start_date: string
   end_date: string
   project_type: string
@@ -213,9 +217,14 @@ function DraggableProjectCard({
         <CardContent className='p-3.5 flex flex-col gap-3'>
           {/* Header */}
           <div className='flex justify-between items-start gap-2'>
-            <h3 className='font-semibold text-sm leading-snug line-clamp-2 text-foreground group-hover:text-primary transition-colors'>
-              {project.name}
-            </h3>
+            <div className='flex flex-col gap-0.5 min-w-0 flex-1'>
+              <span className='text-[10px] font-mono font-bold text-muted-foreground/80 tracking-wide'>
+                ID: #{project.id}
+              </span>
+              <h3 className='font-semibold text-sm leading-snug line-clamp-2 text-foreground group-hover:text-primary transition-colors'>
+                {project.name}
+              </h3>
+            </div>
             <button
               onPointerDown={(e) => e.stopPropagation()}
               onClick={(e) => {
@@ -253,6 +262,16 @@ function DraggableProjectCard({
                 {actionerNames || '-'}
               </span>
             </div>
+            {project.created_at ? (
+              <div className='flex items-center justify-between gap-1 pt-0.5 border-t border-muted/40'>
+                <span className='flex items-center gap-1.5 text-[10px] font-medium text-zinc-400'>
+                  <Clock className='w-3 h-3 text-zinc-400 shrink-0' /> Created
+                </span>
+                <span className='font-mono text-[10px] text-foreground/80 font-medium truncate max-w-[150px]'>
+                  {project.created_at}
+                </span>
+              </div>
+            ) : null}
             {project.start_date || project.end_date ? (
               <div className='flex items-center justify-between gap-1 pt-0.5 border-t border-muted/40'>
                 <span className='flex items-center gap-1.5 text-[10px] font-medium text-zinc-400'>
@@ -408,8 +427,13 @@ export default function ProjectKanban({
       // Build the query string
       const params = new URLSearchParams()
       if (filters.search) params.append('search', filters.search)
+      if (filters.project_id) params.append('project_id', filters.project_id)
       if (filters.assignee_id !== 'all')
         params.append('assignee_id', filters.assignee_id)
+      if (filters.created_by && filters.created_by !== 'all')
+        params.append('created_by', filters.created_by)
+      if (filters.priority && filters.priority !== 'all')
+        params.append('priority', filters.priority)
       if (filters.start_date) params.append('start_date', filters.start_date)
       if (filters.end_date) params.append('end_date', filters.end_date)
       if (filters.project_type !== 'all')
@@ -514,6 +538,9 @@ export default function ProjectKanban({
           {activeProject && (
             <Card className='cursor-grabbing shadow-xl shadow-zinc-200/50 border border-blue-200 opacity-90 scale-105 rotate-2 py-0'>
               <CardContent className='p-3 text-sm bg-white rounded-lg'>
+                <span className='text-[10px] font-mono font-medium text-muted-foreground block mb-0.5'>
+                  ID: #{activeProject.id}
+                </span>
                 <p className='font-semibold text-zinc-900 line-clamp-2'>
                   {activeProject.name}
                 </p>

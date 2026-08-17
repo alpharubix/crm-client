@@ -28,6 +28,8 @@ export interface AccountTask {
   account_status?: string;
   account_stage?: string;
   call_back_date_status?: CallBackDateStatus;
+  call_back_date_time?: string;
+  account_assigned_date_time?: string;
   task_type: TaskType;
   task_description?: string;
   task_assigned_date_time?: string;

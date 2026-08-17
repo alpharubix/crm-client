@@ -5,7 +5,20 @@ import CreateProjectForm from './create-project'
 import type { Project } from '@/types/project-types'
 import ProjectList from './project-list'
 import ProjectKanban, { type ProjectFilters } from './project-kanban'
-import { FilterX, Search, Layers } from 'lucide-react'
+import {
+  FilterX,
+  Search,
+  Layers,
+  Hash,
+  User,
+  UserCheck,
+  Tag,
+  Activity,
+  AlertCircle,
+  Calendar,
+  RotateCcw,
+  Filter,
+} from 'lucide-react'
 import {
   Select,
   SelectContent,
@@ -19,7 +32,10 @@ import { Label } from '../ui/label'
 
 const defaultFilters: ProjectFilters = {
   search: '',
+  project_id: '',
   assignee_id: 'all',
+  created_by: 'all',
+  priority: 'all',
   start_date: '',
   end_date: '',
   project_type: 'all',
@@ -30,6 +46,13 @@ const defaultFilters: ProjectFilters = {
 const MODULE_OPTIONS = [
   { label: 'All Modules', value: 'all' },
   ...PROJECT_MODULES.map((m) => ({ label: m, value: m })),
+]
+
+const PRIORITY_OPTIONS = [
+  { label: 'Low', value: 'low' },
+  { label: 'Medium', value: 'medium' },
+  { label: 'High', value: 'high' },
+  { label: 'Critical', value: 'critical' },
 ]
 
 const STATUS_OPTIONS = [
@@ -56,6 +79,22 @@ export default function Project() {
 
   const [appliedFilters, setAppliedFilters] =
     useState<ProjectFilters>(defaultFilters)
+
+  const activeFilterCount = [
+    localFilters.search,
+    localFilters.project_id,
+    localFilters.assignee_id !== 'all' ? localFilters.assignee_id : null,
+    localFilters.created_by && localFilters.created_by !== 'all'
+      ? localFilters.created_by
+      : null,
+    localFilters.priority && localFilters.priority !== 'all'
+      ? localFilters.priority
+      : null,
+    localFilters.project_type !== 'all' ? localFilters.project_type : null,
+    localFilters.status !== 'all' ? localFilters.status : null,
+    localFilters.start_date,
+    localFilters.end_date,
+  ].filter(Boolean).length
 
   function handleModuleSelect(moduleValue: string) {
     setSelectedModule(moduleValue)
@@ -123,7 +162,7 @@ export default function Project() {
                 onClick={() => handleModuleSelect(m.value)}
                 className={`px-3.5 py-1.5 text-xs font-semibold rounded-md transition-all whitespace-nowrap cursor-pointer ${
                   active
-                    ? 'bg-background text-foreground shadow-sm border border-border'
+                    ? 'bg-background text-foreground shadow-xs border border-border'
                     : 'text-muted-foreground hover:text-foreground hover:bg-background/50'
                 }`}
               >
@@ -133,33 +172,48 @@ export default function Project() {
           })}
         </div>
 
-        {/* FILTER BAR */}
-        <div className='flex flex-wrap items-center justify-between gap-3 mb-6 p-2 bg-card border rounded-lg shadow-sm'>
-          <div className='flex flex-wrap items-center gap-2 flex-1'>
+        {/* REFINED FILTER BAR */}
+        <div className='flex flex-wrap items-center justify-between gap-3 mb-6 p-2.5 bg-card border rounded-xl shadow-xs transition-all'>
+          <div className='flex flex-wrap items-center gap-2.5 flex-1 min-w-0'>
             {/* Search */}
-            <div className='relative w-full max-w-60'>
-              <Search className='absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground' />
+            <div className='relative w-full sm:w-44 lg:w-48'>
+              <Search className='absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground/70 pointer-events-none' />
               <Input
-                placeholder='Search projects...'
-                className='pl-8 h-9 bg-muted/40 border-transparent hover:border-border focus-visible:border-primary focus-visible:ring-1 transition-colors shadow-none'
+                placeholder='Search by name...'
+                className='pl-8 h-9 text-xs bg-muted/30 border-muted hover:border-border focus-visible:border-primary transition-colors shadow-none rounded-md'
                 value={localFilters.search}
                 onChange={(e) => setFilter('search', e.target.value)}
                 onKeyDown={(e) => e.key === 'Enter' && applyFilters()}
               />
             </div>
 
-            <div className='h-5 w-px bg-border mx-1 hidden sm:block' />
+            {/* Project ID Filter */}
+            <div className='relative w-24 sm:w-28'>
+              <Hash className='absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground/70 pointer-events-none' />
+              <Input
+                placeholder='ID'
+                className='pl-8 h-9 text-xs font-mono bg-muted/30 border-muted hover:border-border focus-visible:border-primary transition-colors shadow-none rounded-md'
+                value={localFilters.project_id || ''}
+                onChange={(e) => setFilter('project_id', e.target.value)}
+                onKeyDown={(e) => e.key === 'Enter' && applyFilters()}
+              />
+            </div>
 
-            {/* Selects */}
+            <div className='h-5 w-px bg-border/60 mx-0.5 hidden sm:block' />
+
+            {/* Assignee / Actioner */}
             <Select
               value={localFilters.assignee_id}
               onValueChange={(v) => setFilter('assignee_id', v)}
             >
-              <SelectTrigger className='h-9 w-[140px] bg-muted/40 border-transparent hover:border-border transition-colors shadow-none'>
-                <SelectValue placeholder='Assignee' />
+              <SelectTrigger className='h-9 w-[130px] text-xs bg-muted/30 border-muted hover:border-border transition-colors shadow-none rounded-md'>
+                <div className='flex items-center gap-1.5 truncate'>
+                  <User className='h-3.5 w-3.5 text-muted-foreground shrink-0' />
+                  <SelectValue placeholder='Actioner' />
+                </div>
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value='all'>All Assignees</SelectItem>
+                <SelectItem value='all'>All Actioners</SelectItem>
                 {Object.entries(USERS_MAP).map(([id, name]) => (
                   <SelectItem key={id} value={id}>
                     {name}
@@ -168,12 +222,37 @@ export default function Project() {
               </SelectContent>
             </Select>
 
+            {/* Initiator */}
+            <Select
+              value={localFilters.created_by || 'all'}
+              onValueChange={(v) => setFilter('created_by', v)}
+            >
+              <SelectTrigger className='h-9 w-[130px] text-xs bg-muted/30 border-muted hover:border-border transition-colors shadow-none rounded-md'>
+                <div className='flex items-center gap-1.5 truncate'>
+                  <UserCheck className='h-3.5 w-3.5 text-muted-foreground shrink-0' />
+                  <SelectValue placeholder='Initiator' />
+                </div>
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value='all'>All Initiators</SelectItem>
+                {Object.entries(USERS_MAP).map(([id, name]) => (
+                  <SelectItem key={id} value={id}>
+                    {name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+
+            {/* Type */}
             <Select
               value={localFilters.project_type}
               onValueChange={(v) => setFilter('project_type', v)}
             >
-              <SelectTrigger className='h-9 w-[130px] bg-muted/40 border-transparent hover:border-border transition-colors shadow-none'>
-                <SelectValue placeholder='Type' />
+              <SelectTrigger className='h-9 w-[120px] text-xs bg-muted/30 border-muted hover:border-border transition-colors shadow-none rounded-md'>
+                <div className='flex items-center gap-1.5 truncate'>
+                  <Tag className='h-3.5 w-3.5 text-muted-foreground shrink-0' />
+                  <SelectValue placeholder='Type' />
+                </div>
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value='all'>All Types</SelectItem>
@@ -185,12 +264,37 @@ export default function Project() {
               </SelectContent>
             </Select>
 
+            {/* Priority */}
+            <Select
+              value={localFilters.priority || 'all'}
+              onValueChange={(v) => setFilter('priority', v)}
+            >
+              <SelectTrigger className='h-9 w-[125px] text-xs bg-muted/30 border-muted hover:border-border transition-colors shadow-none rounded-md'>
+                <div className='flex items-center gap-1.5 truncate'>
+                  <AlertCircle className='h-3.5 w-3.5 text-muted-foreground shrink-0' />
+                  <SelectValue placeholder='Priority' />
+                </div>
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value='all'>All Priorities</SelectItem>
+                {PRIORITY_OPTIONS.map((p) => (
+                  <SelectItem key={p.value} value={p.value}>
+                    {p.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+
+            {/* Status */}
             <Select
               value={localFilters.status}
               onValueChange={(v) => setFilter('status', v)}
             >
-              <SelectTrigger className='h-9 w-[140px] bg-muted/40 border-transparent hover:border-border transition-colors shadow-none'>
-                <SelectValue placeholder='Status' />
+              <SelectTrigger className='h-9 w-[130px] text-xs bg-muted/30 border-muted hover:border-border transition-colors shadow-none rounded-md'>
+                <div className='flex items-center gap-1.5 truncate'>
+                  <Activity className='h-3.5 w-3.5 text-muted-foreground shrink-0' />
+                  <SelectValue placeholder='Status' />
+                </div>
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value='all'>All Statuses</SelectItem>
@@ -202,20 +306,24 @@ export default function Project() {
               </SelectContent>
             </Select>
 
-            <div className='h-5 w-px bg-border mx-1 hidden lg:block' />
+            <div className='h-5 w-px bg-border/60 mx-0.5 hidden lg:block' />
 
-            {/* Date Range */}
-            <div className='flex items-center gap-1 rounded-md px-1.5 h-8 shadow-sm'>
+            {/* Date Range Filter (Schedule Start & End Date) */}
+            <div className='flex items-center gap-1.5 bg-muted/30 border border-muted rounded-md px-2.5 h-9'>
+              <Calendar className='h-3.5 w-3.5 text-muted-foreground shrink-0' />
+              <span className='text-[11px] font-semibold text-muted-foreground shrink-0'>Schedule:</span>
               <Input
                 type='datetime-local'
-                className='h-6 text-[11px] w-[140px] border-0 bg-transparent p-0 focus-visible:ring-0 shadow-none'
+                title='Schedule Start Date'
+                className='h-6 text-[11px] w-[135px] border-0 bg-transparent p-0 focus-visible:ring-0 shadow-none text-muted-foreground hover:text-foreground transition-colors'
                 value={localFilters.start_date}
                 onChange={(e) => setFilter('start_date', e.target.value)}
               />
-              <span className='text-zinc-300 text-xs'>→</span>
+              <span className='text-muted-foreground/60 text-xs font-medium'>→</span>
               <Input
                 type='datetime-local'
-                className='h-6 text-[11px] w-[140px] border-0 bg-transparent p-0 focus-visible:ring-0 shadow-none'
+                title='Schedule End Date'
+                className='h-6 text-[11px] w-[135px] border-0 bg-transparent p-0 focus-visible:ring-0 shadow-none text-muted-foreground hover:text-foreground transition-colors'
                 value={localFilters.end_date}
                 onChange={(e) => setFilter('end_date', e.target.value)}
               />
@@ -223,28 +331,29 @@ export default function Project() {
           </div>
 
           {/* Actions */}
-          <div className='flex items-center gap-2 shrink-0'>
-            {(localFilters.search ||
-              localFilters.assignee_id !== 'all' ||
-              localFilters.project_type !== 'all' ||
-              localFilters.status !== 'all' ||
-              localFilters.start_date ||
-              localFilters.end_date) && (
+          <div className='flex items-center gap-2 shrink-0 border-l border-border/40 pl-2.5 sm:pl-3'>
+            {activeFilterCount > 0 && (
               <Button
                 variant='ghost'
                 size='sm'
                 onClick={clearFilters}
-                className='h-9 px-3 text-muted-foreground hover:text-foreground'
+                className='h-9 px-2.5 text-xs text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors gap-1.5'
               >
-                Clear
+                <RotateCcw className='h-3.5 w-3.5' /> Clear
               </Button>
             )}
             <Button
               size='sm'
               onClick={applyFilters}
-              className='h-9 px-4 shadow-sm'
+              className='h-9 px-3.5 text-xs font-medium shadow-xs gap-1.5 cursor-pointer'
             >
-              Apply Filters
+              <Filter className='h-3.5 w-3.5' />
+              Apply
+              {activeFilterCount > 0 && (
+                <span className='ml-1 px-1.5 py-0.2 rounded-full bg-primary-foreground/20 text-[10px] font-bold'>
+                  {activeFilterCount}
+                </span>
+              )}
             </Button>
           </div>
         </div>
