@@ -49,6 +49,10 @@ const data = {
           url: '/accounts',
         },
         {
+          title: 'Acccounts Status Journey',
+          url: '/acc-status-journey',
+        },
+        {
           title: 'Account Tasks',
           url: '/account-tasks',
         },
