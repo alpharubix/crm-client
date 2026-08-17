@@ -1,27 +1,23 @@
-import { useState } from 'react'
-import { useParams, useNavigate } from 'react-router-dom'
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { toast } from 'sonner'
-import { ENV, HR_USER_IDS, MANAGER_USER_IDS } from '@/conf'
+import { MANAGER_USER_IDS } from '@/conf'
 
 import { NavMain } from '@/components/nav-main'
 import { NavUser } from '@/components/nav-user'
-import { TeamSwitcher } from '@/components/team-switcher'
 import {
   Sidebar,
   SidebarContent,
   SidebarFooter,
   SidebarHeader,
   SidebarRail,
+  SidebarTrigger,
 } from '@/components/ui/sidebar'
 import {
   BookOpen,
   FolderDown,
   FolderOpenDot,
-  GalleryVerticalEnd,
   Logs,
   Megaphone,
   LifeBuoy,
+  GalleryVerticalEnd,
 } from 'lucide-react'
 import { useAuth } from '@/context/auth-context'
 
@@ -179,8 +175,27 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
 
   return (
     <Sidebar collapsible='icon' {...props}>
-      <SidebarHeader>
-        <TeamSwitcher teams={data.teams} />
+      <SidebarHeader className='border-b border-border/50'>
+        <div className='flex items-center justify-between h-14 px-3'>
+          <div className='flex items-center gap-2.5 overflow-hidden group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:w-full'>
+            {/* Logo Icon */}
+            <div className='flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-gradient-to-br from-blue-600 to-blue-500 text-white shadow-md shadow-blue-500/25'>
+              <svg className='h-4.5 w-4.5' viewBox='0 0 24 24' fill='none' stroke='currentColor' strokeWidth='2.5' strokeLinecap='round' strokeLinejoin='round'>
+                <path d='M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2' />
+                <circle cx='9' cy='7' r='4' />
+                <polyline points='16 11 18 13 22 9' />
+              </svg>
+            </div>
+            {/* Brand Name */}
+            <div className='flex flex-col group-data-[collapsible=icon]:hidden min-w-0'>
+              <span className='text-base font-bold tracking-tight text-foreground leading-none'>
+                R1X <span className='text-blue-500'>CRM</span>
+              </span>
+              <span className='text-[10px] text-muted-foreground/70 leading-none mt-0.5 tracking-wide'>AlphaRubix</span>
+            </div>
+          </div>
+          <SidebarTrigger className='group-data-[collapsible=icon]:hidden text-muted-foreground hover:text-foreground' />
+        </div>
       </SidebarHeader>
       <SidebarContent>
         <NavMain

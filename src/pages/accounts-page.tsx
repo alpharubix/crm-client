@@ -30,6 +30,7 @@ import {
 } from '@tanstack/react-query'
 import { toast } from 'sonner'
 import { Skeleton } from '@/components/ui/skeleton'
+import { Badge } from '@/components/ui/badge'
 
 import { Spinner } from '@/components/ui/spinner'
 import { formatExactDate } from '@/utils/date-formatter'
@@ -555,73 +556,74 @@ export default function AccountsPage() {
     user?.role?.toLowerCase().includes('manager')
 
   return (
-    <div className='p-4 space-y-4'>
-      <div className='flex items-center justify-between'>
+    <div className='flex flex-col h-screen overflow-hidden'>
+      {/* Page Header */}
+      <div className='flex items-center justify-between px-5 py-3.5 border-b border-border/60 bg-background shrink-0'>
         <div>
-          <h1 className='text-2xl font-bold'>Accounts Database</h1>
-          <p className='text-muted-foreground'>Manage your accounts here.</p>
+          <h1 className='text-xl font-semibold text-foreground tracking-tight'>Accounts Database</h1>
+          <p className='text-xs text-muted-foreground mt-0.5'>Manage and track all your accounts</p>
         </div>
 
-        {isLoading ? (
-          <Skeleton className='w-24 h-4' />
-        ) : (
-          <div className='flex gap-2 items-center'>
-            <h3 className='font-semibold text-muted-foreground'>
-              Total Accounts :
-            </h3>
-            <p className='text-muted-foreground'>{pageInfo.data_size}</p>
-          </div>
-        )}
-
-        <div className='flex gap-2 items-center'>
-          {isAllowToCreate && (
-            <Button onClick={() => navigate('/accounts/create')}>
-              + Create Account
-            </Button>
+        <div className='flex items-center gap-2.5'>
+          {isLoading ? (
+            <Skeleton className='w-28 h-5 rounded-md' />
+          ) : (
+            <span className='text-xs font-medium text-muted-foreground bg-muted/60 px-2.5 py-1 rounded-md border border-border/50'>
+              {pageInfo.data_size} accounts
+            </span>
           )}
-          <UploadCsv isLoading={isLoading} refetch={refetch} />
+          <div className='flex gap-1.5 items-center'>
+            {isAllowToCreate && (
+              <Button size='sm' onClick={() => navigate('/accounts/create')} className='h-8 text-xs gap-1.5'>
+                <span className='text-base leading-none'>+</span> Create Account
+              </Button>
+            )}
+            <UploadCsv isLoading={isLoading} refetch={refetch} />
+          </div>
         </div>
       </div>
 
-      <div className='grid grid-cols-[260px_1fr] gap-4'>
-        <div className='border rounded-md p-3 space-y-4 bg-background overflow-y-auto h-[calc(100vh-140px)]'>
-          <h3 className='font-semibold text-sm'>Filter Accounts by</h3>
+      {/* Content Area */}
+      <div className='flex flex-1 overflow-hidden'>
+        {/* Filter Sidebar */}
+        <div className='w-[240px] shrink-0 border-r border-border/60 bg-background overflow-y-auto flex flex-col'>
+          <div className='p-3 border-b border-border/50 flex items-center justify-between'>
+            <h3 className='text-xs font-semibold text-muted-foreground uppercase tracking-wider'>Filters</h3>
+          </div>
+          <div className='p-3 space-y-3 flex-1'>
+            {showOwnerFilter && (
+              <div className='space-y-1.5'>
+                <Label className='text-xs'>Account Owner</Label>
+                <MultiSelect
+                  options={owners.map((owner: any) => ({
+                    label: owner.full_name,
+                    value: owner.id.toString(),
+                  }))}
+                  value={filters.accountOwnerId}
+                  onChange={(val) => handleFilterChange('accountOwnerId', val)}
+                  placeholder='Select Owners...'
+                />
+              </div>
+            )}
 
-          {showOwnerFilter && (
-            <div className='space-y-2'>
-              <Label>Account Owner</Label>
-              <MultiSelect
-                options={owners.map((owner: any) => ({
-                  label: owner.full_name,
-                  value: owner.id.toString(),
-                }))}
-                value={filters.accountOwnerId}
-                onChange={(val) => handleFilterChange('accountOwnerId', val)}
-                placeholder='Select Owners...'
+            <div className='space-y-1.5'>
+              <Label className='text-xs'>Account Name</Label>
+              <Input
+                placeholder='Account Name'
+                value={filters.accountName}
+                onChange={(e) => handleFilterChange('accountName', e.target.value)}
               />
             </div>
-          )}
 
-          <div className='space-y-2'>
-            <Label>Account Name</Label>
-            <Input
-              placeholder='Account Name'
-              value={filters.accountName}
-              onChange={(e) =>
-                handleFilterChange('accountName', e.target.value)
-              }
-            />
-          </div>
-
-          <div className='space-y-2'>
-            <Label>Account Status</Label>
-            <MultiSelect
-              options={ACCOUNT_STATUS_OPTIONS}
-              value={filters.accountStatus}
-              onChange={(val) => handleFilterChange('accountStatus', val)}
-              placeholder='Select Status...'
-            />
-          </div>
+            <div className='space-y-1.5'>
+              <Label className='text-xs'>Account Status</Label>
+              <MultiSelect
+                options={ACCOUNT_STATUS_OPTIONS}
+                value={filters.accountStatus}
+                onChange={(val) => handleFilterChange('accountStatus', val)}
+                placeholder='Select Status...'
+              />
+            </div>
 
           <div className='space-y-2'>
             <Label>Phone</Label>
@@ -925,55 +927,52 @@ export default function AccountsPage() {
               </div>
             </div>
           </div>
-
-          <div className='flex gap-2 pt-2'>
-            <Button className='flex-1 cursor-pointer' onClick={handleSearch}>
-              Search
-            </Button>
-            <Button
-              variant='outline'
-              className='cursor-pointer'
-              onClick={handleClear}
-            >
-              Clear
-            </Button>
           </div>
-          <ManageColumnsDialog
-            columns={columns}
-            onSave={savePreferences}
-            onReset={resetToDefault}
-          />
+          {/* Filter Actions */}
+          <div className='p-3 border-t border-border/60 bg-background shrink-0 space-y-1.5'>
+            <Button className='w-full h-8 text-xs cursor-pointer' onClick={handleSearch}>
+              Apply Filters
+            </Button>
+            <Button variant='ghost' className='w-full h-8 text-xs cursor-pointer text-muted-foreground hover:text-foreground' onClick={handleClear}>
+              Clear All
+            </Button>
+            <ManageColumnsDialog
+              columns={columns}
+              onSave={savePreferences}
+              onReset={resetToDefault}
+            />
+          </div>
         </div>
 
-        <div className='flex flex-col gap-4 min-w-0 h-[calc(100vh-140px)]'>
+        {/* Main Table Area */}
+        <div className='flex flex-col flex-1 overflow-hidden'>
           {isLoading ? (
-            <div className='flex items-center justify-center h-64 border rounded-md'>
-              <Spinner className='h-8 w-8 text-muted-foreground' />
+            <div className='flex items-center justify-center flex-1 border-l border-border/60'>
+              <Spinner className='h-7 w-7 text-muted-foreground' />
             </div>
           ) : (
             <>
               {selectedAccountIds.length > 0 && (
-                <div className='flex items-center justify-between bg-primary/10 border border-primary/20 text-primary px-3.5 py-2 rounded-md text-xs font-medium shrink-0 shadow-xs'>
-                  <div className='flex items-center gap-2'>
-                    <span>
-                      Selected {selectedAccountIds.length} of {accounts.length} accounts on this page
-                    </span>
-                    <span className='text-muted-foreground/60'>|</span>
+                <div className='flex items-center justify-between bg-blue-500/10 border border-blue-500/25 text-blue-600 dark:text-blue-400 px-4 py-2.5 shrink-0 mx-0 text-xs font-medium'>
+                  <div className='flex items-center gap-2.5'>
+                    <div className='h-1.5 w-1.5 rounded-full bg-blue-500 animate-pulse' />
+                    <span className='font-semibold'>{selectedAccountIds.length} selected</span>
+                    <span className='text-muted-foreground/60'>·</span>
                     <span className='font-normal text-muted-foreground'>
-                      Will generate {selectedAccountIds.length} task(s) (1 task per account)
+                      {selectedAccountIds.length} task(s) will be created
                     </span>
                   </div>
-                  <div className='flex items-center gap-2'>
+                  <div className='flex items-center gap-1.5'>
                     <Button
                       size='sm'
                       onClick={() => bulkCreateTasksMutation.mutate(selectedAccountIds)}
                       disabled={bulkCreateTasksMutation.isPending}
-                      className='h-7 text-xs px-3 cursor-pointer shadow-xs'
+                      className='h-7 text-xs px-3 cursor-pointer gap-1.5'
                     >
                       {bulkCreateTasksMutation.isPending ? (
                         <>
-                          <Spinner className='mr-1.5 h-3.5 w-3.5' />
-                          Creating Tasks...
+                          <Spinner className='h-3.5 w-3.5' />
+                          Creating...
                         </>
                       ) : (
                         `Create Tasks (${selectedAccountIds.length})`
@@ -983,17 +982,17 @@ export default function AccountsPage() {
                       variant='ghost'
                       size='sm'
                       onClick={() => setSelectedAccountIds([])}
-                      className='h-7 text-xs px-2 hover:bg-primary/20 cursor-pointer'
+                      className='h-7 text-xs px-2 cursor-pointer text-muted-foreground hover:text-foreground'
                     >
-                      Clear Selection
+                      Deselect All
                     </Button>
                   </div>
                 </div>
               )}
-              <div className='border rounded-md flex-1 overflow-auto relative'>
+              <div className='flex-1 overflow-auto'>
                 <table className='w-full caption-bottom text-sm'>
                   <TableHeader>
-                    <TableRow className='sticky top-0 z-10 bg-background hover:bg-accent'>
+                    <TableRow className='sticky top-0 z-10 bg-muted/40 hover:bg-muted/50 border-b border-border/60'>
                       <TableHead className='w-[40px] px-3 text-center'>
                         <Checkbox
                           checked={
@@ -1026,8 +1025,10 @@ export default function AccountsPage() {
                         return (
                           <TableRow
                             key={acc.id}
-                            className={`cursor-pointer hover:bg-accent ${
-                              isSelected ? 'bg-muted/50' : ''
+                            className={`cursor-pointer transition-colors ${
+                              isSelected
+                                ? 'bg-blue-500/8 dark:bg-blue-500/10 border-l-2 border-l-blue-500'
+                                : 'hover:bg-muted/40'
                             }`}
                             onClick={() => handleRowClick(acc.id)}
                           >
@@ -1070,9 +1071,17 @@ export default function AccountsPage() {
                                 return (
                                   <TableCell
                                     key={col.id}
-                                    className='text-primary'
                                   >
-                                    {acc.account_status || '—'}
+                                    {acc.account_status ? (
+                                      <Badge
+                                        variant='outline'
+                                        className='bg-emerald-950/60 text-emerald-400 border-emerald-800/50 dark:bg-emerald-950/60 dark:text-emerald-400 dark:border-emerald-800/50 bg-emerald-50 text-emerald-700 border-emerald-200 font-medium text-xs px-2.5 py-0.5 rounded-full'
+                                      >
+                                        {acc.account_status}
+                                      </Badge>
+                                    ) : (
+                                      '—'
+                                    )}
                                   </TableCell>
                                 )
                               case 'source':
@@ -1224,11 +1233,13 @@ export default function AccountsPage() {
                 </table>
               </div>
 
-              <Pagination
-                currentPage={pageInfo.page}
-                totalPages={pageInfo.total_pages}
-                onPageChange={handlePageChange}
-              />
+              <div className='px-4 py-2 border-t border-border/60 shrink-0 bg-background'>
+                <Pagination
+                  currentPage={pageInfo.page}
+                  totalPages={pageInfo.total_pages}
+                  onPageChange={handlePageChange}
+                />
+              </div>
             </>
           )}
         </div>

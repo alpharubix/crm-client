@@ -305,114 +305,112 @@ export default function AccountTasksPage() {
   };
 
   const getStatusBadge = (status: TaskStatus) => {
-    switch (status) {
-      case 'Completed':
-      case 'Verified':
-        return (
-          <Badge className='bg-green-600 hover:bg-green-700 text-white'>
-            {status}
-          </Badge>
-        );
-      case 'In Progress':
-        return (
-          <Badge className='bg-blue-600 hover:bg-blue-700 text-white'>
-            {status}
-          </Badge>
-        );
-      case 'Pending':
-      case 'Assigned':
-        return (
-          <Badge className='bg-amber-500 hover:bg-amber-600 text-white'>
-            {status}
-          </Badge>
-        );
-      case 'Overdue':
-        return <Badge variant='destructive'>{status}</Badge>;
-      default:
-        return <Badge variant='outline'>{status || 'Unassigned'}</Badge>;
+    const base = 'inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-[11px] font-semibold whitespace-nowrap border'
+
+    const styles: Record<string, string> = {
+      Pending:     'bg-amber-50   text-amber-700  border-amber-200   dark:bg-amber-500/10  dark:text-amber-400  dark:border-amber-500/20',
+      Assigned:    'bg-indigo-50  text-indigo-700 border-indigo-200  dark:bg-indigo-500/10 dark:text-indigo-400 dark:border-indigo-500/20',
+      'In Progress':'bg-blue-50   text-blue-700   border-blue-200    dark:bg-blue-500/10   dark:text-blue-400   dark:border-blue-500/20',
+      Completed:   'bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-500/10 dark:text-emerald-400 dark:border-emerald-500/20',
+      Verified:    'bg-teal-50    text-teal-700   border-teal-200    dark:bg-teal-500/10   dark:text-teal-400   dark:border-teal-500/20',
+      Overdue:     'bg-red-50     text-red-700    border-red-200     dark:bg-red-500/10    dark:text-red-400    dark:border-red-500/20',
+      Unassigned:  'bg-slate-50   text-slate-600  border-slate-200   dark:bg-slate-500/10  dark:text-slate-400  dark:border-slate-500/20',
     }
-  };
+
+    const dotColors: Record<string, string> = {
+      Pending:     'bg-amber-500',
+      Assigned:    'bg-indigo-500',
+      'In Progress':'bg-blue-500',
+      Completed:   'bg-emerald-500',
+      Verified:    'bg-teal-500',
+      Overdue:     'bg-red-500',
+      Unassigned:  'bg-slate-400',
+    }
+
+    const style = styles[status] || styles.Unassigned
+    const dot = dotColors[status] || dotColors.Unassigned
+    const label = status || 'Unassigned'
+
+    return (
+      <span className={`${base} ${style}`}>
+        <span className={`h-1.5 w-1.5 rounded-full shrink-0 ${dot}`} />
+        {label}
+      </span>
+    )
+  }
 
   const getCallBackBadge = (cbStatus?: CallBackDateStatus) => {
-    switch (cbStatus) {
-      case 'Overdue':
-        return (
-          <Badge variant='destructive' className='text-xs px-2 py-0.5'>
-            {cbStatus}
-          </Badge>
-        );
-      case 'Due Today':
-        return (
-          <Badge className='bg-amber-500 text-xs px-2 py-0.5'>{cbStatus}</Badge>
-        );
-      case 'Due Tomorrow':
-        return (
-          <Badge className='bg-blue-500 text-xs px-2 py-0.5'>{cbStatus}</Badge>
-        );
-      case 'Due This Week':
-        return (
-          <Badge variant='secondary' className='text-xs px-2 py-0.5'>
-            {cbStatus}
-          </Badge>
-        );
-      case 'Due Next Week':
-        return (
-          <Badge variant='outline' className='text-xs px-2 py-0.5'>
-            {cbStatus}
-          </Badge>
-        );
-      default:
-        return <span className='text-sm text-muted-foreground'>Blank</span>;
+    const base = 'inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-[11px] font-semibold whitespace-nowrap border'
+
+    const styles: Record<string, string> = {
+      Overdue:       'bg-red-50    text-red-700    border-red-200    dark:bg-red-500/10    dark:text-red-400    dark:border-red-500/20',
+      'Due Today':   'bg-orange-50 text-orange-700 border-orange-200 dark:bg-orange-500/10 dark:text-orange-400 dark:border-orange-500/20',
+      'Due Tomorrow':'bg-amber-50  text-amber-700  border-amber-200  dark:bg-amber-500/10  dark:text-amber-400  dark:border-amber-500/20',
+      'Due This Week':'bg-blue-50  text-blue-700   border-blue-200   dark:bg-blue-500/10   dark:text-blue-400   dark:border-blue-500/20',
+      'Due Next Week':'bg-slate-50 text-slate-600  border-slate-200  dark:bg-slate-500/10  dark:text-slate-400  dark:border-slate-500/20',
     }
-  };
+
+    const dotColors: Record<string, string> = {
+      Overdue:       'bg-red-500',
+      'Due Today':   'bg-orange-500',
+      'Due Tomorrow':'bg-amber-500',
+      'Due This Week':'bg-blue-500',
+      'Due Next Week':'bg-slate-400',
+    }
+
+    if (!cbStatus || !styles[cbStatus]) {
+      return <span className='text-xs text-muted-foreground'>—</span>
+    }
+
+    return (
+      <span className={`${base} ${styles[cbStatus]}`}>
+        <span className={`h-1.5 w-1.5 rounded-full shrink-0 ${dotColors[cbStatus]}`} />
+        {cbStatus}
+      </span>
+    )
+  }
 
   return (
-    <div className='p-4 space-y-4'>
-      {/* Top Bar matching Accounts page layout */}
-      <div className='flex items-center justify-between'>
+    <div className='flex flex-col h-screen overflow-hidden'>
+      {/* Page Header */}
+      <div className='flex items-center justify-between px-5 py-3.5 border-b border-border/60 bg-background shrink-0'>
         <div>
-          <h1 className='text-2xl font-bold'>Account Tasks</h1>
-          <p className='text-muted-foreground text-sm'>
-            Manage and track all tasks parented under Accounts.
-          </p>
+          <h1 className='text-xl font-semibold text-foreground tracking-tight'>Account Tasks</h1>
+          <p className='text-xs text-muted-foreground mt-0.5'>Track and manage tasks linked to accounts</p>
         </div>
 
-        <div className='flex gap-4 items-center'>
+        <div className='flex items-center gap-2.5'>
           {isLoading ? (
-            <Skeleton className='w-32 h-4' />
+            <Skeleton className='w-24 h-5 rounded-md' />
           ) : (
-            <div className='flex gap-2 items-center text-sm'>
-              <h3 className='font-semibold text-muted-foreground'>
-                Total Tasks :
-              </h3>
-              <p className='text-muted-foreground'>
-                {pageInfo.total_records || tasks.length}
-              </p>
-            </div>
+            <span className='text-xs font-medium text-muted-foreground bg-muted/60 px-2.5 py-1 rounded-md border border-border/50'>
+              {pageInfo.total_records || tasks.length} tasks
+            </span>
           )}
-
           <Button
-            className='cursor-pointer'
+            size='sm'
+            className='cursor-pointer h-8 text-xs gap-1.5'
             onClick={() => setIsCreateModalOpen(true)}
           >
-            + Create Account Task
+            <span className='text-base leading-none'>+</span> Create Task
           </Button>
         </div>
       </div>
 
       {/* Mass Update Status Action Bar */}
       {selectedTaskIds.length > 0 && (
-        <div className='flex items-center justify-between bg-primary/10 p-2.5 px-4 rounded-md border border-primary/20 animate-in fade-in duration-200'>
-          <span className='text-xs font-semibold text-foreground'>
-            {selectedTaskIds.length} task(s) selected (Created by you)
-          </span>
+        <div className='flex items-center justify-between bg-blue-500/10 border border-blue-500/25 text-blue-600 dark:text-blue-400 px-4 py-2.5 shrink-0 text-xs font-medium'>
+          <div className='flex items-center gap-2.5'>
+            <div className='h-1.5 w-1.5 rounded-full bg-blue-500 animate-pulse' />
+            <span className='font-semibold'>{selectedTaskIds.length} tasks selected</span>
+          </div>
           <div className='flex items-center gap-2'>
             <Select
               onValueChange={(val) => massUpdateStatusMutation.mutate(val)}
               disabled={massUpdateStatusMutation.isPending}
             >
               <SelectTrigger className='h-8 text-xs bg-background w-[170px] font-medium'>
-                <SelectValue placeholder='Mass Update Status' />
+                <SelectValue placeholder='Update Status' />
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value='Assigned'>Assigned</SelectItem>
@@ -426,7 +424,7 @@ export default function AccountTasksPage() {
             <Button
               size='sm'
               variant='ghost'
-              className='h-8 text-xs text-muted-foreground hover:text-foreground'
+              className='h-8 text-xs text-muted-foreground hover:text-foreground cursor-pointer'
               onClick={() => setSelectedTaskIds([])}
             >
               Cancel
@@ -435,25 +433,23 @@ export default function AccountTasksPage() {
         </div>
       )}
 
-      {/* Main Content Split: Left Filter Sidebar, Right Table */}
-      <div className='grid grid-cols-1 lg:grid-cols-4 gap-4 items-start'>
+      {/* Main Content Split: Left Filter, Right Table */}
+      <div className='flex flex-1 overflow-hidden'>
         {/* Left Filter Sidebar */}
-        <div className='border rounded-md p-4 bg-card space-y-4 lg:col-span-1 shadow-sm'>
-          <div className='flex items-center justify-between border-b pb-2'>
-            <h2 className='font-semibold text-sm flex items-center gap-2'>
-              <Filter className='h-4 w-4' /> Filter Tasks
+        <div className='w-[240px] shrink-0 border-r border-border/60 bg-background overflow-y-auto flex flex-col'>
+          <div className='p-3 border-b border-border/50 flex items-center justify-between'>
+            <h2 className='text-xs font-semibold text-muted-foreground uppercase tracking-wider flex items-center gap-1.5'>
+              <Filter className='h-3.5 w-3.5' /> Filters
             </h2>
-            <Button
-              variant='ghost'
-              size='sm'
+            <button
               onClick={handleClear}
-              className='h-7 text-xs text-muted-foreground hover:text-foreground'
+              className='text-[11px] text-muted-foreground hover:text-foreground transition-colors'
             >
               Reset
-            </Button>
+            </button>
           </div>
 
-          <div className='space-y-3.5'>
+          <div className='p-3 space-y-3 flex-1 overflow-y-auto'>
             {/* Search Input */}
             <div className='space-y-1.5'>
               <Label className='text-xs'>Search</Label>
@@ -616,36 +612,29 @@ export default function AccountTasksPage() {
             </div>
           </div>
 
-          {/* Bottom Action Buttons inside Filter Sidebar */}
-          <div className='flex gap-2 pt-3 border-t mt-4'>
-            <Button
-              className='flex-1 cursor-pointer h-9 text-xs'
-              onClick={handleSearch}
-            >
-              Search
+          {/* Filter Actions */}
+          <div className='p-3 border-t border-border/60 bg-background shrink-0 space-y-1.5'>
+            <Button className='w-full h-8 text-xs cursor-pointer' onClick={handleSearch}>
+              Apply Filters
             </Button>
-            <Button
-              variant='outline'
-              className='cursor-pointer h-9 text-xs'
-              onClick={handleClear}
-            >
-              Clear
+            <Button variant='ghost' className='w-full h-8 text-xs cursor-pointer text-muted-foreground hover:text-foreground' onClick={handleClear}>
+              Clear All
             </Button>
           </div>
         </div>
 
         {/* Right Main Table & Pagination */}
-        <div className='flex flex-col gap-4 min-w-0 lg:col-span-3'>
+        <div className='flex flex-col flex-1 overflow-hidden'>
           {isLoading ? (
-            <div className='flex items-center justify-center h-64 border rounded-md'>
-              <Spinner className='h-8 w-8 text-muted-foreground' />
+            <div className='flex items-center justify-center flex-1 border-l border-border/60'>
+              <Spinner className='h-7 w-7 text-muted-foreground' />
             </div>
           ) : (
             <>
-              <div className='border rounded-md flex-1 overflow-auto relative bg-background'>
+              <div className='flex-1 overflow-auto'>
                 <table className='w-full caption-bottom text-sm'>
                   <thead>
-                    <tr className='sticky top-0 z-10 bg-background hover:bg-accent border-b'>
+                    <tr className='sticky top-0 z-10 bg-muted/40 hover:bg-muted/50 border-b border-border/60'>
                       <th className='h-10 px-3 text-left align-middle w-10'>
                         <input
                           type='checkbox'
@@ -744,8 +733,10 @@ export default function AccountTasksPage() {
                             key={task.id}
                             className={
                               isOverdue
-                                ? 'border-b transition-colors cursor-pointer bg-red-500/10 dark:bg-red-950/40 text-red-900 dark:text-red-200 hover:bg-red-500/20 border-red-200 dark:border-red-900'
-                                : 'border-b transition-colors hover:bg-muted/50 cursor-pointer'
+                                ? 'border-b border-border/50 transition-colors cursor-pointer bg-red-500/5 hover:bg-red-500/10 dark:bg-red-900/10 dark:hover:bg-red-900/20'
+                                : isSelected
+                                ? 'border-b border-border/50 transition-colors cursor-pointer bg-blue-500/5 dark:bg-blue-500/8'
+                                : 'border-b border-border/50 transition-colors cursor-pointer hover:bg-muted/40'
                             }
                             onClick={() => {
                               setSelectedTaskId(task.id);
@@ -753,7 +744,7 @@ export default function AccountTasksPage() {
                             }}
                           >
                             <td
-                              className='p-3 w-10'
+                              className='px-3 py-2.5 w-10'
                               onClick={(e) => e.stopPropagation()}
                             >
                               <input
@@ -763,73 +754,70 @@ export default function AccountTasksPage() {
                                 onChange={(e) =>
                                   handleSelectTask(task.id, e.target.checked)
                                 }
-                                className='h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed'
+                                className='h-3.5 w-3.5 rounded border-border text-primary focus:ring-primary cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed accent-primary'
                                 title={
                                   canSelect
                                     ? 'Select task for mass update'
-                                    : 'Mass update status is only available for tasks created by you'
+                                    : 'Only tasks you created can be selected'
                                 }
                               />
                             </td>
-                            <td className='p-3 text-xs text-muted-foreground whitespace-nowrap'>
+                            <td className='px-3 py-2.5 text-xs text-muted-foreground whitespace-nowrap'>
                               {task.module_name || 'Account'}
                             </td>
-                            <td className='p-3 text-sm font-semibold text-primary whitespace-nowrap'>
-                              {task.account_name ||
-                                `Account #${task.account_id}`}
+                            <td className='px-3 py-2.5 whitespace-nowrap'>
+                              <span className='text-sm font-medium text-primary hover:underline'>
+                                {task.account_name || `Account #${task.account_id}`}
+                              </span>
                             </td>
-                            <td className='p-3 text-sm whitespace-nowrap'>
-                              {task.account_owner || 'Unassigned'}
+                            <td className='px-3 py-2.5 text-xs text-foreground whitespace-nowrap'>
+                              {task.account_owner || <span className='text-muted-foreground'>—</span>}
                             </td>
-                            <td className='p-3 whitespace-nowrap'>
-                              <Badge
-                                variant='outline'
-                                className='font-normal text-xs'
-                              >
+                            <td className='px-3 py-2.5 whitespace-nowrap'>
+                              <span className='inline-flex items-center rounded-md bg-secondary text-secondary-foreground border border-border/60 px-2 py-0.5 text-[11px] font-medium'>
                                 {task.task_type}
-                              </Badge>
+                              </span>
                             </td>
-                            <td className='p-3 text-sm text-muted-foreground whitespace-nowrap'>
-                              {task.account_status || '-'}
+                            <td className='px-3 py-2.5 text-xs text-muted-foreground whitespace-nowrap'>
+                              {task.account_status || <span className='text-muted-foreground/50'>—</span>}
                             </td>
-                            <td className='p-3 text-sm text-muted-foreground whitespace-nowrap'>
-                              {task.account_stage || '-'}
+                            <td className='px-3 py-2.5 text-xs text-muted-foreground whitespace-nowrap'>
+                              {task.account_stage || <span className='text-muted-foreground/50'>—</span>}
                             </td>
-                            <td className='p-3 whitespace-nowrap'>
+                            <td className='px-3 py-2.5 whitespace-nowrap'>
                               {getCallBackBadge(task.call_back_date_status)}
                             </td>
                             <td
-                              className='p-3 text-sm max-w-[250px] truncate'
+                              className='px-3 py-2.5 text-xs text-foreground max-w-[220px] truncate'
                               title={task.task_description}
                             >
                               {task.task_description || (
-                                <span className='text-muted-foreground italic text-xs'>
+                                <span className='text-muted-foreground/50 italic'>
                                   No description
                                 </span>
                               )}
                             </td>
-                            <td className='p-3 text-sm font-semibold text-foreground whitespace-nowrap'>
+                            <td className='px-3 py-2.5 text-xs text-muted-foreground whitespace-nowrap tabular-nums'>
                               {formatISTDateTime(task.created_at)}
                             </td>
-                            <td className='p-3 text-sm font-semibold text-foreground whitespace-nowrap'>
+                            <td className='px-3 py-2.5 text-xs text-muted-foreground whitespace-nowrap tabular-nums'>
                               {formatISTDateTime(task.task_assigned_date_time)}
                             </td>
-                            <td className='p-3 text-sm font-semibold text-foreground whitespace-nowrap'>
+                            <td className={`px-3 py-2.5 text-xs whitespace-nowrap tabular-nums font-medium ${isOverdue ? 'text-red-600 dark:text-red-400' : 'text-foreground'}`}>
                               {formatISTDateTime(task.task_due_date_time)}
                             </td>
-                            <td className='p-3 whitespace-nowrap'>
-                              <div className='flex items-center gap-2'>
+                            <td className='px-3 py-2.5 whitespace-nowrap'>
+                              <div className='flex items-center gap-1.5'>
                                 {getStatusBadge(
                                   isOverdue
                                     ? 'Overdue'
                                     : (task.task_status as TaskStatus),
                                 )}
                                 {task.task_status !== 'Completed' &&
+                                  task.task_status !== 'Verified' &&
                                   isAccOwner && (
-                                    <Button
-                                      size='sm'
-                                      variant='outline'
-                                      className='h-6 px-2 text-[11px] border-green-600 text-green-700 hover:bg-green-50 dark:hover:bg-green-950 dark:text-green-400 gap-1 font-medium'
+                                    <button
+                                      className='inline-flex items-center gap-1 rounded-md border border-emerald-300 dark:border-emerald-700 bg-emerald-50 dark:bg-emerald-950/30 text-emerald-700 dark:text-emerald-400 hover:bg-emerald-100 dark:hover:bg-emerald-900/40 px-2 py-0.5 text-[11px] font-medium transition-colors'
                                       onClick={(e) => {
                                         e.stopPropagation();
                                         quickCompleteMutation.mutate(task.id);
@@ -838,26 +826,24 @@ export default function AccountTasksPage() {
                                       title='Mark as Completed'
                                     >
                                       <CheckCircle2 className='h-3 w-3' />
-                                      Complete
-                                    </Button>
+                                      Done
+                                    </button>
                                   )}
                               </div>
                             </td>
                             <td
-                              className='p-3 text-right whitespace-nowrap'
+                              className='px-3 py-2.5 text-right whitespace-nowrap'
                               onClick={(e) => e.stopPropagation()}
                             >
-                              <Button
-                                variant='ghost'
-                                size='icon'
-                                className='h-8 w-8'
+                              <button
+                                className='inline-flex items-center justify-center h-7 w-7 rounded-md text-muted-foreground hover:text-foreground hover:bg-accent transition-colors'
                                 onClick={() => {
                                   setSelectedTaskId(task.id);
                                   setIsUpdateModalOpen(true);
                                 }}
                               >
-                                <Pencil className='h-4 w-4 text-muted-foreground hover:text-foreground' />
-                              </Button>
+                                <Pencil className='h-3.5 w-3.5' />
+                              </button>
                             </td>
                           </tr>
                         );
@@ -867,9 +853,9 @@ export default function AccountTasksPage() {
                 </table>
               </div>
 
-              {/* Pagination matching Accounts page */}
+              {/* Pagination */}
               {pageInfo && pageInfo.total_pages > 1 && (
-                <div className='shrink-0'>
+                <div className='px-4 py-2 border-t border-border/60 shrink-0 bg-background'>
                   <Pagination
                     currentPage={currentPage}
                     totalPages={pageInfo.total_pages}
