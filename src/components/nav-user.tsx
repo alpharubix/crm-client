@@ -4,6 +4,8 @@ import {
   LogOut,
   Moon,
   Sun,
+  Sparkles,
+  LayoutTemplate,
 } from 'lucide-react'
 
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
@@ -46,6 +48,14 @@ export function NavUser({
     .map((w) => w[0]?.toUpperCase() ?? '')
     .join('')
 
+  const { user: authUser } = useAuth()
+  const rawRole = authUser?.role || ''
+  const formattedRole = rawRole
+    .replace(/_/g, ' ')
+    .split(' ')
+    .map((w) => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase())
+    .join(' ') || 'User'
+
   return (
     <SidebarMenu>
       <SidebarMenuItem>
@@ -62,8 +72,12 @@ export function NavUser({
                 </AvatarFallback>
               </Avatar>
               <div className='grid flex-1 text-left text-sm leading-tight'>
-                <span className='truncate font-semibold text-foreground'>{user.name}</span>
-                <span className='truncate text-xs text-muted-foreground'>{user.email}</span>
+                <div className='flex items-center gap-1.5 min-w-0'>
+                  <span className='truncate font-semibold text-foreground'>{user.name}</span>
+                </div>
+                <div className='flex items-center justify-between gap-1'>
+                  <span className='truncate text-[11px] text-muted-foreground'>{user.email}</span>
+                </div>
               </div>
               <ChevronsUpDown className='ml-auto size-4 text-muted-foreground' />
             </SidebarMenuButton>
@@ -75,7 +89,7 @@ export function NavUser({
             sideOffset={6}
           >
             <DropdownMenuLabel className='p-0 font-normal'>
-              <div className='flex items-center gap-3 px-2 py-2.5 text-left text-sm bg-muted/30 rounded-t-xl border-b border-border/50'>
+              <div className='flex items-center gap-3 px-3 py-3 text-left text-sm bg-muted/30 rounded-t-xl border-b border-border/50'>
                 <Avatar className='h-9 w-9 rounded-lg ring-2 ring-primary/20'>
                   <AvatarImage src={user.avatar} alt={user.name} />
                   <AvatarFallback className='rounded-lg bg-primary text-primary-foreground text-xs font-semibold'>
@@ -83,20 +97,27 @@ export function NavUser({
                   </AvatarFallback>
                 </Avatar>
                 <div className='grid flex-1 text-left text-sm leading-tight'>
-                  <span className='truncate font-semibold text-foreground'>{user.name}</span>
-                  <span className='truncate text-xs text-muted-foreground'>{user.email}</span>
+                  <div className='flex items-center justify-between gap-2'>
+                    <span className='truncate font-semibold text-foreground'>{user.name}</span>
+                    <span className='text-[10px] font-semibold bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-500/20 px-2 py-0.5 rounded-full shrink-0'>
+                      {formattedRole}
+                    </span>
+                  </div>
+                  <span className='truncate text-xs text-muted-foreground mt-0.5'>{user.email}</span>
                 </div>
               </div>
             </DropdownMenuLabel>
 
-            {/* Theme Toggle Row */}
-            <div className='px-2 py-2 border-b border-border/50'>
-              <p className='text-[10px] uppercase tracking-wider text-muted-foreground font-semibold mb-2 px-1'>Appearance</p>
+            {/* Appearance Toggle */}
+            <div className='px-2.5 py-2 border-b border-border/50'>
+              <p className='text-[10px] uppercase tracking-wider text-muted-foreground font-semibold mb-1.5 px-0.5'>
+                Appearance
+              </p>
               <div className='flex rounded-lg bg-muted/60 p-0.5 gap-0.5'>
                 <button
                   onClick={() => setTheme('light')}
                   className={cn(
-                    'flex-1 flex items-center justify-center gap-1.5 text-xs py-1.5 px-2 rounded-md font-medium transition-all',
+                    'flex-1 flex items-center justify-center gap-1.5 text-xs py-1.5 px-2 rounded-md font-medium transition-all cursor-pointer',
                     !isDark
                       ? 'bg-background text-foreground shadow-sm'
                       : 'text-muted-foreground hover:text-foreground'
@@ -108,7 +129,7 @@ export function NavUser({
                 <button
                   onClick={() => setTheme('dark')}
                   className={cn(
-                    'flex-1 flex items-center justify-center gap-1.5 text-xs py-1.5 px-2 rounded-md font-medium transition-all',
+                    'flex-1 flex items-center justify-center gap-1.5 text-xs py-1.5 px-2 rounded-md font-medium transition-all cursor-pointer',
                     isDark
                       ? 'bg-background text-foreground shadow-sm'
                       : 'text-muted-foreground hover:text-foreground'

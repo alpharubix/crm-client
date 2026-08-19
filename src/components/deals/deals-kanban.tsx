@@ -2,6 +2,7 @@ import { useState } from "react";
 import { FilterX, Search } from "lucide-react";
 import { Button } from "../ui/button";
 import { Input } from "../ui/input";
+import { DatePicker } from "../ui/date-picker";
 import {
   Select,
   SelectContent,
@@ -149,38 +150,41 @@ export default function DealsKanban() {
           {/* <Button>Create +</Button> */}
         </div>
 
-        <div className="bg-white dark:bg-zinc-950 border rounded-xl shadow-sm p-5 space-y-5">
-          {/* Top Row: Search & Dropdowns */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-4 w-full">
-            <div className="space-y-1">
+        <div className="bg-card border border-border/70 rounded-2xl shadow-2xs p-4 sm:p-5 space-y-4">
+          {/* Top Row: Search & MultiSelect Dropdowns */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-5 gap-3.5 w-full">
+            <div className="space-y-1.5 md:col-span-1">
               <Label
                 htmlFor="search"
-                className="text-[11px] font-bold tracking-wider text-zinc-400 uppercase"
+                className="text-[10px] font-bold tracking-wider text-muted-foreground uppercase"
               >
-                Search
+                Search Account
               </Label>
-              <Input
-                id="search"
-                placeholder="Account name..."
-                className="h-9 text-xs rounded-lg border-zinc-200"
-                value={localFilters.search}
-                onChange={(e) => setFilter("search", e.target.value)}
-                onKeyDown={(e) => e.key === "Enter" && applyFilters()}
-              />
+              <div className="relative">
+                <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground/70 pointer-events-none" />
+                <Input
+                  id="search"
+                  placeholder="Account name..."
+                  className="pl-8 h-9 text-xs rounded-lg bg-background border-border/60"
+                  value={localFilters.search}
+                  onChange={(e) => setFilter("search", e.target.value)}
+                  onKeyDown={(e) => e.key === "Enter" && applyFilters()}
+                />
+              </div>
             </div>
 
-            <div className="space-y-1 md:col-span-2">
-              <Label className="text-[11px] font-bold tracking-wider text-zinc-400 uppercase">Loan Type</Label>
+            <div className="space-y-1.5 md:col-span-2">
+              <Label className="text-[10px] font-bold tracking-wider text-muted-foreground uppercase">Loan Type</Label>
               <MultiSelect
                 options={LOAN_TYPE_OPTIONS}
                 value={localFilters.project_type}
                 onChange={(val) => setFilter("project_type", val)}
-                placeholder="Select Types..."
+                placeholder="Select Loan Types..."
               />
             </div>
 
-            <div className="space-y-1 md:col-span-2">
-              <Label className="text-[11px] font-bold tracking-wider text-zinc-400 uppercase">
+            <div className="space-y-1.5 md:col-span-2">
+              <Label className="text-[10px] font-bold tracking-wider text-muted-foreground uppercase">
                 Deal Owner
               </Label>
               <MultiSelect
@@ -195,130 +199,83 @@ export default function DealsKanban() {
             </div>
           </div>
 
-          {/* Thin dotted/dashed horizontal separator just like the screenshot */}
-          <div className="border-t border-dashed border-zinc-200 my-1" />
-
-          {/* Bottom Row: Grouped Date Ranges with Vertical Dividers */}
-          <div className="flex flex-wrap items-center gap-y-4 text-xs">
-            {/* Group 1: Created At */}
-            <div className="flex gap-3 pr-4">
-              <div className="space-y-1">
-                <Label
-                  htmlFor="from_date"
-                  className="text-[10px] font-semibold text-zinc-500"
-                >
-                  Created From
-                </Label>
-                <Input
-                  id="from_date"
-                  type="date"
-                  className="h-9 text-xs w-[140px] rounded-lg border-zinc-200"
+          {/* Grouped Date Ranges with Subtle Background Containers */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-3.5 pt-2 border-t border-border/50">
+            {/* Group 1: Created Date */}
+            <div className="bg-muted/20 border border-border/40 p-2.5 rounded-xl space-y-1.5">
+              <Label className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider block">
+                Created Date
+              </Label>
+              <div className="grid grid-cols-2 gap-2">
+                <DatePicker
                   value={localFilters.created_from}
-                  onChange={(e) => setFilter("created_from", e.target.value)}
+                  onChange={(val) => setFilter("created_from", val)}
+                  placeholder="From Date"
                 />
-              </div>
-              <div className="space-y-1">
-                <Label
-                  htmlFor="to_date"
-                  className="text-[10px] font-semibold text-zinc-500"
-                >
-                  Created To
-                </Label>
-                <Input
-                  id="to_date"
-                  type="date"
-                  className="h-9 text-xs w-[140px] rounded-lg border-zinc-200"
+                <DatePicker
                   value={localFilters.created_to}
-                  onChange={(e) => setFilter("created_to", e.target.value)}
+                  onChange={(val) => setFilter("created_to", val)}
+                  placeholder="To Date"
                 />
               </div>
             </div>
 
-            {/* Vertical Line 1 */}
-            <div className="hidden md:block h-10 w-[1px] bg-zinc-200 mx-2" />
-
-            {/* Group 2: Expected Closing Range */}
-            <div className="flex gap-3 px-0 md:px-4">
-              <div className="space-y-1">
-                <Label className="text-[10px] font-semibold text-zinc-500">
-                  Expected From
-                </Label>
-                <Input
-                  type="date"
-                  className="h-9 text-xs w-[140px] rounded-lg border-zinc-200"
+            {/* Group 2: Expected Closing */}
+            <div className="bg-muted/20 border border-border/40 p-2.5 rounded-xl space-y-1.5">
+              <Label className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider block">
+                Expected Closing
+              </Label>
+              <div className="grid grid-cols-2 gap-2">
+                <DatePicker
                   value={localFilters.expected_closing_from}
-                  onChange={(e) =>
-                    setFilter("expected_closing_from", e.target.value)
-                  }
+                  onChange={(val) => setFilter("expected_closing_from", val)}
+                  placeholder="From Date"
                 />
-              </div>
-              <div className="space-y-1">
-                <Label className="text-[10px] font-semibold text-zinc-500">
-                  Expected To
-                </Label>
-                <Input
-                  type="date"
-                  className="h-9 text-xs w-[140px] rounded-lg border-zinc-200"
+                <DatePicker
                   value={localFilters.expected_closing_to}
-                  onChange={(e) =>
-                    setFilter("expected_closing_to", e.target.value)
-                  }
+                  onChange={(val) => setFilter("expected_closing_to", val)}
+                  placeholder="To Date"
                 />
               </div>
             </div>
 
-            {/* Vertical Line 2 */}
-            <div className="hidden md:block h-10 w-[1px] bg-zinc-200 mx-2" />
-
-            {/* Group 3: Status Closing Range */}
-            <div className="flex gap-3 pl-0 md:pl-4">
-              <div className="space-y-1">
-                <Label className="text-[10px] font-semibold text-zinc-500">
-                  Status Closing From
-                </Label>
-                <Input
-                  type="date"
-                  className="h-9 text-xs w-[140px] rounded-lg border-zinc-200"
+            {/* Group 3: Status Closing */}
+            <div className="bg-muted/20 border border-border/40 p-2.5 rounded-xl space-y-1.5">
+              <Label className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider block">
+                Status Closing
+              </Label>
+              <div className="grid grid-cols-2 gap-2">
+                <DatePicker
                   value={localFilters.status_closing_from}
-                  onChange={(e) =>
-                    setFilter("status_closing_from", e.target.value)
-                  }
+                  onChange={(val) => setFilter("status_closing_from", val)}
+                  placeholder="From Date"
                 />
-              </div>
-              <div className="space-y-1">
-                <Label className="text-[10px] font-semibold text-zinc-500">
-                  Status Closing To
-                </Label>
-                <Input
-                  type="date"
-                  className="h-9 text-xs w-[140px] rounded-lg border-zinc-200"
+                <DatePicker
                   value={localFilters.status_closing_to}
-                  onChange={(e) =>
-                    setFilter("status_closing_to", e.target.value)
-                  }
+                  onChange={(val) => setFilter("status_closing_to", val)}
+                  placeholder="To Date"
                 />
               </div>
             </div>
           </div>
 
-          {/* Action Buttons: Left-aligned exactly like your design */}
-          <div className="flex items-center gap-4 pt-2">
-            <Button
-              onClick={applyFilters}
-              className="h-9 text-xs px-5 bg-[#4f46e5] hover:bg-[#4338ca] text-white rounded-lg font-medium shadow-sm flex items-center gap-1.5"
-            >
-              <Search size={14} /> Apply Filters
-            </Button>
-
+          {/* Bottom Action Buttons Bar */}
+          <div className="flex items-center justify-end gap-2.5 pt-2 border-t border-border/40">
             {hasActiveFilters && (
               <Button
-                variant="ghost"
+                variant="outline"
                 onClick={clearFilters}
-                className="h-9 text-xs text-zinc-500 hover:text-zinc-800 hover:bg-zinc-50 px-2 flex items-center gap-1.5"
+                className="h-9 text-xs rounded-lg px-3.5 cursor-pointer gap-1.5 text-muted-foreground hover:text-foreground"
               >
                 <FilterX size={14} /> Reset
               </Button>
             )}
+            <Button
+              onClick={applyFilters}
+              className="h-9 text-xs px-5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-semibold cursor-pointer shadow-sm gap-1.5"
+            >
+              <Search size={14} /> Apply Filters
+            </Button>
           </div>
         </div>
 

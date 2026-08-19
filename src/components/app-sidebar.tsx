@@ -11,9 +11,14 @@ import {
   SidebarTrigger,
 } from '@/components/ui/sidebar'
 import {
-  BookOpen,
-  FolderDown,
+  Building2,
+  Briefcase,
+  Users,
+  Ticket,
+  IndianRupee,
   FolderOpenDot,
+  Database,
+  FolderDown,
   Logs,
   Megaphone,
   LifeBuoy,
@@ -36,88 +41,83 @@ const data = {
   ],
   navMain: [
     {
-      title: 'Modules',
+      title: 'Accounts & Tasks',
       url: '#',
-      icon: BookOpen,
+      icon: Building2,
       items: [
         {
-          title: 'Accounts',
+          title: 'Accounts Database',
           url: '/accounts',
         },
         {
           title: 'Account Tasks',
           url: '/account-tasks',
         },
+      ],
+    },
+    {
+      title: 'Deals & Pipeline',
+      url: '#',
+      icon: Briefcase,
+      items: [
         {
-          title: 'Contacts',
-          url: '/contacts',
-        },
-        {
-          title: 'Deals',
+          title: 'Deals Database',
           url: '/deals',
         },
         {
           title: 'Deals Kanban',
           url: '/kanban-deals',
         },
+      ],
+    },
+    {
+      title: 'Contacts',
+      url: '#',
+      icon: Users,
+      items: [
         {
-          title: 'Tickets',
+          title: 'All Contacts',
+          url: '/contacts',
+        },
+      ],
+    },
+    {
+      title: 'Tickets',
+      url: '#',
+      icon: Ticket,
+      items: [
+        {
+          title: 'Tickets Database',
           url: '/tickets',
         },
         {
           title: 'Tickets Kanban',
           url: '/kanban-tickets',
         },
+      ],
+    },
+    {
+      title: 'Revenue',
+      url: '#',
+      icon: IndianRupee,
+      items: [
         {
-          title: 'Revenue',
+          title: 'Revenue Entries',
           url: '/revenue',
         },
       ],
     },
     {
-      title: 'Export',
-      url: '#',
-      icon: FolderDown,
-      items: [
-        {
-          title: 'All Exports',
-          url: '/exports',
-        },
-      ],
-    },
-    {
-      title: 'Logs',
-      url: '#',
-      icon: Logs,
-      items: [
-        {
-          title: 'Audit Log',
-          url: '/audit-logs',
-        },
-        {
-          title: 'Project logs',
-          url: '/project-logs',
-        },
-      ],
-    },
-    {
-      title: 'Projects',
+      title: 'Workspace',
       url: '#',
       icon: FolderOpenDot,
       items: [
         {
-          title: 'All Projects',
+          title: 'Projects',
           url: '/projects',
         },
-      ],
-    },
-    {
-      title: 'Hiring',
-      url: '#',
-      icon: Megaphone,
-      items: [
         {
-          title: 'Job Requirement',
+          title: 'Hiring',
           url: '/hiring',
         },
       ],
@@ -125,7 +125,7 @@ const data = {
     {
       title: 'Data Repository',
       url: '#',
-      icon: FolderDown,
+      icon: Database,
       items: [
         {
           title: 'Invoicing Master',
@@ -142,6 +142,25 @@ const data = {
       ],
     },
     {
+      title: 'Tools & Logs',
+      url: '#',
+      icon: FolderDown,
+      items: [
+        {
+          title: 'Exports',
+          url: '/exports',
+        },
+        {
+          title: 'Audit Log',
+          url: '/audit-logs',
+        },
+        {
+          title: 'Project Logs',
+          url: '/project-logs',
+        },
+      ],
+    },
+    {
       title: 'Support',
       url: '#',
       icon: LifeBuoy,
@@ -152,7 +171,6 @@ const data = {
         },
       ],
     },
-    
   ],
 }
 
@@ -176,11 +194,11 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   return (
     <Sidebar collapsible='icon' {...props}>
       <SidebarHeader className='border-b border-border/50'>
-        <div className='flex items-center justify-between h-14 px-3'>
+        <div className='flex items-center justify-between h-14 px-3 group-data-[collapsible=icon]:px-0 group-data-[collapsible=icon]:justify-center'>
           <div className='flex items-center gap-2.5 overflow-hidden group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:w-full'>
-            {/* Logo Icon */}
-            <div className='flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-gradient-to-br from-blue-600 to-blue-500 text-white shadow-md shadow-blue-500/25'>
-              <svg className='h-4.5 w-4.5' viewBox='0 0 24 24' fill='none' stroke='currentColor' strokeWidth='2.5' strokeLinecap='round' strokeLinejoin='round'>
+            {/* Logo Icon - Fixed sizing to prevent squeezing */}
+            <div className='flex h-8 w-8 min-w-8 min-h-8 aspect-square shrink-0 items-center justify-center rounded-lg bg-gradient-to-br from-blue-600 to-blue-500 text-white shadow-md shadow-blue-500/25'>
+              <svg className='h-4.5 w-4.5 shrink-0' viewBox='0 0 24 24' fill='none' stroke='currentColor' strokeWidth='2.5' strokeLinecap='round' strokeLinejoin='round'>
                 <path d='M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2' />
                 <circle cx='9' cy='7' r='4' />
                 <polyline points='16 11 18 13 22 9' />
@@ -199,39 +217,27 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
       </SidebarHeader>
       <SidebarContent>
         <NavMain
-          items={data.navMain.filter((item) => {
-            // ── 1. ABSOLUTE STRIP DOWN FOR SARADA & AMBIKA ──
-            // Sarada & Ambika can ONLY see Hiring. No other tabs (Modules, Projects, etc.) are allowed.
-            if (isSarada || isAmbika) {
-              return item.title === 'Hiring'
-            }
+          items={data.navMain
+            .filter((item) => {
+              if (isSarada || isAmbika) {
+                return item.title === 'Workspace'
+              }
 
-            // ── 2. LOGS PERMISSION GATEWAY ──
-            if (item.title === 'Logs' && currentUserRole !== 'super_admin') {
-              return false
-            }
-
-            // ── 3. EXPORTS PERMISSION GATEWAY ──
-            if (
-              item.title === 'Export' &&
-              currentUserRole !== 'super_admin' &&
-              currentUserRole !== 'admin'
-            ) {
-              return false
-            }
-
-            // ── 4. HIRING PERMISSION GATEWAY FOR SYSTEM ACTORS ──
-            // Display Hiring module for Super Admin, Admin, and ALL Managers
-            if (item.title === 'Hiring') {
-              const hasGlobalRole =
-                currentUserRole === 'super_admin' || currentUserRole === 'admin'
-              if (!hasGlobalRole && !isManager) {
+              if (item.title === 'Tools & Logs' && currentUserRole !== 'super_admin' && currentUserRole !== 'admin') {
                 return false
               }
-            }
 
-            return true
-          })}
+              return true
+            })
+            .map((item) => {
+              if (isSarada || isAmbika) {
+                return {
+                  ...item,
+                  items: item.items?.filter((subItem) => subItem.url === '/hiring'),
+                }
+              }
+              return item
+            })}
         />
       </SidebarContent>
       <SidebarFooter>

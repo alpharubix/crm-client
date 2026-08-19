@@ -4,7 +4,7 @@ import {
   PopoverTrigger,
 } from '@/components/ui/popover'
 
-import { RefreshCw, Upload } from 'lucide-react'
+import { Upload } from 'lucide-react'
 import Dropzone, { type DropzoneState } from 'shadcn-dropzone'
 
 import { ENV } from '@/conf'
@@ -126,19 +126,6 @@ const UploadCsv = ({
             </PopoverContent>
           </Popover>
         )}
-        <Button
-          variant='outline'
-          size='icon'
-          className='cursor-pointer'
-          onClick={() => refetch()}
-          disabled={isLoading}
-        >
-          {isLoading ? (
-            <Spinner className='h-4 w-4' />
-          ) : (
-            <RefreshCw className='h-4 w-4' />
-          )}
-        </Button>
       </div>
     </>
   )

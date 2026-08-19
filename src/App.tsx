@@ -1,63 +1,67 @@
-import { lazy, Suspense } from 'react'
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
-import { AuthProvider } from './context/auth-context'
-import ProtectedRoute, { ProtectedLogRoute } from './components/protected-route'
-import PublicRoute from './components/public-routes'
-import SidebarComponent from './components/sidebar-component'
-import { GlobalProgressBar } from './components/global-progress-bar'
-import { Spinner } from './components/ui/spinner'
-import DealsKanban from './components/deals/deals-kanban'
-import HiringKanban from './components/hiring/hiring-kanban'
-import CandidateKanban from './components/hiring/candidate-kanban'
-import CreateJobRequirement from './components/hiring/create-job-requirement'
-import CreateCandidate from './components/hiring/create-candidate'
-import GstHistoryPage from './pages/gst-page'
-import ItrAnalysisPage from './pages/itr-page'
-import GstReportPage from './components/gst-reports/GstReportPage'
-import ExistingReports from './pages/cibil/ExistingReports'
-import ViewReport from './pages/cibil/ViewReport'
-import LimitsReportPage from './pages/limitsreport'
-import InvoicingMasterPage from './pages/invoicing-master'
-import DistributorMasterPage from './pages/distributor-master'
+import { lazy, Suspense } from 'react';
+import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { AuthProvider } from './context/auth-context';
+import ProtectedRoute, {
+  ProtectedLogRoute,
+} from './components/protected-route';
+import PublicRoute from './components/public-routes';
+import SidebarComponent from './components/sidebar-component';
+import { GlobalProgressBar } from './components/global-progress-bar';
+import { Spinner } from './components/ui/spinner';
+import DealsKanban from './components/deals/deals-kanban';
+import HiringKanban from './components/hiring/hiring-kanban';
+import CandidateKanban from './components/hiring/candidate-kanban';
+import CreateJobRequirement from './components/hiring/create-job-requirement';
+import CreateCandidate from './components/hiring/create-candidate';
+import GstHistoryPage from './pages/gst-page';
+import ItrAnalysisPage from './pages/itr-page';
+import GstReportPage from './components/gst-reports/GstReportPage';
+import ExistingReports from './pages/cibil/ExistingReports';
+import ViewReport from './pages/cibil/ViewReport';
+import LimitsReportPage from './pages/limitsreport';
+import InvoicingMasterPage from './pages/invoicing-master';
+import DistributorMasterPage from './pages/distributor-master';
 
 // Lazy loaded pages and heavy route components
-const AccountPage = lazy(() => import('./pages/accounts-page'))
-const AccountTasksPage = lazy(() => import('./pages/account-tasks-page'))
-const ContactPage = lazy(() => import('./pages/contact-page'))
+const AccountPage = lazy(() => import('./pages/accounts-page'));
+const AccountTasksPage = lazy(() => import('./pages/account-tasks-page'));
+const ContactPage = lazy(() => import('./pages/contact-page'));
 const UpdateAccounts = lazy(
   () => import('./components/accounts/update-accounts'),
-)
+);
 const UpdateContacts = lazy(
   () => import('./components/contacts/update-contacts'),
-)
-const NotFoundPage = lazy(() => import('./pages/not-found-page'))
-const CreateContact = lazy(() => import('./components/contacts/create-contact'))
-const AuditLogs = lazy(() => import('./components/log/audit-log'))
-const ProjectLogs = lazy(() => import('./components/log/project-log'))
-const DealsPage = lazy(() => import('./pages/deals-page'))
-const TicketsPage = lazy(() => import('./pages/tickets-page'))
-const UpdateDeals = lazy(() => import('./components/deals/update-deals'))
-const Project = lazy(() => import('./components/projects/project'))
-const Task = lazy(() => import('./components/projects/task'))
-const CreateDeal = lazy(() => import('./components/deals/create-deals'))
-const SignInPage = lazy(() => import('./pages/signin-page'))
-const Export = lazy(() => import('./components/export/export'))
-const TicketsKanban = lazy(() => import('./components/tickets/tickets-kanban'))
-const CreateTicket = lazy(() => import('./components/tickets/create-ticket'))
+);
+const NotFoundPage = lazy(() => import('./pages/not-found-page'));
+const CreateContact = lazy(
+  () => import('./components/contacts/create-contact'),
+);
+const AuditLogs = lazy(() => import('./components/log/audit-log'));
+const ProjectLogs = lazy(() => import('./components/log/project-log'));
+const DealsPage = lazy(() => import('./pages/deals-page'));
+const TicketsPage = lazy(() => import('./pages/tickets-page'));
+const UpdateDeals = lazy(() => import('./components/deals/update-deals'));
+const Project = lazy(() => import('./components/projects/project'));
+const Task = lazy(() => import('./components/projects/task'));
+const CreateDeal = lazy(() => import('./components/deals/create-deals'));
+const SignInPage = lazy(() => import('./pages/signin-page'));
+const Export = lazy(() => import('./components/export/export'));
+const TicketsKanban = lazy(() => import('./components/tickets/tickets-kanban'));
+const CreateTicket = lazy(() => import('./components/tickets/create-ticket'));
 const UpdateTicketsKanban = lazy(
   () => import('./components/tickets/update-kanban-tickets'),
-)
+);
 
-const CreateAccount = lazy(() => import('./components/accounts/create-account'))
+const CreateAccount = lazy(
+  () => import('./components/accounts/create-account'),
+);
 
-const Revenue = lazy(() => import('./pages/revenue'))
-const CreateRevenue = lazy(() => import('./components/revenue/create-revenue'))
-const UpdateRevenue = lazy(() => import('./components/revenue/update-revenue'))
-const BsaAnalysisPage = lazy(() => import('./pages/bsa-analysis-page'))
-const GstAnalysisPage = lazy(() => import('./pages/gst-page'))
-const SupportTicketsPage = lazy(() => import('./pages/support-tickets-page'))
-
-
+const Revenue = lazy(() => import('./pages/revenue'));
+const CreateRevenue = lazy(() => import('./components/revenue/create-revenue'));
+const UpdateRevenue = lazy(() => import('./components/revenue/update-revenue'));
+const BsaAnalysisPage = lazy(() => import('./pages/bsa-analysis-page'));
+const GstAnalysisPage = lazy(() => import('./pages/gst-page'));
+const SupportTicketsPage = lazy(() => import('./pages/support-tickets-page'));
 
 export default function App() {
   return (
@@ -138,17 +142,21 @@ export default function App() {
               <Route path='/projects/:id' element={<Task />} />
               <Route path='/exports' element={<Export />} />
               <Route path='/support-tickets' element={<SupportTicketsPage />} />
-              <Route path='/invoicing-master' element={<InvoicingMasterPage />} />
-              <Route path='/distributer-master' element={<DistributorMasterPage />} />
+              <Route
+                path='/invoicing-master'
+                element={<InvoicingMasterPage />}
+              />
+              <Route
+                path='/distributer-master'
+                element={<DistributorMasterPage />}
+              />
               <Route path='/limit-reports' element={<LimitsReportPage />} />
-              
+
               <Route path='*' element={<NotFoundPage />} />
-
-
             </Route>
           </Routes>
         </Suspense>
       </BrowserRouter>
     </AuthProvider>
-  )
+  );
 }

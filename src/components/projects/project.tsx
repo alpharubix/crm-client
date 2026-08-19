@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { Button } from '../ui/button'
+import { DatePicker } from '../ui/date-picker'
 import { Dialog } from '../ui/dialog'
 import CreateProjectForm from './create-project'
 import type { Project } from '@/types/project-types'
@@ -309,23 +310,19 @@ export default function Project() {
             <div className='h-5 w-px bg-border/60 mx-0.5 hidden lg:block' />
 
             {/* Date Range Filter (Schedule Start & End Date) */}
-            <div className='flex items-center gap-1.5 bg-muted/30 border border-muted rounded-md px-2.5 h-9'>
-              <Calendar className='h-3.5 w-3.5 text-muted-foreground shrink-0' />
-              <span className='text-[11px] font-semibold text-muted-foreground shrink-0'>Schedule:</span>
-              <Input
-                type='datetime-local'
-                title='Schedule Start Date'
-                className='h-6 text-[11px] w-[135px] border-0 bg-transparent p-0 focus-visible:ring-0 shadow-none text-muted-foreground hover:text-foreground transition-colors'
+            <div className='flex items-center gap-2'>
+              <DatePicker
                 value={localFilters.start_date}
-                onChange={(e) => setFilter('start_date', e.target.value)}
+                onChange={(val) => setFilter('start_date', val)}
+                placeholder='Start Date'
+                className='w-[140px]'
               />
               <span className='text-muted-foreground/60 text-xs font-medium'>→</span>
-              <Input
-                type='datetime-local'
-                title='Schedule End Date'
-                className='h-6 text-[11px] w-[135px] border-0 bg-transparent p-0 focus-visible:ring-0 shadow-none text-muted-foreground hover:text-foreground transition-colors'
+              <DatePicker
                 value={localFilters.end_date}
-                onChange={(e) => setFilter('end_date', e.target.value)}
+                onChange={(val) => setFilter('end_date', val)}
+                placeholder='End Date'
+                className='w-[140px]'
               />
             </div>
           </div>

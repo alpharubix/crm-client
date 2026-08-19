@@ -98,7 +98,7 @@ export function MultiSelect({
       <div className='relative mt-2'>
         <CommandList>
           {open && selectables.length > 0 && (
-            <div className='absolute z-10 w-full rounded-md border bg-popover shadow-md'>
+            <div className='absolute z-50 w-full rounded-md border bg-popover shadow-md'>
               <CommandGroup className='max-h-60 overflow-y-auto'>
                 {selectables.map((option) => (
                   <CommandItem
