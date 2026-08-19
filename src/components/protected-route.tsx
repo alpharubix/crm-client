@@ -35,11 +35,12 @@ export function ProtectedLogRoute({ children }: any) {
     .toLowerCase()
     .trim()
     .replace(/\s+/g, '_');
-  const isAdminOrSuperAdmin =
-    ['super_admin', 'superadmin', 'admin'].includes(userRole) ||
-    userRole.includes('admin');
+  const isSuperAdmin =
+    ['super_admin', 'superadmin'].includes(userRole) ||
+    userRole.includes('super_admin') ||
+    userRole.includes('superadmin');
 
-  if (!isAdminOrSuperAdmin) {
+  if (!isSuperAdmin) {
     return <Navigate to='/accounts' replace />;
   }
 

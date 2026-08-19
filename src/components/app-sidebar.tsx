@@ -182,9 +182,10 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
     .toLowerCase()
     .trim()
     .replace(/\s+/g, '_');
-  const isAdminOrSuperAdmin =
-    ['super_admin', 'superadmin', 'admin'].includes(rawRole) ||
-    rawRole.includes('admin');
+  const isSuperAdmin =
+    ['super_admin', 'superadmin'].includes(rawRole) ||
+    rawRole.includes('super_admin') ||
+    rawRole.includes('superadmin');
 
   // Isolate user identity signatures
   const isSarada = currentUserId === '3899927000000221552';
@@ -239,7 +240,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                 return item.title === 'Workspace';
               }
 
-              if (item.title === 'Tools & Logs' && !isAdminOrSuperAdmin) {
+              if (item.title === 'Tools & Logs' && !isSuperAdmin) {
                 return false;
               }
 
