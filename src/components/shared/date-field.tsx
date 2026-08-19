@@ -32,8 +32,8 @@ export default function DateField({
 }: Props) {
   if (!isEdit) {
     const displayFormat = showTime
-      ? 'EEEE, dd MMM, yyyy hh:mm a'
-      : 'EEEE, dd MMM, yyyy'
+      ? 'dd-MM-yyyy hh:mm a'
+      : 'dd-MM-yyyy'
     return <span>{value ? format(new Date(value), displayFormat) : '—'}</span>
   }
 
@@ -123,7 +123,7 @@ export default function DateField({
           {value
             ? format(
                 new Date(value),
-                showTime ? 'dd MMM, yyyy hh:mm a' : 'dd MMM, yyyy',
+                showTime ? 'dd-MM-yyyy hh:mm a' : 'dd-MM-yyyy',
               )
             : showTime
               ? 'Pick Date & Time'

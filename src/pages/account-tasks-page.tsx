@@ -1,4 +1,5 @@
 import { useState, useMemo } from 'react';
+import { DatePicker } from '@/components/ui/date-picker';
 import {
   useQuery,
   useMutation,
@@ -12,7 +13,14 @@ import {
   Filter,
   Plus,
   Search,
+  Hash,
   RefreshCw,
+  SlidersHorizontal,
+  RotateCw,
+  CheckSquare,
+  Clock,
+  AlertCircle,
+  MoreVertical,
 } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -41,6 +49,20 @@ import type {
 } from '@/types/account-task';
 import CreateAccountTaskModal from '@/components/account-tasks/create-account-task-modal';
 import UpdateAccountTaskModal from '@/components/account-tasks/update-account-task-modal';
+import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+import {
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+  SheetFooter,
+} from '@/components/ui/sheet';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 
 const formatISTDateTime = (dateStr?: string | null) => {
   if (!dateStr) return '-';
@@ -65,10 +87,28 @@ const formatISTDateTime = (dateStr?: string | null) => {
     const dayPeriod =
       parts.find((p) => p.type === 'dayPeriod')?.value?.toUpperCase() || '';
 
-    return `${d}/${m}/${y}, ${hr}:${min} ${dayPeriod}`;
+    return `${d}-${m}-${y} ${hr}:${min} ${dayPeriod}`;
   } catch {
     return dateStr || '-';
   }
+};
+
+const getTaskStatusStyle = (status?: string | null) => {
+  if (!status) return 'bg-slate-100 text-slate-600 border-slate-200';
+  const s = status.toLowerCase();
+  if (s.includes('completed') || s.includes('verified')) {
+    return 'bg-emerald-100 text-emerald-700 border-emerald-200 font-medium';
+  }
+  if (s.includes('in progress')) {
+    return 'bg-blue-100 text-blue-700 border-blue-200 font-medium';
+  }
+  if (s.includes('pending') || s.includes('assigned')) {
+    return 'bg-amber-100 text-amber-700 border-amber-200 font-medium';
+  }
+  if (s.includes('overdue')) {
+    return 'bg-red-100 text-red-700 border-red-200 font-medium';
+  }
+  return 'bg-slate-100 text-slate-700 border-slate-200 font-medium';
 };
 
 export default function AccountTasksPage() {
@@ -76,6 +116,9 @@ export default function AccountTasksPage() {
   const { user } = useAuth();
   const role = String(user?.role || '').toLowerCase();
   const canViewOwnerFilter = ['super_admin', 'admin', 'manager'].includes(role);
+
+  const [isFilterSheetOpen, setIsFilterSheetOpen] = useState(false);
+  const [pageSize, setPageSize] = useState<number>(15);
 
   const quickCompleteMutation = useMutation({
     mutationFn: async (taskId: string | number) => {
@@ -104,7 +147,6 @@ export default function AccountTasksPage() {
     },
   });
 
-  // Mass Update Status State & Mutation (Restricted to Task Creator)
   const [selectedTaskIds, setSelectedTaskIds] = useState<(string | number)[]>(
     [],
   );
@@ -140,8 +182,8 @@ export default function AccountTasksPage() {
     },
   });
 
-  // Draft Filter state
   const [filters, setFilters] = useState({
+    accountId: '',
     search: '',
     taskStatus: 'all',
     taskType: 'all',
@@ -151,20 +193,21 @@ export default function AccountTasksPage() {
     assignedToDate: '',
     createdFromDate: '',
     createdToDate: '',
+    assignmentFromDate: '',
+    assignmentToDate: '',
+    noteFromDate: '',
+    noteToDate: '',
   });
 
-  // Applied Filter state (triggered when clicking "Search" button)
   const [appliedFilters, setAppliedFilters] = useState(filters);
   const [currentPage, setCurrentPage] = useState(1);
 
-  // Modals state
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [selectedTaskId, setSelectedTaskId] = useState<string | number | null>(
     null,
   );
   const [isUpdateModalOpen, setIsUpdateModalOpen] = useState(false);
 
-  // Fetch Account Owners for MultiSelect Filter (only for super_admin, admin, manager)
   const { data: ownerResponse } = useQuery({
     queryKey: ['account-owners'],
     queryFn: async () => {
@@ -193,14 +236,15 @@ export default function AccountTasksPage() {
     }));
   }, [rawOwners]);
 
-  // React Query fetch for Account Tasks list
   const { data, isLoading, refetch } = useQuery({
-    queryKey: ['account-tasks-list', currentPage, appliedFilters],
+    queryKey: ['account-tasks-list', currentPage, appliedFilters, pageSize],
     queryFn: async () => {
       const params = new URLSearchParams();
       params.set('page', currentPage.toString());
-      params.set('page_size', '15');
+      params.set('page_size', pageSize.toString());
 
+      if (appliedFilters.accountId)
+        params.set('account_id', appliedFilters.accountId);
       if (appliedFilters.search) params.set('search', appliedFilters.search);
       if (appliedFilters.taskStatus !== 'all')
         params.set('task_status', appliedFilters.taskStatus);
@@ -217,6 +261,14 @@ export default function AccountTasksPage() {
         params.set('created_from_date', appliedFilters.createdFromDate);
       if (appliedFilters.createdToDate)
         params.set('created_to_date', appliedFilters.createdToDate);
+      if (appliedFilters.assignmentFromDate)
+        params.set('assignment_from_date', appliedFilters.assignmentFromDate);
+      if (appliedFilters.assignmentToDate)
+        params.set('assignment_to_date', appliedFilters.assignmentToDate);
+      if (appliedFilters.noteFromDate)
+        params.set('note_from_date', appliedFilters.noteFromDate);
+      if (appliedFilters.noteToDate)
+        params.set('note_to_date', appliedFilters.noteToDate);
 
       if (
         appliedFilters.accountOwnerId &&
@@ -248,35 +300,29 @@ export default function AccountTasksPage() {
 
   const currentUserId = user?.user_id || (user as any)?.id;
 
-  const isCreatorOrAdmin = (task: AccountTask) => {
-    return (
-      (task.created_by_id &&
-        String(task.created_by_id) === String(currentUserId)) ||
-      role === 'super_admin' ||
-      role === 'admin'
-    );
-  };
-
-  const userCreatedTasks = tasks.filter(isCreatorOrAdmin);
-  const isAllSelected =
-    userCreatedTasks.length > 0 &&
-    userCreatedTasks.every((t) => selectedTaskIds.includes(String(t.id)));
-
-  const handleSelectAll = (checked: boolean) => {
-    if (checked) {
-      setSelectedTaskIds(userCreatedTasks.map((t) => String(t.id)));
-    } else {
-      setSelectedTaskIds([]);
-    }
-  };
-
-  const handleSelectTask = (taskId: string, checked: boolean) => {
-    if (checked) {
-      setSelectedTaskIds((prev) => [...prev, taskId]);
-    } else {
-      setSelectedTaskIds((prev) => prev.filter((id) => id !== taskId));
-    }
-  };
+  const deleteTaskMutation = useMutation({
+    mutationFn: async (id: string | number) => {
+      const res = await fetch(
+        `${ENV.VITE_BACKEND_BASE_URL}/account-tasks/${id}`,
+        {
+          method: 'DELETE',
+          credentials: 'include',
+        },
+      );
+      if (!res.ok) {
+        const err = await res.json();
+        throw new Error(err.detail || 'Failed to delete task');
+      }
+      return res.json();
+    },
+    onSuccess: () => {
+      toast.success('Task deleted successfully');
+      queryClient.invalidateQueries({ queryKey: ['account-tasks-list'] });
+    },
+    onError: (err: any) => {
+      toast.error(err.message || 'Error deleting task');
+    },
+  });
 
   const handleFilterChange = (key: string, value: any) => {
     setFilters((prev) => ({ ...prev, [key]: value }));
@@ -288,7 +334,8 @@ export default function AccountTasksPage() {
   };
 
   const handleClear = () => {
-    const empty = {
+    const emptyFilters = {
+      accountId: '',
       search: '',
       taskStatus: 'all',
       taskType: 'all',
@@ -298,200 +345,554 @@ export default function AccountTasksPage() {
       assignedToDate: '',
       createdFromDate: '',
       createdToDate: '',
+      assignmentFromDate: '',
+      assignmentToDate: '',
+      noteFromDate: '',
+      noteToDate: '',
     };
-    setFilters(empty);
-    setAppliedFilters(empty);
+    setFilters(emptyFilters);
+    setAppliedFilters(emptyFilters);
     setCurrentPage(1);
   };
 
-  const getStatusBadge = (status: TaskStatus) => {
-    switch (status) {
-      case 'Completed':
-      case 'Verified':
-        return (
-          <Badge className='bg-green-600 hover:bg-green-700 text-white'>
-            {status}
-          </Badge>
-        );
-      case 'In Progress':
-        return (
-          <Badge className='bg-blue-600 hover:bg-blue-700 text-white'>
-            {status}
-          </Badge>
-        );
-      case 'Pending':
-      case 'Assigned':
-        return (
-          <Badge className='bg-amber-500 hover:bg-amber-600 text-white'>
-            {status}
-          </Badge>
-        );
-      case 'Overdue':
-        return <Badge variant='destructive'>{status}</Badge>;
-      default:
-        return <Badge variant='outline'>{status || 'Unassigned'}</Badge>;
+  const handleToggleSelectAll = () => {
+    if (selectedTaskIds.length === tasks.length && tasks.length > 0) {
+      setSelectedTaskIds([]);
+    } else {
+      setSelectedTaskIds(tasks.map((t) => t.id));
     }
   };
 
-  const getCallBackBadge = (cbStatus?: CallBackDateStatus) => {
-    switch (cbStatus) {
-      case 'Overdue':
-        return (
-          <Badge variant='destructive' className='text-xs px-2 py-0.5'>
-            {cbStatus}
-          </Badge>
-        );
-      case 'Due Today':
-        return (
-          <Badge className='bg-amber-500 text-xs px-2 py-0.5'>{cbStatus}</Badge>
-        );
-      case 'Due Tomorrow':
-        return (
-          <Badge className='bg-blue-500 text-xs px-2 py-0.5'>{cbStatus}</Badge>
-        );
-      case 'Due This Week':
-        return (
-          <Badge variant='secondary' className='text-xs px-2 py-0.5'>
-            {cbStatus}
-          </Badge>
-        );
-      case 'Due Next Week':
-        return (
-          <Badge variant='outline' className='text-xs px-2 py-0.5'>
-            {cbStatus}
-          </Badge>
-        );
-      default:
-        return <span className='text-sm text-muted-foreground'>Blank</span>;
-    }
+  const handleToggleSelectRow = (taskId: string | number) => {
+    setSelectedTaskIds((prev) =>
+      prev.includes(taskId)
+        ? prev.filter((id) => id !== taskId)
+        : [...prev, taskId],
+    );
   };
+
+  const pendingCount = tasks.filter(
+    (t) => t.task_status !== 'Completed',
+  ).length;
+  const overdueCount = tasks.filter(
+    (t) =>
+      t.call_back_date_time &&
+      new Date(t.call_back_date_time) < new Date() &&
+      t.task_status !== 'Completed',
+  ).length;
 
   return (
-    <div className='p-4 space-y-4'>
-      {/* Top Bar matching Accounts page layout */}
-      <div className='flex items-center justify-between'>
+    <div className='flex flex-col h-screen overflow-hidden bg-slate-50/50 dark:bg-background'>
+      {/* ── Header Bar ── */}
+      <div className='bg-background border-b border-border/60 px-6 py-4 flex flex-col md:flex-row md:items-center justify-between gap-4 shrink-0 shadow-2xs'>
         <div>
-          <h1 className='text-2xl font-bold'>Account Tasks</h1>
-          <p className='text-muted-foreground text-sm'>
-            Manage and track all tasks parented under Accounts.
+          <h1 className='text-2xl font-bold text-foreground tracking-tight'>
+            Account Tasks
+          </h1>
+          <p className='text-xs text-muted-foreground mt-0.5'>
+            Manage call-backs, follow-ups, and customer touchpoints.
           </p>
         </div>
 
-        <div className='flex gap-4 items-center'>
-          {isLoading ? (
-            <Skeleton className='w-32 h-4' />
-          ) : (
-            <div className='flex gap-2 items-center text-sm'>
-              <h3 className='font-semibold text-muted-foreground'>
-                Total Tasks :
-              </h3>
-              <p className='text-muted-foreground'>
-                {pageInfo.total_records || tasks.length}
-              </p>
+        <div className='flex items-center gap-4'>
+          {/* Stat Cards */}
+          <div className='flex items-center gap-3'>
+            <div className='flex items-center gap-3 bg-muted/40 border border-border/50 rounded-xl px-3.5 py-2 shadow-2xs'>
+              <div className='h-8 w-8 rounded-lg bg-blue-500/10 text-blue-600 dark:text-blue-400 flex items-center justify-center shrink-0'>
+                <CheckSquare className='h-4 w-4' />
+              </div>
+              <div className='flex flex-col'>
+                <span className='text-[10px] font-medium text-muted-foreground uppercase tracking-wider'>
+                  Total
+                </span>
+                <span className='text-base font-bold text-foreground leading-none mt-0.5'>
+                  {isLoading ? (
+                    <Skeleton className='h-4 w-12' />
+                  ) : (
+                    pageInfo.total_records || tasks.length
+                  )}
+                </span>
+              </div>
             </div>
-          )}
 
-          <Button
-            className='cursor-pointer'
-            onClick={() => setIsCreateModalOpen(true)}
-          >
-            + Create Account Task
-          </Button>
-        </div>
-      </div>
+            <div className='flex items-center gap-3 bg-muted/40 border border-border/50 rounded-xl px-3.5 py-2 shadow-2xs'>
+              <div className='h-8 w-8 rounded-lg bg-amber-500/10 text-amber-600 dark:text-amber-400 flex items-center justify-center shrink-0'>
+                <Clock className='h-4 w-4' />
+              </div>
+              <div className='flex flex-col'>
+                <span className='text-[10px] font-medium text-muted-foreground uppercase tracking-wider'>
+                  Pending
+                </span>
+                <span className='text-base font-bold text-foreground leading-none mt-0.5'>
+                  {isLoading ? <Skeleton className='h-4 w-12' /> : pendingCount}
+                </span>
+              </div>
+            </div>
 
-      {/* Mass Update Status Action Bar */}
-      {selectedTaskIds.length > 0 && (
-        <div className='flex items-center justify-between bg-primary/10 p-2.5 px-4 rounded-md border border-primary/20 animate-in fade-in duration-200'>
-          <span className='text-xs font-semibold text-foreground'>
-            {selectedTaskIds.length} task(s) selected (Created by you)
-          </span>
-          <div className='flex items-center gap-2'>
-            <Select
-              onValueChange={(val) => massUpdateStatusMutation.mutate(val)}
-              disabled={massUpdateStatusMutation.isPending}
-            >
-              <SelectTrigger className='h-8 text-xs bg-background w-[170px] font-medium'>
-                <SelectValue placeholder='Mass Update Status' />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value='Assigned'>Assigned</SelectItem>
-                <SelectItem value='Pending'>Pending</SelectItem>
-                <SelectItem value='In Progress'>In Progress</SelectItem>
-                <SelectItem value='Completed'>Completed</SelectItem>
-                <SelectItem value='Verified'>Verified</SelectItem>
-                <SelectItem value='Overdue'>Overdue</SelectItem>
-              </SelectContent>
-            </Select>
+            <div className='flex items-center gap-3 bg-muted/40 border border-border/50 rounded-xl px-3.5 py-2 shadow-2xs'>
+              <div className='h-8 w-8 rounded-lg bg-red-500/10 text-red-600 dark:text-red-400 flex items-center justify-center shrink-0'>
+                <AlertCircle className='h-4 w-4' />
+              </div>
+              <div className='flex flex-col'>
+                <span className='text-[10px] font-medium text-muted-foreground uppercase tracking-wider'>
+                  Overdue
+                </span>
+                <span className='text-base font-bold text-foreground leading-none mt-0.5'>
+                  {isLoading ? <Skeleton className='h-4 w-12' /> : overdueCount}
+                </span>
+              </div>
+            </div>
+          </div>
+
+          {/* Actions */}
+          <div className='flex items-center gap-2.5'>
             <Button
-              size='sm'
-              variant='ghost'
-              className='h-8 text-xs text-muted-foreground hover:text-foreground'
-              onClick={() => setSelectedTaskIds([])}
+              onClick={() => setIsCreateModalOpen(true)}
+              className='bg-blue-600 hover:bg-blue-700 text-white shadow-sm font-medium text-xs rounded-lg px-4 h-9 gap-1.5 cursor-pointer'
             >
-              Cancel
+              <Plus className='h-4 w-4' /> Create Task
+            </Button>
+            <Button
+              variant='outline'
+              size='icon'
+              onClick={() => refetch()}
+              title='Refresh tasks'
+              className='h-9 w-9 rounded-lg border-border/60 text-muted-foreground hover:text-foreground cursor-pointer'
+            >
+              <RotateCw
+                className={`h-4 w-4 ${isLoading ? 'animate-spin' : ''}`}
+              />
             </Button>
           </div>
         </div>
-      )}
+      </div>
 
-      {/* Main Content Split: Left Filter Sidebar, Right Table */}
-      <div className='grid grid-cols-1 lg:grid-cols-4 gap-4 items-start'>
-        {/* Left Filter Sidebar */}
-        <div className='border rounded-md p-4 bg-card space-y-4 lg:col-span-1 shadow-sm'>
-          <div className='flex items-center justify-between border-b pb-2'>
-            <h2 className='font-semibold text-sm flex items-center gap-2'>
-              <Filter className='h-4 w-4' /> Filter Tasks
-            </h2>
+      {/* ── Toolbar & Content Container ── */}
+      <div className='flex-1 flex flex-col overflow-hidden p-6 gap-4'>
+        {/* Quick Filter Control Toolbar */}
+        <div className='bg-background rounded-xl border border-border/60 p-3 flex flex-wrap items-center justify-between gap-3 shadow-2xs shrink-0'>
+          <div className='flex flex-wrap items-center gap-2.5 flex-1'>
+            <div className='flex items-center gap-1.5'>
+              {/* Account ID Filter */}
+              <div className='relative w-30 sm:w-35 '>
+                <Hash className='absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground/70 pointer-events-none' />
+                <Input
+                  placeholder='Account ID'
+                  value={filters.accountId}
+                  onChange={(e) =>
+                    handleFilterChange('accountId', e.target.value)
+                  }
+                  onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
+                  className='pl-8 h-9 w-35 text-xs font-mono bg-background border-border/60 focus-visible:border-primary transition-colors shadow-none rounded-lg'
+                />
+              </div>
+
+              <div className='relative w-full max-w-[240px]'>
+                <Search className='absolute left-3 top-2.5 h-4 w-4 text-muted-foreground' />
+                <Input
+                  placeholder='Search Account...'
+                  value={filters.search}
+                  onChange={(e) => handleFilterChange('search', e.target.value)}
+                  onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
+                  className='pl-9 h-9 text-xs rounded-lg bg-background'
+                />
+              </div>
+              <Button
+                size='sm'
+                onClick={handleSearch}
+                className='h-9 text-xs bg-blue-600 hover:bg-blue-700 text-white rounded-lg px-3.5 gap-1.5 cursor-pointer font-medium shadow-2xs'
+              >
+                <Search className='h-3.5 w-3.5' /> Search
+              </Button>
+            </div>
+
+            {/* Status Select */}
+            <div className='w-[140px]'>
+              <Select
+                value={filters.taskStatus}
+                onValueChange={(val) => {
+                  handleFilterChange('taskStatus', val);
+                  setAppliedFilters((prev) => ({ ...prev, taskStatus: val }));
+                }}
+              >
+                <SelectTrigger className='h-9 text-xs rounded-lg bg-background'>
+                  <SelectValue placeholder='All Statuses' />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value='all'>All Statuses</SelectItem>
+                  <SelectItem value='Pending'>Pending</SelectItem>
+                  <SelectItem value='In Progress'>In Progress</SelectItem>
+                  <SelectItem value='Completed'>Completed</SelectItem>
+                  <SelectItem value='Overdue'>Overdue</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* Filters Button */}
+            <Button
+              variant='outline'
+              onClick={() => setIsFilterSheetOpen(true)}
+              className='h-9 text-xs gap-1.5 rounded-lg border-border font-medium cursor-pointer hover:bg-muted/50'
+            >
+              <SlidersHorizontal className='h-3.5 w-3.5 text-muted-foreground' />
+              Filters
+            </Button>
+
+            <Button
+              variant='ghost'
+              onClick={handleClear}
+              className='h-9 text-xs text-blue-600 font-medium hover:bg-blue-50 hover:text-blue-700 cursor-pointer'
+            >
+              Clear
+            </Button>
+          </div>
+
+          {/* <div className='flex items-center gap-2 text-xs text-muted-foreground'>
+            <span>Show</span>
+            <Select
+              value={pageSize.toString()}
+              onValueChange={(val) => setPageSize(Number(val))}
+            >
+              <SelectTrigger className='h-8 w-16 text-xs rounded-md bg-background px-2'>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value='15'>15</SelectItem>
+                <SelectItem value='30'>30</SelectItem>
+                <SelectItem value='50'>50</SelectItem>
+              </SelectContent>
+            </Select>
+            <span>entries</span>
+          </div> */}
+        </div>
+
+        {/* Main Content Area */}
+        <div className='flex-1 bg-background rounded-xl border border-border/60 shadow-2xs overflow-hidden flex flex-col'>
+          {/* Selected Rows Mass Action Bar */}
+          {selectedTaskIds.length > 0 && (
+            <div className='flex items-center justify-between bg-blue-500/10 border-b border-blue-500/25 text-blue-600 dark:text-blue-400 px-5 py-2.5 shrink-0 text-xs font-medium'>
+              <div className='flex items-center gap-2.5'>
+                <div className='h-2 w-2 rounded-full bg-blue-500 animate-pulse' />
+                <span className='font-semibold'>
+                  {selectedTaskIds.length} task(s) selected
+                </span>
+              </div>
+              <div className='flex items-center gap-2'>
+                <Select
+                  onValueChange={(val) => massUpdateStatusMutation.mutate(val)}
+                  disabled={massUpdateStatusMutation.isPending}
+                >
+                  <SelectTrigger className='h-8 text-xs bg-background w-[160px] font-medium'>
+                    <SelectValue placeholder='Update Status' />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value='Pending'>Pending</SelectItem>
+                    <SelectItem value='In Progress'>In Progress</SelectItem>
+                    <SelectItem value='Completed'>Completed</SelectItem>
+                    <SelectItem value='Verified'>Verified</SelectItem>
+                  </SelectContent>
+                </Select>
+                <Button
+                  size='sm'
+                  variant='ghost'
+                  onClick={() => setSelectedTaskIds([])}
+                  className='h-8 text-xs text-muted-foreground hover:text-foreground cursor-pointer'
+                >
+                  Cancel
+                </Button>
+              </div>
+            </div>
+          )}
+
+          {/* Table */}
+          <div className='flex-1 overflow-auto'>
+            {isLoading ? (
+              <div className='flex flex-col items-center justify-center h-64 gap-2 text-muted-foreground'>
+                <Spinner className='h-7 w-7 text-blue-600' />
+                <span className='text-xs font-medium'>
+                  Loading account tasks...
+                </span>
+              </div>
+            ) : (
+              <table className='w-full caption-bottom text-sm'>
+                <thead className='bg-slate-50/80 dark:bg-muted/30 sticky top-0 z-10 border-b border-border/60'>
+                  <tr className='text-left text-xs font-semibold text-muted-foreground tracking-wide'>
+                    <th className='w-[48px] px-4 py-3 text-center'>
+                      <input
+                        type='checkbox'
+                        checked={
+                          selectedTaskIds.length === tasks.length &&
+                          tasks.length > 0
+                        }
+                        onChange={handleToggleSelectAll}
+                        className='rounded border-border'
+                      />
+                    </th>
+                    <th className='px-4 py-3'>Task Details</th>
+                    <th className='px-4 py-3'>Account Name</th>
+                    <th className='px-4 py-3'>Assignee</th>
+                    <th className='px-4 py-3'>Due Date / Time</th>
+                    <th className='px-4 py-3'>Status</th>
+                    <th className='px-4 py-3 text-right pr-6'>Actions</th>
+                  </tr>
+                </thead>
+                <tbody className='divide-y divide-border/40'>
+                  {tasks.length === 0 ? (
+                    <tr>
+                      <td
+                        colSpan={7}
+                        className='text-center h-36 text-muted-foreground text-sm'
+                      >
+                        No tasks found.
+                      </td>
+                    </tr>
+                  ) : (
+                    tasks.map((task) => {
+                      const isSelected = selectedTaskIds.includes(task.id);
+                      const isCreator =
+                        String(task.task_creator_id) === String(currentUserId);
+                      const isAssignee =
+                        String(task.assigned_to_id) === String(currentUserId);
+                      const isCompleted = task.task_status === 'Completed';
+                      const statusStyle = getTaskStatusStyle(task.task_status);
+
+                      return (
+                        <tr
+                          key={task.id}
+                          className={`transition-colors border-b border-border/40 ${
+                            isSelected
+                              ? 'bg-blue-50/60 dark:bg-blue-950/20'
+                              : 'hover:bg-slate-50/80 dark:hover:bg-muted/30'
+                          }`}
+                        >
+                          <td className='w-[48px] px-4 py-3.5 text-center'>
+                            <input
+                              type='checkbox'
+                              checked={isSelected}
+                              onChange={() => handleToggleSelectRow(task.id)}
+                              className='rounded border-border'
+                            />
+                          </td>
+
+                          {/* Task Description / Type */}
+                          <td className='px-4 py-3.5'>
+                            <div className='flex flex-col'>
+                              <span className='font-semibold text-foreground text-xs'>
+                                {task.description || `Task #${task.id}`}
+                              </span>
+                              {task.task_type && (
+                                <span className='text-[11px] text-muted-foreground mt-0.5'>
+                                  Type: {task.task_type}
+                                </span>
+                              )}
+                            </div>
+                          </td>
+
+                          {/* Account Name */}
+                          <td className='px-4 py-3.5'>
+                            <span
+                              onClick={() =>
+                                window.open(
+                                  `/accounts/${task.account_id}`,
+                                  '_blank',
+                                )
+                              }
+                              className='font-semibold text-blue-600 dark:text-blue-400 text-xs hover:underline cursor-pointer'
+                            >
+                              {task.account_name ||
+                                `Account #${task.account_id}`}
+                            </span>
+                          </td>
+
+                          {/* Assignee */}
+                          <td className='px-4 py-3.5'>
+                            <div className='flex items-center gap-2'>
+                              <Avatar className='h-6 w-6 border border-border/60'>
+                                <AvatarFallback className='text-[10px] bg-slate-200 text-slate-700 font-semibold'>
+                                  {task.assigned_to_name
+                                    ? task.assigned_to_name
+                                        .split(' ')
+                                        .map((n) => n[0])
+                                        .slice(0, 2)
+                                        .join('')
+                                    : 'U'}
+                                </AvatarFallback>
+                              </Avatar>
+                              <span className='text-xs font-medium text-slate-700 dark:text-slate-200'>
+                                {task.assigned_to_name || '—'}
+                              </span>
+                            </div>
+                          </td>
+
+                          {/* Due Date */}
+                          <td className='px-4 py-3.5 text-xs text-muted-foreground'>
+                            {formatISTDateTime(task.call_back_date_time)}
+                          </td>
+
+                          {/* Status */}
+                          <td className='px-4 py-3.5'>
+                            <Badge
+                              variant='outline'
+                              className={`rounded-full px-3 py-0.5 text-[11px] font-medium border border-transparent shadow-2xs ${statusStyle}`}
+                            >
+                              {task.task_status || 'Pending'}
+                            </Badge>
+                          </td>
+
+                          {/* Quick Actions */}
+                          <td className='px-4 py-3.5 text-right pr-6'>
+                            <div className='flex items-center justify-end gap-1.5'>
+                              {!isCompleted && (
+                                <Button
+                                  size='sm'
+                                  variant='ghost'
+                                  onClick={() =>
+                                    quickCompleteMutation.mutate(task.id)
+                                  }
+                                  disabled={quickCompleteMutation.isPending}
+                                  title='Mark as Completed'
+                                  className='h-7 px-2 text-xs text-emerald-600 hover:text-emerald-700 hover:bg-emerald-50 cursor-pointer gap-1'
+                                >
+                                  <CheckCircle2 className='h-3.5 w-3.5' />{' '}
+                                  Complete
+                                </Button>
+                              )}
+
+                              {(isCreator ||
+                                isAssignee ||
+                                canViewOwnerFilter) && (
+                                <Button
+                                  size='icon'
+                                  variant='ghost'
+                                  onClick={() => {
+                                    setSelectedTaskId(task.id);
+                                    setIsUpdateModalOpen(true);
+                                  }}
+                                  className='h-7 w-7 text-muted-foreground hover:text-foreground cursor-pointer'
+                                >
+                                  <Pencil className='h-3.5 w-3.5' />
+                                </Button>
+                              )}
+
+                              {isCreator && (
+                                <Button
+                                  size='icon'
+                                  variant='ghost'
+                                  onClick={() => {
+                                    if (
+                                      confirm(
+                                        'Are you sure you want to delete this task?',
+                                      )
+                                    ) {
+                                      deleteTaskMutation.mutate(task.id);
+                                    }
+                                  }}
+                                  className='h-7 w-7 text-red-500 hover:text-red-700 hover:bg-red-50 cursor-pointer'
+                                >
+                                  <Trash2 className='h-3.5 w-3.5' />
+                                </Button>
+                              )}
+                            </div>
+                          </td>
+                        </tr>
+                      );
+                    })
+                  )}
+                </tbody>
+              </table>
+            )}
+          </div>
+
+          {/* Table Bottom Pagination Bar */}
+          <div className='px-5 py-3 border-t border-border/60 shrink-0 bg-background flex flex-col md:flex-row md:items-center justify-between gap-3'>
+            <span className='text-xs text-muted-foreground font-medium'>
+              Showing{' '}
+              <span className='text-foreground font-semibold'>
+                {tasks.length > 0 ? (currentPage - 1) * pageSize + 1 : 0}
+              </span>{' '}
+              to{' '}
+              <span className='text-foreground font-semibold'>
+                {Math.min(
+                  currentPage * pageSize,
+                  pageInfo.total_records || tasks.length,
+                )}
+              </span>{' '}
+              of{' '}
+              <span className='text-foreground font-semibold'>
+                {(pageInfo.total_records || tasks.length).toLocaleString()}
+              </span>{' '}
+              tasks
+            </span>
+
+            <Pagination
+              currentPage={pageInfo.page || currentPage}
+              totalPages={pageInfo.total_pages || 1}
+              onPageChange={(p) => setCurrentPage(p)}
+            />
+          </div>
+        </div>
+      </div>
+
+      {/* ── Advanced Filter Side Sheet ── */}
+      <Sheet open={isFilterSheetOpen} onOpenChange={setIsFilterSheetOpen}>
+        <SheetContent
+          side='right'
+          className='w-[380px] sm:w-[440px] p-0 flex flex-col gap-0 border-l shadow-2xl bg-background'
+        >
+          <SheetHeader className='px-6 py-4 border-b border-border/60 flex flex-row items-center justify-between shrink-0 space-y-0'>
+            <SheetTitle className='text-base font-bold text-foreground'>
+              Filter Tasks
+            </SheetTitle>
             <Button
               variant='ghost'
               size='sm'
               onClick={handleClear}
-              className='h-7 text-xs text-muted-foreground hover:text-foreground'
+              className='h-7 text-xs text-blue-600 font-medium hover:bg-blue-50 hover:text-blue-700 px-2'
             >
-              Reset
+              Clear all
             </Button>
-          </div>
+          </SheetHeader>
 
-          <div className='space-y-3.5'>
-            {/* Search Input */}
+          <div className='flex-1 overflow-y-auto px-6 py-5 space-y-4'>
+            {/* Account ID */}
             <div className='space-y-1.5'>
-              <Label className='text-xs'>Search</Label>
+              <Label className='text-xs font-semibold text-foreground'>
+                Account ID
+              </Label>
               <Input
-                placeholder='Search Account or Description...'
+                placeholder='Enter Account ID (e.g. 1001)...'
+                value={filters.accountId}
+                onChange={(e) => handleFilterChange('accountId', e.target.value)}
+                className='h-9 text-xs font-mono rounded-lg'
+              />
+            </div>
+            {/* Search */}
+            <div className='space-y-1.5'>
+              <Label className='text-xs font-semibold text-foreground'>
+                Search Keyword
+              </Label>
+              <Input
+                placeholder='Search account...'
                 value={filters.search}
                 onChange={(e) => handleFilterChange('search', e.target.value)}
-                className='h-9 text-xs'
+                className='h-9 text-xs rounded-lg'
               />
             </div>
 
-            {/* Account Owner */}
-            {canViewOwnerFilter && (
-              <div className='space-y-1.5'>
-                <Label className='text-xs'>Account Owner</Label>
-                <MultiSelect
-                  options={ownerOptions}
-                  value={filters.accountOwnerId}
-                  onChange={(val) => handleFilterChange('accountOwnerId', val)}
-                  placeholder='Select Owner...'
-                />
-              </div>
-            )}
-
             {/* Task Status */}
             <div className='space-y-1.5'>
-              <Label className='text-xs'>Task Status</Label>
+              <Label className='text-xs font-semibold text-foreground'>
+                Task Status
+              </Label>
               <Select
                 value={filters.taskStatus}
                 onValueChange={(val) => handleFilterChange('taskStatus', val)}
               >
-                <SelectTrigger className='h-9 text-xs'>
+                <SelectTrigger className='h-9 text-xs rounded-lg bg-background'>
                   <SelectValue placeholder='Select Task Status' />
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value='all'>All Statuses</SelectItem>
-                  <SelectItem value='Unassigned'>Unassigned</SelectItem>
-                  <SelectItem value='Assigned'>Assigned</SelectItem>
                   <SelectItem value='Pending'>Pending</SelectItem>
                   <SelectItem value='In Progress'>In Progress</SelectItem>
                   <SelectItem value='Completed'>Completed</SelectItem>
@@ -503,12 +904,14 @@ export default function AccountTasksPage() {
 
             {/* Task Type */}
             <div className='space-y-1.5'>
-              <Label className='text-xs'>Task Type</Label>
+              <Label className='text-xs font-semibold text-foreground'>
+                Task Type
+              </Label>
               <Select
                 value={filters.taskType}
                 onValueChange={(val) => handleFilterChange('taskType', val)}
               >
-                <SelectTrigger className='h-9 text-xs'>
+                <SelectTrigger className='h-9 text-xs rounded-lg bg-background'>
                   <SelectValue placeholder='Select Task Type' />
                 </SelectTrigger>
                 <SelectContent>
@@ -521,380 +924,117 @@ export default function AccountTasksPage() {
               </Select>
             </div>
 
-            {/* Call Back Status */}
-            <div className='space-y-1.5'>
-              <Label className='text-xs'>Call Back Date Status</Label>
-              <Select
-                value={filters.callBackStatus}
-                onValueChange={(val) =>
-                  handleFilterChange('callBackStatus', val)
-                }
-              >
-                <SelectTrigger className='h-9 text-xs'>
-                  <SelectValue placeholder='Select Call Back Status' />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value='all'>All Call Back Statuses</SelectItem>
-                  <SelectItem value='Blank'>Blank</SelectItem>
-                  <SelectItem value='Overdue'>Overdue</SelectItem>
-                  <SelectItem value='Due Today'>Due Today</SelectItem>
-                  <SelectItem value='Due Tomorrow'>Due Tomorrow</SelectItem>
-                  <SelectItem value='Due This Week'>Due This Week</SelectItem>
-                  <SelectItem value='Due Next Week'>Due Next Week</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
+            {/* Account Owner */}
+            {canViewOwnerFilter && (
+              <div className='space-y-1.5'>
+                <Label className='text-xs font-semibold text-foreground'>
+                  Assignee / Owner
+                </Label>
+                <MultiSelect
+                  options={ownerOptions}
+                  value={filters.accountOwnerId}
+                  onChange={(val) => handleFilterChange('accountOwnerId', val)}
+                  placeholder='Select Owner...'
+                />
+              </div>
+            )}
 
-            {/* Assigned Date Range Filter */}
-            <div className='space-y-2'>
-              <Label className='text-xs font-semibold'>
-                Assigned Task Filter
+            {/* Date Filters */}
+            <div className='space-y-2 pt-2 border-t border-border/60'>
+              <Label className='text-xs font-semibold text-foreground block'>
+                Task Assigned Date Range
               </Label>
               <div className='grid grid-cols-2 gap-2'>
-                <div>
-                  <Label className='text-[11px] text-muted-foreground'>
-                    From Date
-                  </Label>
-                  <Input
-                    type='date'
-                    value={filters.assignedFromDate}
-                    onChange={(e) =>
-                      handleFilterChange('assignedFromDate', e.target.value)
-                    }
-                    className='h-8 text-xs bg-background'
-                  />
-                </div>
-                <div>
-                  <Label className='text-[11px] text-muted-foreground'>
-                    To Date
-                  </Label>
-                  <Input
-                    type='date'
-                    value={filters.assignedToDate}
-                    onChange={(e) =>
-                      handleFilterChange('assignedToDate', e.target.value)
-                    }
-                    className='h-8 text-xs bg-background'
-                  />
-                </div>
+                <DatePicker
+                  value={filters.assignedFromDate}
+                  onChange={(val) =>
+                    handleFilterChange('assignedFromDate', val)
+                  }
+                  placeholder='From Date'
+                />
+                <DatePicker
+                  value={filters.assignedToDate}
+                  onChange={(val) => handleFilterChange('assignedToDate', val)}
+                  placeholder='To Date'
+                />
               </div>
             </div>
 
-            {/* Created Date Range Filter */}
-            <div className='space-y-2'>
-              <Label className='text-xs font-semibold'>
-                Created Task Filter
+            {/* Account Assignment Date Section */}
+            <div className='space-y-2 pt-2 border-t border-border/60'>
+              <Label className='text-xs font-semibold text-foreground block'>
+                Account Assignment Date Range
               </Label>
               <div className='grid grid-cols-2 gap-2'>
-                <div>
-                  <Label className='text-[11px] text-muted-foreground'>
-                    From Date
-                  </Label>
-                  <Input
-                    type='date'
-                    value={filters.createdFromDate}
-                    onChange={(e) =>
-                      handleFilterChange('createdFromDate', e.target.value)
-                    }
-                    className='h-8 text-xs bg-background'
-                  />
-                </div>
-                <div>
-                  <Label className='text-[11px] text-muted-foreground'>
-                    To Date
-                  </Label>
-                  <Input
-                    type='date'
-                    value={filters.createdToDate}
-                    onChange={(e) =>
-                      handleFilterChange('createdToDate', e.target.value)
-                    }
-                    className='h-8 text-xs bg-background'
-                  />
-                </div>
+                <DatePicker
+                  value={filters.assignmentFromDate}
+                  onChange={(val) =>
+                    handleFilterChange('assignmentFromDate', val)
+                  }
+                  placeholder='From Date'
+                />
+                <DatePicker
+                  value={filters.assignmentToDate}
+                  onChange={(val) => handleFilterChange('assignmentToDate', val)}
+                  placeholder='To Date'
+                />
+              </div>
+            </div>
+
+            {/* Last Updated Note Date Section */}
+            <div className='space-y-2 pt-2 border-t border-border/60'>
+              <Label className='text-xs font-semibold text-foreground block'>
+                Last Updated Note Date Range
+              </Label>
+              <div className='grid grid-cols-2 gap-2'>
+                <DatePicker
+                  value={filters.noteFromDate}
+                  onChange={(val) => handleFilterChange('noteFromDate', val)}
+                  placeholder='From Date'
+                />
+                <DatePicker
+                  value={filters.noteToDate}
+                  onChange={(val) => handleFilterChange('noteToDate', val)}
+                  placeholder='To Date'
+                />
               </div>
             </div>
           </div>
 
-          {/* Bottom Action Buttons inside Filter Sidebar */}
-          <div className='flex gap-2 pt-3 border-t mt-4'>
-            <Button
-              className='flex-1 cursor-pointer h-9 text-xs'
-              onClick={handleSearch}
-            >
-              Search
-            </Button>
+          <SheetFooter className='p-4 border-t border-border/60 flex flex-row items-center justify-end gap-2 bg-slate-50/50 dark:bg-muted/20 shrink-0'>
             <Button
               variant='outline'
-              className='cursor-pointer h-9 text-xs'
-              onClick={handleClear}
+              onClick={() => setIsFilterSheetOpen(false)}
+              className='h-9 text-xs rounded-lg px-4 cursor-pointer'
             >
-              Clear
+              Cancel
             </Button>
-          </div>
-        </div>
+            <Button
+              onClick={() => {
+                handleSearch();
+                setIsFilterSheetOpen(false);
+              }}
+              className='h-9 text-xs bg-blue-600 hover:bg-blue-700 text-white rounded-lg px-5 font-semibold cursor-pointer shadow-sm'
+            >
+              Apply Filters
+            </Button>
+          </SheetFooter>
+        </SheetContent>
+      </Sheet>
 
-        {/* Right Main Table & Pagination */}
-        <div className='flex flex-col gap-4 min-w-0 lg:col-span-3'>
-          {isLoading ? (
-            <div className='flex items-center justify-center h-64 border rounded-md'>
-              <Spinner className='h-8 w-8 text-muted-foreground' />
-            </div>
-          ) : (
-            <>
-              <div className='border rounded-md flex-1 overflow-auto relative bg-background'>
-                <table className='w-full caption-bottom text-sm'>
-                  <thead>
-                    <tr className='sticky top-0 z-10 bg-background hover:bg-accent border-b'>
-                      <th className='h-10 px-3 text-left align-middle w-10'>
-                        <input
-                          type='checkbox'
-                          checked={isAllSelected}
-                          onChange={(e) => handleSelectAll(e.target.checked)}
-                          className='h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary cursor-pointer'
-                          title='Select all tasks created by you'
-                        />
-                      </th>
-                      <th className='h-10 px-3 text-left align-middle font-medium text-muted-foreground text-xs whitespace-nowrap'>
-                        Module Name
-                      </th>
-                      <th className='h-10 px-3 text-left align-middle font-medium text-muted-foreground text-xs whitespace-nowrap'>
-                        Account Name
-                      </th>
-                      <th className='h-10 px-3 text-left align-middle font-medium text-muted-foreground text-xs whitespace-nowrap'>
-                        Account Owner
-                      </th>
-                      <th className='h-10 px-3 text-left align-middle font-medium text-muted-foreground text-xs whitespace-nowrap'>
-                        Task Type
-                      </th>
-                      <th className='h-10 px-3 text-left align-middle font-medium text-muted-foreground text-xs whitespace-nowrap'>
-                        Account Status
-                      </th>
-                      <th className='h-10 px-3 text-left align-middle font-medium text-muted-foreground text-xs whitespace-nowrap'>
-                        Account Stage
-                      </th>
-                      <th className='h-10 px-3 text-left align-middle font-semibold text-foreground text-xs whitespace-nowrap min-w-[150px]'>
-                        Call Back Date/Time
-                      </th>
-                      <th className='h-10 px-3 text-left align-middle font-medium text-muted-foreground text-xs whitespace-nowrap min-w-[200px]'>
-                        Task Description
-                      </th>
-                      <th className='h-10 px-3 text-left align-middle font-semibold text-foreground text-xs whitespace-nowrap min-w-[150px]'>
-                        Created At
-                      </th>
-                      <th className='h-10 px-3 text-left align-middle font-semibold text-foreground text-xs whitespace-nowrap min-w-[150px]'>
-                        Assigned Date/Time
-                      </th>
-                      <th className='h-10 px-3 text-left align-middle font-semibold text-foreground text-xs whitespace-nowrap min-w-[150px]'>
-                        Due Date/Time
-                      </th>
-                      <th className='h-10 px-3 text-left align-middle font-medium text-muted-foreground text-xs whitespace-nowrap'>
-                        Task Status
-                      </th>
-                      <th className='h-10 px-3 text-right align-middle font-medium text-muted-foreground text-xs whitespace-nowrap'>
-                        Actions
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {tasks.length === 0 ? (
-                      <tr>
-                        <td
-                          colSpan={14}
-                          className='text-center py-12 text-muted-foreground text-sm'
-                        >
-                          No account tasks found matching your filter
-                          parameters.
-                        </td>
-                      </tr>
-                    ) : (
-                      tasks.map((task) => {
-                        const canSelect = isCreatorOrAdmin(task);
-                        const isSelected = selectedTaskIds.includes(task.id);
-                        const isOverdue =
-                          task.task_status === 'Overdue' ||
-                          (task.task_due_date_time &&
-                            task.task_assigned_date_time &&
-                            new Date(task.task_due_date_time) <
-                              new Date(task.task_assigned_date_time) &&
-                            !['Completed', 'Verified'].includes(
-                              task.task_status,
-                            )) ||
-                          (task.task_due_date_time &&
-                            new Date(task.task_due_date_time) < new Date() &&
-                            !['Completed', 'Verified'].includes(
-                              task.task_status,
-                            ));
-
-                        const isAccOwner = Boolean(
-                          (task.account_owner_id &&
-                            String(task.account_owner_id) ===
-                              String(currentUserId)) ||
-                          (task.assigned_to_id &&
-                            String(task.assigned_to_id) ===
-                              String(currentUserId)) ||
-                          (task.created_by_id &&
-                            String(task.created_by_id) ===
-                              String(currentUserId)) ||
-                          ['super_admin', 'admin', 'manager'].includes(role),
-                        );
-
-                        return (
-                          <tr
-                            key={task.id}
-                            className={
-                              isOverdue
-                                ? 'border-b transition-colors cursor-pointer bg-red-500/10 dark:bg-red-950/40 text-red-900 dark:text-red-200 hover:bg-red-500/20 border-red-200 dark:border-red-900'
-                                : 'border-b transition-colors hover:bg-muted/50 cursor-pointer'
-                            }
-                            onClick={() => {
-                              setSelectedTaskId(task.id);
-                              setIsUpdateModalOpen(true);
-                            }}
-                          >
-                            <td
-                              className='p-3 w-10'
-                              onClick={(e) => e.stopPropagation()}
-                            >
-                              <input
-                                type='checkbox'
-                                checked={isSelected}
-                                disabled={!canSelect}
-                                onChange={(e) =>
-                                  handleSelectTask(task.id, e.target.checked)
-                                }
-                                className='h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed'
-                                title={
-                                  canSelect
-                                    ? 'Select task for mass update'
-                                    : 'Mass update status is only available for tasks created by you'
-                                }
-                              />
-                            </td>
-                            <td className='p-3 text-xs text-muted-foreground whitespace-nowrap'>
-                              {task.module_name || 'Account'}
-                            </td>
-                            <td className='p-3 text-sm font-semibold text-primary whitespace-nowrap'>
-                              {task.account_name ||
-                                `Account #${task.account_id}`}
-                            </td>
-                            <td className='p-3 text-sm whitespace-nowrap'>
-                              {task.account_owner || 'Unassigned'}
-                            </td>
-                            <td className='p-3 whitespace-nowrap'>
-                              <Badge
-                                variant='outline'
-                                className='font-normal text-xs'
-                              >
-                                {task.task_type}
-                              </Badge>
-                            </td>
-                            <td className='p-3 text-sm text-muted-foreground whitespace-nowrap'>
-                              {task.account_status || '-'}
-                            </td>
-                            <td className='p-3 text-sm text-muted-foreground whitespace-nowrap'>
-                              {task.account_stage || '-'}
-                            </td>
-                            <td className='p-3 whitespace-nowrap'>
-                              {getCallBackBadge(task.call_back_date_status)}
-                            </td>
-                            <td
-                              className='p-3 text-sm max-w-[250px] truncate'
-                              title={task.task_description}
-                            >
-                              {task.task_description || (
-                                <span className='text-muted-foreground italic text-xs'>
-                                  No description
-                                </span>
-                              )}
-                            </td>
-                            <td className='p-3 text-sm font-semibold text-foreground whitespace-nowrap'>
-                              {formatISTDateTime(task.created_at)}
-                            </td>
-                            <td className='p-3 text-sm font-semibold text-foreground whitespace-nowrap'>
-                              {formatISTDateTime(task.task_assigned_date_time)}
-                            </td>
-                            <td className='p-3 text-sm font-semibold text-foreground whitespace-nowrap'>
-                              {formatISTDateTime(task.task_due_date_time)}
-                            </td>
-                            <td className='p-3 whitespace-nowrap'>
-                              <div className='flex items-center gap-2'>
-                                {getStatusBadge(
-                                  isOverdue
-                                    ? 'Overdue'
-                                    : (task.task_status as TaskStatus),
-                                )}
-                                {task.task_status !== 'Completed' &&
-                                  isAccOwner && (
-                                    <Button
-                                      size='sm'
-                                      variant='outline'
-                                      className='h-6 px-2 text-[11px] border-green-600 text-green-700 hover:bg-green-50 dark:hover:bg-green-950 dark:text-green-400 gap-1 font-medium'
-                                      onClick={(e) => {
-                                        e.stopPropagation();
-                                        quickCompleteMutation.mutate(task.id);
-                                      }}
-                                      disabled={quickCompleteMutation.isPending}
-                                      title='Mark as Completed'
-                                    >
-                                      <CheckCircle2 className='h-3 w-3' />
-                                      Complete
-                                    </Button>
-                                  )}
-                              </div>
-                            </td>
-                            <td
-                              className='p-3 text-right whitespace-nowrap'
-                              onClick={(e) => e.stopPropagation()}
-                            >
-                              <Button
-                                variant='ghost'
-                                size='icon'
-                                className='h-8 w-8'
-                                onClick={() => {
-                                  setSelectedTaskId(task.id);
-                                  setIsUpdateModalOpen(true);
-                                }}
-                              >
-                                <Pencil className='h-4 w-4 text-muted-foreground hover:text-foreground' />
-                              </Button>
-                            </td>
-                          </tr>
-                        );
-                      })
-                    )}
-                  </tbody>
-                </table>
-              </div>
-
-              {/* Pagination matching Accounts page */}
-              {pageInfo && pageInfo.total_pages > 1 && (
-                <div className='shrink-0'>
-                  <Pagination
-                    currentPage={currentPage}
-                    totalPages={pageInfo.total_pages}
-                    onPageChange={(page) => setCurrentPage(page)}
-                  />
-                </div>
-              )}
-            </>
-          )}
-        </div>
-      </div>
-
-      {/* Modals */}
+      {/* Create & Update Modals */}
       <CreateAccountTaskModal
         isOpen={isCreateModalOpen}
         onClose={() => setIsCreateModalOpen(false)}
       />
 
       <UpdateAccountTaskModal
-        taskId={selectedTaskId}
         isOpen={isUpdateModalOpen}
         onClose={() => {
           setIsUpdateModalOpen(false);
           setSelectedTaskId(null);
         }}
+        taskId={selectedTaskId}
       />
     </div>
   );

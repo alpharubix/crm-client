@@ -202,7 +202,7 @@ function mapAccountToForm(apiData: any): UpdateAccountFormValues {
       : '',
     sourceType: apiData.source_type ?? '',
     sourceOther: apiData.source_other ?? '',
-    sourceDate: apiData.source_date ? new Date(apiData.source_date) : new Date(),
+    sourceDate: apiData.source_date ? new Date(apiData.source_date) : undefined,
     sourceDescription: apiData.source_description ?? '',
     distributorCode: apiData.distributor_code ?? '',
     wabaInterested: apiData.waba_interested ?? false,
