@@ -1,7 +1,7 @@
-import { MANAGER_USER_IDS } from '@/conf'
+import { MANAGER_USER_IDS } from '@/conf';
 
-import { NavMain } from '@/components/nav-main'
-import { NavUser } from '@/components/nav-user'
+import { NavMain } from '@/components/nav-main';
+import { NavUser } from '@/components/nav-user';
 import {
   Sidebar,
   SidebarContent,
@@ -9,7 +9,7 @@ import {
   SidebarHeader,
   SidebarRail,
   SidebarTrigger,
-} from '@/components/ui/sidebar'
+} from '@/components/ui/sidebar';
 import {
   Building2,
   Briefcase,
@@ -23,8 +23,8 @@ import {
   Megaphone,
   LifeBuoy,
   GalleryVerticalEnd,
-} from 'lucide-react'
-import { useAuth } from '@/context/auth-context'
+} from 'lucide-react';
+import { useAuth } from '@/context/auth-context';
 
 const data = {
   user: {
@@ -172,24 +172,30 @@ const data = {
       ],
     },
   ],
-}
+};
 
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
-  const { user } = useAuth()
+  const { user } = useAuth();
 
-  const currentUserId = user?.user_id ? String(user.user_id) : ''
-  const currentUserRole = user?.role || ''
+  const currentUserId = user?.user_id ? String(user.user_id) : '';
+  const rawRole = String(user?.role || '')
+    .toLowerCase()
+    .trim()
+    .replace(/\s+/g, '_');
+  const isAdminOrSuperAdmin =
+    ['super_admin', 'superadmin', 'admin'].includes(rawRole) ||
+    rawRole.includes('admin');
 
   // Isolate user identity signatures
-  const isSarada = currentUserId === '3899927000000221552'
-  const isAmbika = currentUserId === '3899927000000527649'
-  const isManager = MANAGER_USER_IDS.includes(currentUserId)
+  const isSarada = currentUserId === '3899927000000221552';
+  const isAmbika = currentUserId === '3899927000000527649';
+  const isManager = MANAGER_USER_IDS.includes(currentUserId);
 
   const navUser = {
     name: user?.user_name || 'User',
     email: user?.email || '',
     avatar: '/avatars/shadcn.jpg',
-  }
+  };
 
   return (
     <Sidebar collapsible='icon' {...props}>
@@ -198,7 +204,15 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
           <div className='flex items-center gap-2.5 overflow-hidden group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:w-full'>
             {/* Logo Icon - Fixed sizing to prevent squeezing */}
             <div className='flex h-8 w-8 min-w-8 min-h-8 aspect-square shrink-0 items-center justify-center rounded-lg bg-gradient-to-br from-blue-600 to-blue-500 text-white shadow-md shadow-blue-500/25'>
-              <svg className='h-4.5 w-4.5 shrink-0' viewBox='0 0 24 24' fill='none' stroke='currentColor' strokeWidth='2.5' strokeLinecap='round' strokeLinejoin='round'>
+              <svg
+                className='h-4.5 w-4.5 shrink-0'
+                viewBox='0 0 24 24'
+                fill='none'
+                stroke='currentColor'
+                strokeWidth='2.5'
+                strokeLinecap='round'
+                strokeLinejoin='round'
+              >
                 <path d='M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2' />
                 <circle cx='9' cy='7' r='4' />
                 <polyline points='16 11 18 13 22 9' />
@@ -209,7 +223,9 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
               <span className='text-base font-bold tracking-tight text-foreground leading-none'>
                 R1X <span className='text-blue-500'>CRM</span>
               </span>
-              <span className='text-[10px] text-muted-foreground/70 leading-none mt-0.5 tracking-wide'>AlphaRubix</span>
+              <span className='text-[10px] text-muted-foreground/70 leading-none mt-0.5 tracking-wide'>
+                AlphaRubix
+              </span>
             </div>
           </div>
           <SidebarTrigger className='group-data-[collapsible=icon]:hidden text-muted-foreground hover:text-foreground' />
@@ -220,23 +236,25 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
           items={data.navMain
             .filter((item) => {
               if (isSarada || isAmbika) {
-                return item.title === 'Workspace'
+                return item.title === 'Workspace';
               }
 
-              if (item.title === 'Tools & Logs' && currentUserRole !== 'super_admin' && currentUserRole !== 'admin') {
-                return false
+              if (item.title === 'Tools & Logs' && !isAdminOrSuperAdmin) {
+                return false;
               }
 
-              return true
+              return true;
             })
             .map((item) => {
               if (isSarada || isAmbika) {
                 return {
                   ...item,
-                  items: item.items?.filter((subItem) => subItem.url === '/hiring'),
-                }
+                  items: item.items?.filter(
+                    (subItem) => subItem.url === '/hiring',
+                  ),
+                };
               }
-              return item
+              return item;
             })}
         />
       </SidebarContent>
@@ -245,5 +263,5 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
       </SidebarFooter>
       <SidebarRail />
     </Sidebar>
-  )
+  );
 }
