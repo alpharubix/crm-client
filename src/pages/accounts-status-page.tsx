@@ -1,7 +1,16 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { useAuth } from '@/context/auth-context'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
+import { Input } from '@/components/ui/input'
+import {
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+} from '@/components/ui/select'
 import {
     Table,
     TableBody,
@@ -21,10 +30,16 @@ import {
     Table as TableIcon,
     Building2,
     Info,
+    Search,
+    Filter,
+    RefreshCw,
 } from 'lucide-react'
+import { useQuery } from '@tanstack/react-query'
+import { ENV } from '@/conf'
+import Pagination from '@/components/shared/pagination'
+import { Skeleton } from '@/components/ui/skeleton'
 
 export interface StatusStep {
-    // code: string
     name: string
     duration: string
     color: string
@@ -130,7 +145,6 @@ const STATUS_COLOR_MAP: Record<string, { bg: string; text: string; dot: string; 
     },
 }
 
-
 const STATUS_LEGEND = [
     { label: 'Yet to be dialed', color: 'blue' },
     { label: 'Wrong Number', color: 'emerald' },
@@ -144,136 +158,75 @@ const STATUS_LEGEND = [
     { label: 'Location Unserviceable', color: 'purple' },
 ]
 
-
-const DUMMY_ACCOUNTS: AccountStatusJourney[] = [
-    {
-        id: '1',
-        name: 'Himalaya Wellness Corp',
-        owner: 'Rahul Sharma',
-        currentStatus: 'Awareness',
-        journey: [
-            { name: 'Awareness', duration: '10d', color: 'blue', startDate: '2026-07-01', endDate: '2026-07-11', updatedBy: 'Rahul S' },
-            { name: 'Attention', duration: '2h', color: 'amber', startDate: '2026-07-11', endDate: '2026-07-11', updatedBy: 'Anita M' },
-            { name: 'Contact Established', duration: '1d', color: 'emerald', startDate: '2026-07-11', endDate: '2026-07-12', updatedBy: 'Rahul S' },
-            { name: 'Awareness', duration: '3d', color: 'blue', startDate: '2026-07-12', endDate: 'Present', updatedBy: 'System' },
-        ],
-    },
-    {
-        id: '2',
-        name: 'CavinKare Pvt Ltd',
-        owner: 'Priya Verma',
-        currentStatus: 'Assessment',
-        journey: [
-            { name: 'Awareness', duration: '4h', color: 'blue', startDate: '2026-07-15', endDate: '2026-07-15', updatedBy: 'Priya V' },
-            { name: 'Interested', duration: '3d', color: 'purple', startDate: '2026-07-15', endDate: '2026-07-18', updatedBy: 'Priya V' },
-            { name: 'Assessment', duration: '8h', color: 'rose', startDate: '2026-07-18', endDate: 'Present', updatedBy: 'Manager' },
-        ],
-    },
-    {
-        id: '3',
-        name: 'Marico Consumer Care',
-        owner: 'Vikram Singh',
-        currentStatus: 'Assessment',
-        journey: [
-            { name: 'Awareness', duration: '2d', color: 'blue', startDate: '2026-07-02', endDate: '2026-07-04', updatedBy: 'Vikram S' },
-            { name: 'Contact Established', duration: '5h', color: 'emerald', startDate: '2026-07-04', endDate: '2026-07-04', updatedBy: 'Vikram S' },
-            { name: 'Attention', duration: '8d', color: 'amber', startDate: '2026-07-04', endDate: '2026-07-12', updatedBy: 'System' },
-            { name: 'Interested', duration: '1d', color: 'purple', startDate: '2026-07-12', endDate: '2026-07-13', updatedBy: 'Vikram S' },
-            { name: 'Assessment', duration: '4h', color: 'rose', startDate: '2026-07-13', endDate: 'Present', updatedBy: 'Lender Team' },
-        ],
-    },
-    {
-        id: '4',
-        name: 'Havells India Ltd',
-        owner: 'Ananya Roy',
-        currentStatus: 'Contact Established',
-        journey: [
-            { name: 'Awareness', duration: '6h', color: 'blue', startDate: '2026-07-20', endDate: '2026-07-20', updatedBy: 'Ananya R' },
-            { name: 'Attention', duration: '2d', color: 'amber', startDate: '2026-07-20', endDate: '2026-07-22', updatedBy: 'Ananya R' },
-            { name: 'Contact Established', duration: '4d', color: 'emerald', startDate: '2026-07-22', endDate: 'Present', updatedBy: 'Ananya R' },
-        ],
-    },
-    {
-        id: '5',
-        name: 'Liberty Shoes Ltd',
-        owner: 'Kiran Patel',
-        currentStatus: 'Awareness',
-        journey: [
-            { name: 'Awareness', duration: '1d', color: 'blue', startDate: '2026-07-25', endDate: '2026-07-26', updatedBy: 'Kiran P' },
-            { name: 'Attention', duration: '6h', color: 'amber', startDate: '2026-07-26', endDate: '2026-07-26', updatedBy: 'Kiran P' },
-            { name: 'Contact Established', duration: '2d', color: 'emerald', startDate: '2026-07-26', endDate: '2026-07-28', updatedBy: 'Kiran P' },
-            { name: 'Awareness', duration: '5h', color: 'blue', startDate: '2026-07-28', endDate: 'Present', updatedBy: 'System' },
-        ],
-    },
-    {
-        id: '6',
-        name: 'Swastik Enterprises',
-        owner: 'Rahul Sharma',
-        currentStatus: 'Interested',
-        journey: [
-            { name: 'Awareness', duration: '12d', color: 'blue', startDate: '2026-06-15', endDate: '2026-06-27', updatedBy: 'Rahul S' },
-            { name: 'Contact Established', duration: '1d', color: 'emerald', startDate: '2026-06-27', endDate: '2026-06-28', updatedBy: 'Rahul S' },
-            { name: 'Attention', duration: '3d', color: 'amber', startDate: '2026-06-28', endDate: '2026-07-01', updatedBy: 'Rahul S' },
-            { name: 'Interested', duration: '4d', color: 'purple', startDate: '2026-07-01', endDate: 'Present', updatedBy: 'Rahul S' },
-        ],
-    },
-    {
-        id: '7',
-        name: 'Condor Footwear Ltd',
-        owner: 'Priya Verma',
-        currentStatus: 'Assessment',
-        journey: [
-            { name: 'Contact Established', duration: '2d', color: 'emerald', startDate: '2026-07-10', endDate: '2026-07-12', updatedBy: 'Priya V' },
-            { name: 'Attention', duration: '5d', color: 'amber', startDate: '2026-07-12', endDate: '2026-07-17', updatedBy: 'Priya V' },
-            { name: 'Assessment', duration: '1d', color: 'rose', startDate: '2026-07-17', endDate: 'Present', updatedBy: 'Underwriting' },
-        ],
-    },
-    {
-        id: '8',
-        name: 'Vibhava Marketing',
-        owner: 'Ananya Roy',
-        currentStatus: 'Awareness',
-        journey: [
-            { name: 'Awareness', duration: '8h', color: 'blue', startDate: '2026-07-05', endDate: '2026-07-05', updatedBy: 'Ananya R' },
-            { name: 'Contact Established', duration: '3d', color: 'emerald', startDate: '2026-07-05', endDate: '2026-07-08', updatedBy: 'Ananya R' },
-            { name: 'Interested', duration: '2d', color: 'purple', startDate: '2026-07-08', endDate: '2026-07-10', updatedBy: 'Ananya R' },
-            { name: 'Assessment', duration: '6d', color: 'rose', startDate: '2026-07-10', endDate: '2026-07-16', updatedBy: 'Manager' },
-            { name: 'Awareness', duration: '1d', color: 'blue', startDate: '2026-07-16', endDate: 'Present', updatedBy: 'System' },
-        ],
-    },
-    {
-        id: '9',
-        name: 'Unicharm India',
-        owner: 'Vikram Singh',
-        currentStatus: 'Assessment',
-        journey: [
-            { name: 'Attention', duration: '4d', color: 'amber', startDate: '2026-07-01', endDate: '2026-07-05', updatedBy: 'Vikram S' },
-            { name: 'Contact Established', duration: '1d', color: 'emerald', startDate: '2026-07-05', endDate: '2026-07-06', updatedBy: 'Vikram S' },
-            { name: 'Assessment', duration: '2d', color: 'rose', startDate: '2026-07-06', endDate: 'Present', updatedBy: 'Lender' },
-        ],
-    },
-    {
-        id: '10',
-        name: 'R1X Distribution Services',
-        owner: 'Kiran Patel',
-        currentStatus: 'Contact Established',
-        journey: [
-            { name: 'Awareness', duration: '15d', color: 'blue', startDate: '2026-06-01', endDate: '2026-06-16', updatedBy: 'Kiran P' },
-            { name: 'Attention', duration: '4h', color: 'amber', startDate: '2026-06-16', endDate: '2026-06-16', updatedBy: 'Kiran P' },
-            { name: 'Contact Established', duration: '2d', color: 'emerald', startDate: '2026-06-16', endDate: 'Present', updatedBy: 'Kiran P' },
-        ],
-    },
-]
-
 export default function AccountsStatusPage() {
     const navigate = useNavigate()
-    const [searchTerm, setSearchTerm] = useState('')
+    const { user } = useAuth()
+    const [currentPage, setCurrentPage] = useState(1)
+    const [pageSize] = useState(20)
+    const [searchInput, setSearchInput] = useState('')
+    const [activeSearchTerm, setActiveSearchTerm] = useState('')
     const [selectedStatusFilter, setSelectedStatusFilter] = useState<string>('all')
 
-    const filteredAccounts = DUMMY_ACCOUNTS.filter((acc) => {
+    const rawRole = String(user?.role || '').toLowerCase().trim().replace(/\s+/g, '_')
+    const isAdminOrSuperAdmin = ['super_admin', 'superadmin', 'admin'].includes(rawRole) || rawRole.includes('admin')
+
+    const { data: accountsData = [], isLoading, isError, refetch } = useQuery<AccountStatusJourney[]>({
+        queryKey: ['accountStatusJourneys', currentPage, pageSize],
+        queryFn: async () => {
+            const res = await fetch(
+                `${ENV.VITE_BACKEND_BASE_URL}/accounts/status-journey?company_id=1&page=${currentPage}&limit=${pageSize}`,
+                {
+                    credentials: 'include',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        Authorization: `Bearer ${localStorage.getItem('token') || ''}`,
+                    },
+                }
+            )
+            if (!res.ok) throw new Error('Failed to fetch account status journeys')
+            return res.json()
+        },
+    })
+
+    // If activeSearchTerm is a numeric account ID, fetch single account directly
+    const isAccountIdSearch = /^\d+$/.test(activeSearchTerm.trim())
+    const { data: singleAccountResult } = useQuery<AccountStatusJourney | null>({
+        queryKey: ['singleAccountJourney', activeSearchTerm],
+        queryFn: async () => {
+            if (!isAccountIdSearch) return null
+            try {
+                const res = await fetch(
+                    `${ENV.VITE_BACKEND_BASE_URL}/accounts/status-journey/${activeSearchTerm.trim()}`,
+                    {
+                        credentials: 'include',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            Authorization: `Bearer ${localStorage.getItem('token') || ''}`,
+                        },
+                    }
+                )
+                if (!res.ok) return null
+                return await res.json()
+            } catch {
+                return null
+            }
+        },
+        enabled: isAccountIdSearch && !!activeSearchTerm.trim(),
+    })
+
+    // Combine list data and single account search result
+    let combinedAccounts = [...accountsData]
+    if (singleAccountResult && !combinedAccounts.some((a) => a.id === singleAccountResult.id)) {
+        combinedAccounts = [singleAccountResult, ...combinedAccounts]
+    }
+
+    const filteredAccounts = combinedAccounts.filter((acc) => {
+        const term = activeSearchTerm.toLowerCase().trim()
         const matchesSearch =
-            acc.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-            acc.owner.toLowerCase().includes(searchTerm.toLowerCase())
+            !term ||
+            acc.id.toLowerCase().includes(term) ||
+            acc.name.toLowerCase().includes(term) ||
+            acc.owner.toLowerCase().includes(term)
 
         const matchesStatus =
             selectedStatusFilter === 'all' ||
@@ -281,6 +234,17 @@ export default function AccountsStatusPage() {
 
         return matchesSearch && matchesStatus
     })
+
+    const handleSearchSubmit = (e?: React.FormEvent) => {
+        if (e) e.preventDefault()
+        setActiveSearchTerm(searchInput)
+    }
+
+    const handleResetFilters = () => {
+        setSearchInput('')
+        setActiveSearchTerm('')
+        setSelectedStatusFilter('all')
+    }
 
     return (
         <TooltipProvider>
@@ -301,6 +265,15 @@ export default function AccountsStatusPage() {
                             variant='outline'
                             size='sm'
                             className='gap-2 text-xs font-medium'
+                            onClick={() => refetch()}
+                        >
+                            <RefreshCw className='w-3.5 h-3.5' />
+                            Refresh
+                        </Button>
+                        <Button
+                            variant='outline'
+                            size='sm'
+                            className='gap-2 text-xs font-medium'
                             onClick={() => navigate('/accounts')}
                         >
                             <TableIcon className='w-4 h-4' />
@@ -312,22 +285,21 @@ export default function AccountsStatusPage() {
                 {/* Legend & Stats Section */}
                 <div className='grid grid-cols-1 md:grid-cols-4 gap-4'>
                     <Card className='md:col-span-3 border bg-card shadow-xs'>
-                        <CardContent className=' flex flex-wrap items-center justify-between gap-3 text-xs'>
+                        <CardContent className=' flex flex-wrap items-center justify-between gap-3 text-xs p-3.5'>
                             <div className='flex items-center gap-2 font-semibold text-muted-foreground'>
                                 <Info className='w-4 h-4 text-primary' />
                                 <span>Status Key:</span>
                             </div>
                             <div className='flex flex-wrap items-center gap-2.5'>
                                 {STATUS_LEGEND.map((item, idx) => {
-                                    const style = STATUS_COLOR_MAP[item.color]
+                                    const style = STATUS_COLOR_MAP[item.color] || STATUS_COLOR_MAP.blue
                                     return (
                                         <div
                                             key={idx}
                                             className={`flex items-center gap-1.5 px-2.5 py-1 rounded-full border ${style.bg} ${style.border}`}
                                         >
                                             <span className={`w-2.5 h-2.5 rounded-full ${style.dot}`} />
-                                            {/* <span className={`font-bold ${style.text}`}>{item.code}</span> */}
-                                            <span className='text-muted-foreground text-[11px]'>({item.label})</span>
+                                            <span className='text-muted-foreground text-[11px]'>{item.label}</span>
                                         </div>
                                     )
                                 })}
@@ -335,74 +307,78 @@ export default function AccountsStatusPage() {
                         </CardContent>
                     </Card>
 
-                    <Card className='border bg-card shadow-xs'>
+                    {/* <Card className='border bg-card shadow-xs'>
                         <CardContent className='p-3.5 flex items-center justify-between gap-3 text-xs'>
                             <div className='space-y-0.5'>
-                                <p className='text-muted-foreground font-medium'>Total Accounts</p>
+                                <p className='text-muted-foreground font-medium'>Loaded Accounts</p>
                                 <p className='text-xl font-bold text-foreground'>{filteredAccounts.length}</p>
                             </div>
                             <div className='p-2 rounded-lg bg-primary/10 text-primary'>
                                 <Building2 className='w-5 h-5' />
                             </div>
                         </CardContent>
-                    </Card>
+                    </Card> */}
                 </div>
 
-                {/* Filters & Controls */}
-                {/* <div className='flex flex-wrap items-center justify-between gap-3 bg-muted/30 p-3 rounded-lg border'>
-          <div className='flex flex-wrap items-center gap-3 flex-1 max-w-xl'>
-            <div className='relative flex-1 min-w-[200px]'>
-              <Search className='absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground' />
-              <Input
-                placeholder='Search account name or code...'
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className='pl-9 bg-background h-9 text-xs'
-              />
-            </div>
+                {/* Search & Filter Bar */}
+                <form onSubmit={handleSearchSubmit} className='flex flex-wrap items-center justify-between gap-3 bg-muted/30 p-3 rounded-lg border'>
+                    <div className='flex flex-wrap items-center gap-3 flex-1 max-w-2xl'>
+                        <div className='relative flex-1 min-w-[240px] flex items-center gap-2'>
+                            <div className='relative flex-1'>
+                                <Search className='absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground' />
+                                <Input
+                                    placeholder='Search Account ID, Name, or Owner...'
+                                    value={searchInput}
+                                    onChange={(e) => setSearchInput(e.target.value)}
+                                    className='pl-9 bg-background h-9 text-xs'
+                                />
+                            </div>
+                            <Button type='submit' size='sm' className='h-9 text-xs gap-1.5 px-4'>
+                                <Search className='w-3.5 h-3.5' />
+                                Search
+                            </Button>
+                        </div>
 
-            <div className='w-48'>
-              <Select value={selectedStatusFilter} onValueChange={setSelectedStatusFilter}>
-                <SelectTrigger className='h-9 text-xs bg-background'>
-                  <div className='flex items-center gap-2 truncate'>
-                    <Filter className='w-3.5 h-3.5 text-muted-foreground' />
-                    <SelectValue placeholder='Filter by stage' />
-                  </div>
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value='all'>All Status Stages</SelectItem>
-                  {STATUS_LEGEND.map((l) => (
-                    <SelectItem key={l.code} value={l.code}>
-                      Stage {l.code} - {l.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
+                        <div className='w-48'>
+                            <Select value={selectedStatusFilter} onValueChange={setSelectedStatusFilter}>
+                                <SelectTrigger className='h-9 text-xs bg-background'>
+                                    <div className='flex items-center gap-2 truncate'>
+                                        <Filter className='w-3.5 h-3.5 text-muted-foreground' />
+                                        <SelectValue placeholder='Filter by status' />
+                                    </div>
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value='all'>All Statuses</SelectItem>
+                                    {STATUS_LEGEND.map((l, idx) => (
+                                        <SelectItem key={idx} value={l.label}>
+                                            {l.label}
+                                        </SelectItem>
+                                    ))}
+                                </SelectContent>
+                            </Select>
+                        </div>
+                    </div>
 
-          <div className='flex items-center gap-2'>
-            <Button
-              variant='ghost'
-              size='sm'
-              className='h-9 text-xs gap-1.5 text-muted-foreground hover:text-foreground'
-              onClick={() => {
-                setSearchTerm('')
-                setSelectedStatusFilter('all')
-              }}
-            >
-              <RefreshCw className='w-3.5 h-3.5' />
-              Reset Filters
-            </Button>
-          </div>
-        </div> */}
+                    <div className='flex items-center gap-2'>
+                        <Button
+                            type='button'
+                            variant='ghost'
+                            size='sm'
+                            className='h-9 text-xs gap-1.5 text-muted-foreground hover:text-foreground'
+                            onClick={handleResetFilters}
+                        >
+                            <RefreshCw className='w-3.5 h-3.5' />
+                            Reset Filters
+                        </Button>
+                    </div>
+                </form>
 
-                {/* 2-Column Table matching reference screenshot */}
+                {/* 2-Column Table matching reference design */}
                 <div className='border rounded-lg bg-background overflow-hidden shadow-xs'>
                     <Table>
                         <TableHeader className='bg-muted/50'>
                             <TableRow className='hover:bg-transparent'>
-                                <TableHead className='w-[240px] font-bold text-xs uppercase tracking-wider text-foreground border-r py-3.5 pl-4'>
+                                <TableHead className='w-[260px] font-bold text-xs uppercase tracking-wider text-foreground border-r py-3.5 pl-4'>
                                     Account
                                 </TableHead>
                                 <TableHead className='font-bold text-xs uppercase tracking-wider text-foreground py-3.5 pl-4'>
@@ -411,10 +387,28 @@ export default function AccountsStatusPage() {
                             </TableRow>
                         </TableHeader>
                         <TableBody>
-                            {filteredAccounts.length === 0 ? (
+                            {isLoading ? (
+                                Array.from({ length: 5 }).map((_, idx) => (
+                                    <TableRow key={idx}>
+                                        <TableCell className='border-r py-4 pl-4'>
+                                            <Skeleton className='h-5 w-40 mb-1' />
+                                            <Skeleton className='h-3 w-24' />
+                                        </TableCell>
+                                        <TableCell className='py-4 pl-4'>
+                                            <Skeleton className='h-8 w-full max-w-lg' />
+                                        </TableCell>
+                                    </TableRow>
+                                ))
+                            ) : isError ? (
+                                <TableRow>
+                                    <TableCell colSpan={2} className='h-32 text-center text-destructive text-sm'>
+                                        Failed to load status journeys. Please try again.
+                                    </TableCell>
+                                </TableRow>
+                            ) : filteredAccounts.length === 0 ? (
                                 <TableRow>
                                     <TableCell colSpan={2} className='h-32 text-center text-muted-foreground text-sm'>
-                                        No accounts found matching search criteria.
+                                        No accounts found matching criteria.
                                     </TableCell>
                                 </TableRow>
                             ) : (
@@ -435,63 +429,69 @@ export default function AccountsStatusPage() {
                                         {/* Column 2: Status Journey */}
                                         <TableCell className='align-middle py-3.5 pl-4 pr-4 overflow-x-auto'>
                                             <div className='flex items-center gap-2 flex-wrap py-1 min-h-[40px]'>
-                                                <Tooltip>
-                                                    <TooltipTrigger asChild>
-                                                        <button
-                                                            type='button'
-                                                            className='inline-flex items-center justify-center p-1 rounded-full bg-amber-50 text-amber-600 hover:bg-amber-100 border border-amber-200 dark:bg-amber-950/50 dark:text-amber-300 dark:border-amber-800 transition-colors mr-1 cursor-pointer'
-                                                            aria-label='Calculated Status grouping'
-                                                        >
-                                                            <Info className='w-3.5 h-3.5' />
-                                                        </button>
-                                                    </TooltipTrigger>
-                                                    <TooltipContent side='top' className='p-3 max-w-md bg-popover text-popover-foreground border shadow-md space-y-1.5'>
-                                                        <div className='flex items-center gap-1.5 font-bold text-xs text-foreground border-b pb-1'>
-                                                            <Info className='w-3.5 h-3.5 text-amber-500' />
-                                                            Calculated Status Grouping
-                                                        </div>
-                                                        <div className='px-2.5 py-1.5 rounded bg-yellow-100 dark:bg-yellow-950/70 border border-yellow-300 dark:border-yellow-700 text-yellow-900 dark:text-yellow-200 font-mono text-xs font-semibold tracking-wide'>
-                                                            {computeStageSummary(account.journey)}
-                                                        </div>
-                                                        <p className='text-[11px] text-muted-foreground leading-tight'>
-                                                            Calculated grouping on which Status has taken how many days and how many times it got changed to same Status.
-                                                        </p>
-                                                    </TooltipContent>
-                                                </Tooltip>
-                                                {account.journey.map((step, idx) => {
-                                                    const style = STATUS_COLOR_MAP[step.color] || STATUS_COLOR_MAP.blue
+                                                {account.journey.length > 0 && (
+                                                    <Tooltip>
+                                                        <TooltipTrigger asChild>
+                                                            <button
+                                                                type='button'
+                                                                className='inline-flex items-center justify-center p-1 rounded-full bg-amber-50 text-amber-600 hover:bg-amber-100 border border-amber-200 dark:bg-amber-950/50 dark:text-amber-300 dark:border-amber-800 transition-colors mr-1 cursor-pointer'
+                                                                aria-label='Calculated Status grouping'
+                                                            >
+                                                                <Info className='w-3.5 h-3.5' />
+                                                            </button>
+                                                        </TooltipTrigger>
+                                                        <TooltipContent side='top' className='p-3 max-w-md bg-popover text-popover-foreground border shadow-md space-y-1.5'>
+                                                            <div className='flex items-center gap-1.5 font-bold text-xs text-foreground border-b pb-1'>
+                                                                <Info className='w-3.5 h-3.5 text-amber-500' />
+                                                                Calculated Status Grouping
+                                                            </div>
+                                                            <div className='px-2.5 py-1.5 rounded bg-yellow-100 dark:bg-yellow-950/70 border border-yellow-300 dark:border-yellow-700 text-yellow-900 dark:text-yellow-200 font-mono text-xs font-semibold tracking-wide'>
+                                                                {computeStageSummary(account.journey)}
+                                                            </div>
+                                                            <p className='text-[11px] text-muted-foreground leading-tight'>
+                                                                Calculated grouping on which Status has taken how many days and how many times it got changed to same Status.
+                                                            </p>
+                                                        </TooltipContent>
+                                                    </Tooltip>
+                                                )}
+                                                {account.journey.length === 0 ? (
+                                                    <span className='text-xs text-muted-foreground italic'>No status history recorded yet</span>
+                                                ) : (
+                                                    account.journey.map((step, idx) => {
+                                                        const style = STATUS_COLOR_MAP[step.color] || STATUS_COLOR_MAP.blue
 
-                                                    return (
-                                                        <div key={idx} className='flex items-center gap-2'>
-                                                            <Tooltip>
-                                                                <TooltipTrigger asChild>
-                                                                    <div
-                                                                        className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full border ${style.bg} ${style.border} ${style.text} shadow-2xs font-medium text-xs cursor-pointer hover:scale-105 transition-transform`}
-                                                                    >
-                                                                        <span className={`w-2.5 h-2.5 rounded-full ${style.dot} flex-shrink-0`} />
-                                                                        <span className='font-bold text-xs'>{step.name}</span>
-                                                                        <span className='text-[11px] opacity-90 font-mono'>· {step.duration}</span>
-                                                                    </div>
-                                                                </TooltipTrigger>
-                                                                <TooltipContent side='top' className='text-xs space-y-1 p-2.5'>
-                                                                    <p className='font-bold'>
-                                                                        Status: {step.name}
-                                                                    </p>
-                                                                    <div className='text-[11px] space-y-0.5'>
-                                                                        <p>Duration spent: <span className='font-semibold text-foreground'>{step.duration}</span></p>
-                                                                        {step.startDate && <p>Started: {step.startDate}</p>}
-                                                                        {step.endDate && <p>Ended: {step.endDate}</p>}
-                                                                        {step.updatedBy && <p>Updated by: {step.updatedBy}</p>}
-                                                                    </div>
-                                                                </TooltipContent>
-                                                            </Tooltip>
+                                                        return (
+                                                            <div key={idx} className='flex items-center gap-2'>
+                                                                <Tooltip>
+                                                                    <TooltipTrigger asChild>
+                                                                        <div
+                                                                            className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full border ${style.bg} ${style.border} ${style.text} shadow-2xs font-medium text-xs cursor-pointer hover:scale-105 transition-transform`}
+                                                                        >
+                                                                            <span className={`w-2.5 h-2.5 rounded-full ${style.dot} flex-shrink-0`} />
+                                                                            <span className='font-bold text-xs'>{step.name}</span>
+                                                                            <span className='text-[11px] opacity-90 font-mono'>· {step.duration}</span>
+                                                                        </div>
+                                                                    </TooltipTrigger>
+                                                                    <TooltipContent side='top' className='text-xs space-y-1 p-2.5'>
+                                                                        <p className='font-bold'>
+                                                                            Status: {step.name}
+                                                                        </p>
+                                                                        <div className='text-[11px] space-y-0.5'>
+                                                                            <p>Duration spent: <span className='font-semibold text-foreground'>{step.duration}</span></p>
+                                                                            {step.startDate && <p>Started: {step.startDate}</p>}
+                                                                            {step.endDate && <p>Ended: {step.endDate}</p>}
+                                                                            {step.updatedBy && <p>Updated by: {step.updatedBy}</p>}
+                                                                        </div>
+                                                                    </TooltipContent>
+                                                                </Tooltip>
 
-                                                            {idx < account.journey.length - 1 && (
-                                                                <ArrowRight className='w-4 h-4 text-muted-foreground/60 flex-shrink-0' />
-                                                            )}
-                                                        </div>
-                                                    )
-                                                })}
+                                                                {idx < account.journey.length - 1 && (
+                                                                    <ArrowRight className='w-4 h-4 text-muted-foreground/60 flex-shrink-0' />
+                                                                )}
+                                                            </div>
+                                                        )
+                                                    })
+                                                )}
                                             </div>
                                         </TableCell>
                                     </TableRow>
@@ -499,6 +499,15 @@ export default function AccountsStatusPage() {
                             )}
                         </TableBody>
                     </Table>
+
+                    {/* Pagination Footer */}
+                    <div className='p-3 border-t bg-muted/20'>
+                        <Pagination
+                            currentPage={currentPage}
+                            totalPages={Math.max(1, Math.ceil(27154 / pageSize))}
+                            onPageChange={(page) => setCurrentPage(page)}
+                        />
+                    </div>
                 </div>
             </div>
         </TooltipProvider>
