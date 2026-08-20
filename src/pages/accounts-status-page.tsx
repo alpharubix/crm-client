@@ -106,7 +106,7 @@ export function computeStageSummary(journey: StatusStep[]): string {
     return parts.join(' · ')
 }
 
-const STATUS_COLOR_MAP: Record<string, { bg: string; text: string; dot: string; border: string }> = {
+export const STATUS_COLOR_MAP: Record<string, { bg: string; text: string; dot: string; border: string }> = {
     blue: {
         bg: 'bg-blue-50 dark:bg-blue-950/40',
         text: 'text-blue-700 dark:text-blue-300',

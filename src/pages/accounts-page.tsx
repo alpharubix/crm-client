@@ -71,7 +71,16 @@ import {
   ExternalLink,
   Calendar as CalendarIcon,
   CheckCircle2,
+  Info,
+  ArrowRight,
 } from 'lucide-react';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '@/components/ui/tooltip';
+import { computeStageSummary, STATUS_COLOR_MAP } from './accounts-status-page';
 
 const ACCOUNT_STATUS_OPTIONS: Option[] = [
   { value: 'Yet to be dialed', label: 'Yet to be dialed' },
@@ -1195,6 +1204,7 @@ export default function AccountsPage() {
                       );
 
                       return (
+                        <>
                         <TableRow
                           key={acc.id}
                           className={`cursor-pointer transition-colors border-b border-border/40 ${
@@ -1452,6 +1462,128 @@ export default function AccountsPage() {
                             </DropdownMenu>
                           </TableCell>
                         </TableRow>
+                        <TableRow
+                          key={`${acc.id}-tracker`}
+                          className="hover:bg-transparent border-b border-border/40 mt-none"
+                        >
+                          <TableCell
+                            colSpan={visibleColumns.length + 2}
+                            className="px-6 py-3 bg-muted/20"
+                          >
+                            {(() => {
+                              const journey = acc.journey || acc.status_journey || [];
+
+                              return (
+                                <TooltipProvider>
+                                  <div className="flex items-center gap-2 flex-wrap py-1 min-h-[40px]">
+                                    {journey.length > 0 && (
+                                      <Tooltip>
+                                        <TooltipTrigger asChild>
+                                          <button
+                                            type="button"
+                                            className="inline-flex items-center justify-center p-1 rounded-full bg-amber-50 text-amber-600 hover:bg-amber-100 border border-amber-200 dark:bg-amber-950/50 dark:text-amber-300 dark:border-amber-800 transition-colors mr-1 cursor-pointer"
+                                            aria-label="Calculated Status grouping"
+                                          >
+                                            <Info className="w-3.5 h-3.5" />
+                                          </button>
+                                        </TooltipTrigger>
+
+                                        <TooltipContent
+                                          side="top"
+                                          className="p-3 max-w-md bg-popover text-popover-foreground border shadow-md space-y-1.5"
+                                        >
+                                          <div className="flex items-center gap-1.5 font-bold text-xs text-foreground border-b pb-1">
+                                            <Info className="w-3.5 h-3.5 text-amber-500" />
+                                            Calculated Status Grouping
+                                          </div>
+
+                                          <div className="px-2.5 py-1.5 rounded bg-yellow-100 dark:bg-yellow-950/70 border border-yellow-300 dark:border-yellow-700 text-yellow-900 dark:text-yellow-200 font-mono text-xs font-semibold tracking-wide">
+                                            {computeStageSummary(journey)}
+                                          </div>
+
+                                          <p className="text-[11px] text-muted-foreground leading-tight">
+                                            Calculated grouping on which Status has taken how many
+                                            days and how many times it got changed to same Status.
+                                          </p>
+                                        </TooltipContent>
+                                      </Tooltip>
+                                    )}
+
+                                    {journey.length === 0 ? (
+                                      <span className="text-xs text-muted-foreground italic">
+                                        No status history recorded yet
+                                      </span>
+                                    ) : (
+                                      journey.map((step: any, idx: number) => {
+                                        const style =
+                                          STATUS_COLOR_MAP[step.color] || STATUS_COLOR_MAP.blue;
+
+                                        return (
+                                          <div key={idx} className="flex items-center gap-2">
+                                            <Tooltip>
+                                              <TooltipTrigger asChild>
+                                                <div
+                                                  className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full border ${style.bg} ${style.border} ${style.text} shadow-2xs font-medium text-xs cursor-pointer hover:scale-105 transition-transform`}
+                                                >
+                                                  <span
+                                                    className={`w-2.5 h-2.5 rounded-full ${style.dot} flex-shrink-0`}
+                                                  />
+
+                                                  <span className="font-bold text-xs">
+                                                    {step.name}
+                                                  </span>
+
+                                                  <span className="text-[11px] opacity-90 font-mono">
+                                                    · {step.duration}
+                                                  </span>
+                                                </div>
+                                              </TooltipTrigger>
+
+                                              <TooltipContent
+                                                side="top"
+                                                className="text-xs space-y-1 p-2.5"
+                                              >
+                                                <p className="font-bold">
+                                                  Status: {step.name}
+                                                </p>
+
+                                                <div className="text-[11px] space-y-0.5">
+                                                  <p>
+                                                    Duration spent:{' '}
+                                                    <span className="font-semibold text-foreground">
+                                                      {step.duration}
+                                                    </span>
+                                                  </p>
+
+                                                  {step.startDate && (
+                                                    <p>Started: {step.startDate}</p>
+                                                  )}
+
+                                                  {step.endDate && (
+                                                    <p>Ended: {step.endDate}</p>
+                                                  )}
+
+                                                  {step.updatedBy && (
+                                                    <p>Updated by: {step.updatedBy}</p>
+                                                  )}
+                                                </div>
+                                              </TooltipContent>
+                                            </Tooltip>
+
+                                            {idx < journey.length - 1 && (
+                                              <ArrowRight className="w-4 h-4 text-muted-foreground/60 flex-shrink-0" />
+                                            )}
+                                          </div>
+                                        );
+                                      })
+                                    )}
+                                  </div>
+                                </TooltipProvider>
+                              );
+                            })()}
+                          </TableCell>
+                        </TableRow>
+                        </>
                       );
                     })
                   )}
