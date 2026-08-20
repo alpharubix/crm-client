@@ -62,6 +62,8 @@ const UpdateRevenue = lazy(() => import('./components/revenue/update-revenue'));
 const BsaAnalysisPage = lazy(() => import('./pages/bsa-analysis-page'));
 const GstAnalysisPage = lazy(() => import('./pages/gst-page'));
 const SupportTicketsPage = lazy(() => import('./pages/support-tickets-page'));
+const AccStatusJourney = lazy(() => import('./pages/accounts-status-page'));
+
 
 export default function App() {
   return (
@@ -90,6 +92,7 @@ export default function App() {
             >
               <Route path='/accounts' element={<AccountPage />} />
               <Route path='/account-tasks' element={<AccountTasksPage />} />
+              <Route path='/acc-status-journey' element={<AccStatusJourney />} />
               <Route path='/accounts/:id' element={<UpdateAccounts />} />
               <Route path='/accounts/:id/bsa' element={<BsaAnalysisPage />} />
               <Route path='/accounts/:id/itr' element={<ItrAnalysisPage />} />
