@@ -34,6 +34,7 @@ import {
   updateTicketSchema,
   type UpdateTicketFormValues,
 } from '@/validators/updateTicket.schema'
+import { NestedComments } from '../nested-notes'
 
 // Safely extract lender_rejection_reason regardless of whether DB returns
 // a string or a JSON object (e.g. { reason: "OGL" })
@@ -457,7 +458,7 @@ export default function UpdateKanbanTicket({
     selectedAccountId !== originalAccountId
 
   return (
-    <div className='space-y-6 bg-background min-h-screen mb-10'>
+    <div className='space-y-6 mx-2 bg-background min-h-screen mb-10'>
       {/* HEADER */}
       <div className='flex justify-between items-center border p-4 rounded-xl bg-card'>
         <div>
@@ -1200,7 +1201,7 @@ export default function UpdateKanbanTicket({
 
         {/* ================= Notes ================= */}
         <SectionHeader title='Notes' />
-        <CardContent className='p-4 space-y-3'>
+        {/* <CardContent className='p-4 space-y-3'>
           <div className='flex items-center justify-between'>
             <p className='text-sm text-muted-foreground'>
               Total Notes:{' '}
@@ -1283,7 +1284,8 @@ export default function UpdateKanbanTicket({
           )}
 
           <NoteDialog onAddNote={handleAddNote} />
-        </CardContent>
+        </CardContent> */}
+        <NestedComments />
       </Card>
     </div>
   )
