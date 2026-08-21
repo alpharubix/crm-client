@@ -53,6 +53,10 @@ const data = {
           title: 'Account Tasks',
           url: '/account-tasks',
         },
+        // {
+        //   title: 'Acccounts Status Journey',
+        //   url: '/acc-status-journey',
+        // },
       ],
     },
     {
@@ -186,6 +190,10 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
     ['super_admin', 'superadmin'].includes(rawRole) ||
     rawRole.includes('super_admin') ||
     rawRole.includes('superadmin');
+  const isAdminOrSuperAdmin =
+    isSuperAdmin ||
+    ['admin'].includes(rawRole) ||
+    rawRole.includes('admin');
 
   // Isolate user identity signatures
   const isSarada = currentUserId === '3899927000000221552';
@@ -247,15 +255,21 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
               return true;
             })
             .map((item) => {
+              let items = item.items;
               if (isSarada || isAmbika) {
-                return {
-                  ...item,
-                  items: item.items?.filter(
-                    (subItem) => subItem.url === '/hiring',
-                  ),
-                };
+                items = items?.filter((subItem) => subItem.url === '/hiring');
+              } else {
+                items = items?.filter((subItem) => {
+                  if (subItem.url === '/acc-status-journey' && !isAdminOrSuperAdmin) {
+                    return false;
+                  }
+                  return true;
+                });
               }
-              return item;
+              return {
+                ...item,
+                items,
+              };
             })}
         />
       </SidebarContent>

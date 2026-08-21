@@ -837,7 +837,7 @@ export default function AccountTasksPage() {
       <Sheet open={isFilterSheetOpen} onOpenChange={setIsFilterSheetOpen}>
         <SheetContent
           side='right'
-          className='w-[380px] sm:w-[440px] p-0 flex flex-col gap-0 border-l shadow-2xl bg-background'
+          className='w-full sm:w-[500px] sm:max-w-none p-0 flex flex-col gap-0 border-l shadow-2xl bg-background'
         >
           <SheetHeader className='px-6 py-4 border-b border-border/60 flex flex-row items-center justify-between shrink-0 space-y-0'>
             <SheetTitle className='text-base font-bold text-foreground'>
