@@ -97,7 +97,9 @@ export default function UpdateAccountTaskModal({
     enabled: !!accountIdForNotes && isOpen,
   })
 
-  const lastAccountNote = accountNotesRes && accountNotesRes.length > 0 ? accountNotesRes[0] : null
+  const lastAccountNote = accountNotesRes && accountNotesRes.length > 0
+    ? [...accountNotesRes].sort((a: any, b: any) => new Date(b.Created_Time || b.Created_time || b.created_at || 0).getTime() - new Date(a.Created_Time || a.Created_time || a.created_at || 0).getTime())[0]
+    : null
 
   const toLocalISOString = (dateStr?: string | null) => {
     if (!dateStr) return ''
