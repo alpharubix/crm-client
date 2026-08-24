@@ -153,7 +153,8 @@ const STATUS_LEGEND = [
     { label: 'Awareness', color: 'purple' },
     { label: 'Attention', color: 'blue' },
     { label: 'Assessment', color: 'emerald' },
-    { label: 'Lender Review', color: 'amber' },
+    { label: 'Lender Review', color: 'indigo' },
+    { label: 'On Hold', color: 'yellow' },
     { label: 'Not Interested', color: 'rose' },
     { label: 'Location Unserviceable', color: 'purple' },
 ]

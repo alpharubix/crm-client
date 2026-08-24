@@ -21,6 +21,7 @@ type Props = {
   onChange: (d?: Date) => void
   showTime?: boolean
   disablePast?: boolean
+  maxDate?: Date
 }
 
 export default function DateField({
@@ -29,6 +30,7 @@ export default function DateField({
   onChange,
   showTime = false,
   disablePast = false,
+  maxDate,
 }: Props) {
   if (!isEdit) {
     const displayFormat = showTime
@@ -135,11 +137,19 @@ export default function DateField({
           mode='single'
           selected={value}
           onSelect={handleDateSelect}
-          disabled={
-            disablePast
-              ? (date) => date < new Date(new Date().setHours(0, 0, 0, 0))
-              : undefined
-          }
+            disabled={(date) => {
+            let disabled = false
+            if (disablePast) {
+              disabled = disabled || date < new Date(new Date().setHours(0, 0, 0, 0))
+            }
+            if (maxDate) {
+              // Compare at start of day so we don't disable the maxDate day itself prematurely
+              const maxDay = new Date(maxDate)
+              maxDay.setHours(23, 59, 59, 999)
+              disabled = disabled || date > maxDay
+            }
+            return disabled
+          }}    
         />
         {showTime && (
           <div className='p-3 border-t bg-muted/20 space-y-2'>
