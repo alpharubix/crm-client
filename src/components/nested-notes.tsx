@@ -1,11 +1,11 @@
-'use client';
-
 import * as React from 'react';
 import { MessageCircle, ChevronDown, ChevronRight, X } from 'lucide-react';
 
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
+import usersData from '@/utils/users.json'
+
 
 type User = {
   id: string;
@@ -204,7 +204,7 @@ function CommentItem({
           </div>
 
           <p className='mt-1 whitespace-pre-wrap text-sm leading-6'>
-            {comment.body}
+            {renderMentions(comment.body)}
           </p>
 
           <div className='mt-2 flex items-center gap-1'>
@@ -273,29 +273,118 @@ function CommentItem({
 }
 
 type ReplyComposerProps = {
-  authorName: string;
-  onCancel: () => void;
-  onSubmit: (body: string) => void;
-};
+  authorName: string
+  onCancel: () => void
+  onSubmit: (body: string) => void
+}
 
-function ReplyComposer({ authorName, onCancel, onSubmit }: ReplyComposerProps) {
-  const [value, setValue] = React.useState('');
+function renderMentions(text: string) {
+  return text.replace(
+    /crm\[user#([^\]]+)\]crm/g,
+    (_, userId) => {
+      const userName = (usersData as Record<string, string>)[userId]
+
+      return userName ? `@${userName}` : '@Unknown User'
+    },
+  )
+}
+
+function ReplyComposer({
+  authorName,
+  onCancel,
+  onSubmit,
+}: ReplyComposerProps) {
+  const [value, setValue] = React.useState('')
+  const [mentionQuery, setMentionQuery] = React.useState<string | null>(null)
+  const [mentionStart, setMentionStart] = React.useState(-1)
+  const [mentionedUsers, setMentionedUsers] = React.useState<
+    { id: string; name: string }[]
+  >([])
+
+  const textareaRef = React.useRef<HTMLTextAreaElement | null>(null)
+
+  const usersList = Object.entries(usersData).map(([id, name]) => ({
+    id,
+    name: String(name),
+  }))
+
+  const filteredUsers =
+    mentionQuery !== null
+      ? usersList.filter((user) =>
+          user.name.toLowerCase().includes(mentionQuery.toLowerCase()),
+        )
+      : []
 
   function submit() {
-    const body = value.trim();
+    let finalBody = value.trim()
 
-    if (!body) return;
+    if (!finalBody) return
 
-    onSubmit(body);
-    setValue('');
+    // Convert @User Name → crm[user#id]crm
+    mentionedUsers.forEach((user) => {
+      const regex = new RegExp(
+        `@${user.name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\b`,
+        'g',
+      )
+
+      finalBody = finalBody.replace(
+        regex,
+        `crm[user#${user.id}]crm`,
+      )
+    })
+
+    onSubmit(finalBody)
+
+    setValue('')
+    setMentionQuery(null)
+    setMentionStart(-1)
+    setMentionedUsers([])
+  }
+
+  const handleMentionSelect = (user: { id: string; name: string }) => {
+    if (mentionStart === -1) return
+
+    const before = value.substring(0, mentionStart)
+
+    const exactEnd =
+      textareaRef.current?.selectionStart ?? value.length
+
+    const after = value.substring(exactEnd)
+
+    const insertText = `@${user.name} `
+
+    setValue(before + insertText + after)
+
+    setMentionedUsers((prev) => {
+      if (!prev.some((mentionedUser) => mentionedUser.id === user.id)) {
+        return [...prev, user]
+      }
+
+      return prev
+    })
+
+    setMentionQuery(null)
+    setMentionStart(-1)
+
+    setTimeout(() => {
+      const newCursorPos = before.length + insertText.length
+
+      textareaRef.current?.focus()
+      textareaRef.current?.setSelectionRange(
+        newCursorPos,
+        newCursorPos,
+      )
+    }, 0)
   }
 
   return (
-    <div className='mt-3 rounded-lg border bg-muted/30 p-3 w-[500px]'>
+    <div className='relative mt-3 rounded-lg border bg-muted/30 p-3 w-[500px]'>
       <div className='mb-2 flex items-center justify-between'>
         <span className='text-xs text-muted-foreground'>
           Replying to{' '}
-          <span className='font-medium text-foreground'>{authorName}</span>
+          <span className='font-medium text-foreground'>
+            {authorName}
+          </span>
         </span>
 
         <Button
@@ -309,25 +398,67 @@ function ReplyComposer({ authorName, onCancel, onSubmit }: ReplyComposerProps) {
         </Button>
       </div>
 
-      <Textarea
-        autoFocus
-        value={value}
-        onChange={(event) => setValue(event.target.value)}
-        placeholder={`Reply to ${authorName}...`}
-        className='min-h-20 resize-none bg-background'
-      />
+      <div className='relative'>
+        <Textarea
+          ref={textareaRef}
+          autoFocus
+          value={value}
+          onChange={(e) => {
+            const val = e.target.value
+            const cursor = e.target.selectionStart
+
+            setValue(val)
+
+            const textBeforeCursor = val.substring(0, cursor)
+
+            const match = textBeforeCursor.match(
+              /(?:^|\s)@([a-zA-Z0-9 ]{0,30})$/,
+            )
+
+            if (match) {
+              setMentionQuery(match[1])
+              setMentionStart(cursor - match[1].length - 1)
+            } else {
+              setMentionQuery(null)
+              setMentionStart(-1)
+            }
+          }}
+          placeholder={`Reply to ${authorName}...`}
+          className='min-h-20 resize-none bg-background'
+        />
+
+        {mentionQuery !== null && filteredUsers.length > 0 && (
+          <div className='absolute z-50 left-0 right-0 bottom-full mb-1 max-h-40 overflow-y-auto rounded-md border bg-popover shadow-md'>
+            {filteredUsers.map((user) => (
+              <button
+                key={user.id}
+                type='button'
+                className='block w-full px-3 py-2 text-left text-sm hover:bg-muted'
+                onMouseDown={(e) => e.preventDefault()}
+                onClick={() => handleMentionSelect(user)}
+              >
+                {user.name}
+              </button>
+            ))}
+          </div>
+        )}
+      </div>
 
       <div className='mt-2 flex justify-end gap-2'>
         <Button variant='ghost' size='sm' onClick={onCancel}>
           Cancel
         </Button>
 
-        <Button size='sm' disabled={!value.trim()} onClick={submit}>
+        <Button
+          size='sm'
+          disabled={!value.trim()}
+          onClick={submit}
+        >
           Reply
         </Button>
       </div>
     </div>
-  );
+  )
 }
 
 /**
