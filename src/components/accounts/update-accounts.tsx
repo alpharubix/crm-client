@@ -1676,7 +1676,7 @@ export default function UpdateAccounts() {
                         render={({ field }) => (
                           <SelectField
                             value={field.value}
-                            isEdit={!field.value && isEdit}
+                            isEdit={isEdit}
                             options={[
                               'Yet to be dialed',
                               'Wrong Number',
