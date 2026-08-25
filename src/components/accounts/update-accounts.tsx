@@ -2106,7 +2106,7 @@ export default function UpdateAccounts() {
                       label='State *'
                       error={errors.businessState?.message}
                     >
-                      {isEdit ? (
+                      {false ? (
                         <div className='relative'>
                           <Input
                             value={businessStateSearch}
@@ -2155,7 +2155,7 @@ export default function UpdateAccounts() {
                       label='Pincode *'
                       error={errors.businessPincode?.message}
                     >
-                      {isEdit ? (
+                      {false ? (
                         <div className='relative'>
                           <Input
                             value={businessPincodeSearch}
@@ -2455,7 +2455,7 @@ export default function UpdateAccounts() {
                           label='State'
                           value={field.value || ''}
                           onChange={field.onChange}
-                          isEdit={isEdit}
+                          isEdit={false}
                           error={errors.coApplicantState?.message}
                         />
                       )}
@@ -2470,7 +2470,7 @@ export default function UpdateAccounts() {
                           label='City'
                           value={field.value || ''}
                           onChange={field.onChange}
-                          isEdit={isEdit}
+                          isEdit={false}
                           error={errors.coApplicantCity?.message}
                         />
                       )}
@@ -2502,7 +2502,7 @@ export default function UpdateAccounts() {
                           label='Pincode'
                           value={field.value || ''}
                           onChange={field.onChange}
-                          isEdit={isEdit}
+                          isEdit={false}
                           error={errors.coApplicantPincode?.message}
                         />
                       )}
