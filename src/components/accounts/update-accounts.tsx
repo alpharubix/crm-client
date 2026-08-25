@@ -1525,7 +1525,7 @@ export default function UpdateAccounts() {
                         render={({ field }) => (
                           <SelectField
                             value={field.value}
-                            isEdit={false}
+                            isEdit={!field.value && isEdit}
                             options={[
                               'Himalaya',
                               'CavinKare',
@@ -1559,7 +1559,7 @@ export default function UpdateAccounts() {
                         render={({ field }) => (
                           <SelectField
                             value={field.value}
-                            isEdit={false}
+                            isEdit={!field.value && isEdit}
                             options={[
                               'Direct',
                               'Referral',
@@ -1748,7 +1748,7 @@ export default function UpdateAccounts() {
                       label='Distributor Code'
                       error={errors.distributorCode?.message}
                     >
-                      {false ? (
+                      {!data.distributorCode && isEdit ? (
                         <Input
                           {...register('distributorCode')}
                           className='h-8'
@@ -1801,7 +1801,7 @@ export default function UpdateAccounts() {
                       label='First Name *'
                       error={errors.firstName?.message}
                     >
-                      {false ? (
+                      {!data.firstName && isEdit ? (
                         <Input {...register('firstName')} className='h-8' />
                       ) : (
                         <span>{display(data.firstName)}</span>
@@ -1828,7 +1828,7 @@ export default function UpdateAccounts() {
                       label='Last Name *'
                       error={errors.lastName?.message}
                     >
-                      {false ? (
+                      {!data.lastName && isEdit ? (
                         <Input {...register('lastName')} className='h-8' />
                       ) : (
                         <span>{display(data.lastName)}</span>
@@ -2106,7 +2106,7 @@ export default function UpdateAccounts() {
                       label='State *'
                       error={errors.businessState?.message}
                     >
-                      {false ? (
+                      {!data.businessState && isEdit ? (
                         <div className='relative'>
                           <Input
                             value={businessStateSearch}
@@ -2155,7 +2155,7 @@ export default function UpdateAccounts() {
                       label='Pincode *'
                       error={errors.businessPincode?.message}
                     >
-                      {false ? (
+                      {!data.businessPincode && isEdit ? (
                         <div className='relative'>
                           <Input
                             value={businessPincodeSearch}
@@ -2219,7 +2219,7 @@ export default function UpdateAccounts() {
                       label='City *'
                       error={errors.businessCity?.message}
                     >
-                      {false ? (
+                      {!data.businessCity && isEdit ? (
                         <div className='relative'>
                           <Input
                             value={businessCitySearch}
@@ -2334,7 +2334,7 @@ export default function UpdateAccounts() {
                           label='State'
                           value={field.value || ''}
                           onChange={field.onChange}
-                          isEdit={false}
+                          isEdit={!field.value && isEdit}
                           error={errors.applicantState?.message}
                         />
                       )}
@@ -2381,7 +2381,7 @@ export default function UpdateAccounts() {
                           label='Pincode'
                           value={field.value || ''}
                           onChange={field.onChange}
-                          isEdit={false}
+                          isEdit={!field.value && isEdit}
                           error={errors.applicantPincode?.message}
                         />
                       )}
@@ -2455,7 +2455,7 @@ export default function UpdateAccounts() {
                           label='State'
                           value={field.value || ''}
                           onChange={field.onChange}
-                          isEdit={false}
+                          isEdit={!field.value && isEdit}
                           error={errors.coApplicantState?.message}
                         />
                       )}
@@ -2502,7 +2502,7 @@ export default function UpdateAccounts() {
                           label='Pincode'
                           value={field.value || ''}
                           onChange={field.onChange}
-                          isEdit={false}
+                          isEdit={!field.value && isEdit}
                           error={errors.coApplicantPincode?.message}
                         />
                       )}
