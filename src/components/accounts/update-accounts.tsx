@@ -709,6 +709,7 @@ export default function UpdateAccounts() {
   });
 
   const accountData = apiResponse?.data?.[0];
+  
   const Deals = accountData?.deals || [];
   const contacts = accountData?.account_linked_contact || [];
   const tickets = accountData?.tickets || [];
@@ -1525,7 +1526,7 @@ export default function UpdateAccounts() {
                         render={({ field }) => (
                           <SelectField
                             value={field.value}
-                            isEdit={!field.value && isEdit}
+                            isEdit={!accountData.source && isEdit}
                             options={[
                               'Himalaya',
                               'CavinKare',
@@ -1559,7 +1560,7 @@ export default function UpdateAccounts() {
                         render={({ field }) => (
                           <SelectField
                             value={field.value}
-                            isEdit={!field.value && isEdit}
+                            isEdit={!accountData.source_type && isEdit}
                             options={[
                               'Direct',
                               'Referral',
@@ -1748,7 +1749,7 @@ export default function UpdateAccounts() {
                       label='Distributor Code'
                       error={errors.distributorCode?.message}
                     >
-                      {!data.distributorCode && isEdit ? (
+                      {!accountData.distributor_code && isEdit ? (
                         <Input
                           {...register('distributorCode')}
                           className='h-8'
@@ -1801,7 +1802,7 @@ export default function UpdateAccounts() {
                       label='First Name *'
                       error={errors.firstName?.message}
                     >
-                      {!data.firstName && isEdit ? (
+                      {!accountData.first_name && isEdit ? (
                         <Input {...register('firstName')} className='h-8' />
                       ) : (
                         <span>{display(data.firstName)}</span>
@@ -1828,7 +1829,7 @@ export default function UpdateAccounts() {
                       label='Last Name *'
                       error={errors.lastName?.message}
                     >
-                      {!data.lastName && isEdit ? (
+                      {!accountData.last_name && isEdit ? (
                         <Input {...register('lastName')} className='h-8' />
                       ) : (
                         <span>{display(data.lastName)}</span>
@@ -2103,10 +2104,10 @@ export default function UpdateAccounts() {
                       )}
                     </FieldRow>
                     <FieldRow
-                      label='State *'
-                      error={errors.businessState?.message}
+                          label='State *'
+                          error={errors.businessState?.message}
                     >
-                      {!data.businessState && isEdit ? (
+                      {!accountData.business_premise_address.state && isEdit ? (
                         <div className='relative'>
                           <Input
                             value={businessStateSearch}
@@ -2152,10 +2153,10 @@ export default function UpdateAccounts() {
                       )}
                     </FieldRow>
                     <FieldRow
-                      label='Pincode *'
-                      error={errors.businessPincode?.message}
+                          label='Pincode *'
+                          error={errors.businessPincode?.message}
                     >
-                      {!data.businessPincode && isEdit ? (
+                      {!accountData.business_premise_address.pincode && isEdit ? (
                         <div className='relative'>
                           <Input
                             value={businessPincodeSearch}
@@ -2175,7 +2176,7 @@ export default function UpdateAccounts() {
                             }
                             placeholder='Search Pincode...'
                             className='h-8'
-                          />
+                    />
                           {businessPincodeOpen &&
                             filteredBusinessPincodes.length > 0 && (
                               <div className='absolute z-10 w-full mt-1 bg-background border rounded-md shadow-lg max-h-60 overflow-auto'>
@@ -2216,10 +2217,10 @@ export default function UpdateAccounts() {
                   </div>
                   <div>
                     <FieldRow
-                      label='City *'
-                      error={errors.businessCity?.message}
+                          label='City *'
+                          error={errors.businessCity?.message}
                     >
-                      {!data.businessCity && isEdit ? (
+                      {!accountData.business_premise_address.city && isEdit ? (
                         <div className='relative'>
                           <Input
                             value={businessCitySearch}
@@ -2236,7 +2237,7 @@ export default function UpdateAccounts() {
                             }
                             placeholder='Search City...'
                             className='h-8'
-                          />
+                    />
                           {businessCityOpen &&
                             filteredBusinessCities.length > 0 && (
                               <div className='absolute z-10 w-full mt-1 bg-background border rounded-md shadow-lg max-h-60 overflow-auto'>
@@ -2334,7 +2335,7 @@ export default function UpdateAccounts() {
                           label='State'
                           value={field.value || ''}
                           onChange={field.onChange}
-                          isEdit={!field.value && isEdit}
+                          isEdit={!accountData.applicant_residence_address?.state && isEdit}
                           error={errors.applicantState?.message}
                         />
                       )}
@@ -2349,7 +2350,7 @@ export default function UpdateAccounts() {
                           label='City'
                           value={field.value || ''}
                           onChange={field.onChange}
-                          isEdit={isEdit}
+                          isEdit={!accountData.applicant_residence_address?.city && isEdit}
                           error={errors.applicantCity?.message}
                         />
                       )}
@@ -2381,7 +2382,7 @@ export default function UpdateAccounts() {
                           label='Pincode'
                           value={field.value || ''}
                           onChange={field.onChange}
-                          isEdit={!field.value && isEdit}
+                          isEdit={!accountData.applicant_residence_address?.pincode && isEdit}
                           error={errors.applicantPincode?.message}
                         />
                       )}
@@ -2455,7 +2456,7 @@ export default function UpdateAccounts() {
                           label='State'
                           value={field.value || ''}
                           onChange={field.onChange}
-                          isEdit={!field.value && isEdit}
+                          isEdit={!accountData.co_applicant_residence_address?.state && isEdit}
                           error={errors.coApplicantState?.message}
                         />
                       )}
@@ -2470,7 +2471,7 @@ export default function UpdateAccounts() {
                           label='City'
                           value={field.value || ''}
                           onChange={field.onChange}
-                          isEdit={false}
+                          isEdit={!accountData.co_applicant_residence_address?.city && isEdit}
                           error={errors.coApplicantCity?.message}
                         />
                       )}
@@ -2502,7 +2503,7 @@ export default function UpdateAccounts() {
                           label='Pincode'
                           value={field.value || ''}
                           onChange={field.onChange}
-                          isEdit={!field.value && isEdit}
+                          isEdit={!accountData.co_applicant_residence_address?.pincode && isEdit}
                           error={errors.coApplicantPincode?.message}
                         />
                       )}
