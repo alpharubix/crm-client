@@ -2109,7 +2109,7 @@ export default function UpdateAccounts() {
                           label='State *'
                           error={errors.businessState?.message}
                     >
-                      {!accountData.business_premise_address.state && isEdit ? (
+                      {isEdit ? (
                         <div className='relative'>
                           <Input
                             value={businessStateSearch}
@@ -2158,7 +2158,7 @@ export default function UpdateAccounts() {
                           label='Pincode *'
                           error={errors.businessPincode?.message}
                     >
-                      {!accountData.business_premise_address.pincode && isEdit ? (
+                      {isEdit ? (
                         <div className='relative'>
                           <Input
                             value={businessPincodeSearch}
@@ -2222,7 +2222,7 @@ export default function UpdateAccounts() {
                           label='City *'
                           error={errors.businessCity?.message}
                     >
-                      {!accountData.business_premise_address.city && isEdit ? (
+                      {isEdit ? (
                         <div className='relative'>
                           <Input
                             value={businessCitySearch}
@@ -2337,7 +2337,7 @@ export default function UpdateAccounts() {
                           label='State'
                           value={field.value || ''}
                           onChange={field.onChange}
-                          isEdit={!accountData.applicant_residence_address?.state && isEdit}
+                          isEdit={isEdit}
                           error={errors.applicantState?.message}
                         />
                       )}
@@ -2352,7 +2352,7 @@ export default function UpdateAccounts() {
                           label='City'
                           value={field.value || ''}
                           onChange={field.onChange}
-                          isEdit={!accountData.applicant_residence_address?.city && isEdit}
+                          isEdit={isEdit}
                           error={errors.applicantCity?.message}
                         />
                       )}
@@ -2384,7 +2384,7 @@ export default function UpdateAccounts() {
                           label='Pincode'
                           value={field.value || ''}
                           onChange={field.onChange}
-                          isEdit={!accountData.applicant_residence_address?.pincode && isEdit}
+                          isEdit={isEdit}
                           error={errors.applicantPincode?.message}
                         />
                       )}
@@ -2473,7 +2473,7 @@ export default function UpdateAccounts() {
                           label='City'
                           value={field.value || ''}
                           onChange={field.onChange}
-                          isEdit={!accountData.co_applicant_residence_address?.city && isEdit}
+                          isEdit={isEdit}
                           error={errors.coApplicantCity?.message}
                         />
                       )}
