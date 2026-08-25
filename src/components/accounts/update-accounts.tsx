@@ -2155,7 +2155,7 @@ export default function UpdateAccounts() {
                       label='Pincode *'
                       error={errors.businessPincode?.message}
                     >
-                      {false ? (
+                      {!data.businessPincode && isEdit ? (
                         <div className='relative'>
                           <Input
                             value={businessPincodeSearch}
