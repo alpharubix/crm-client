@@ -92,6 +92,7 @@ const ACCOUNT_STATUS_OPTIONS: Option[] = [
   { value: 'Attention', label: 'Attention' },
   { value: 'Assessment', label: 'Assessment' },
   { value: 'Lender Review', label: 'Lender Review' },
+  { value: 'On Hold', label: 'On Hold' },
   { value: 'Not Interested', label: 'Not Interested' },
   { value: 'Location Unserviceable', label: 'Location Unserviceable' },
 ]
