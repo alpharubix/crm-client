@@ -50,6 +50,7 @@ import type {
 import CreateAccountTaskModal from '@/components/account-tasks/create-account-task-modal';
 import UpdateAccountTaskModal from '@/components/account-tasks/update-account-task-modal';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+import users from '@/utils/users.json';
 import {
   Sheet,
   SheetContent,
@@ -630,6 +631,7 @@ export default function AccountTasksPage() {
                     </th>
                     <th className='px-4 py-3'>Task Details</th>
                     <th className='px-4 py-3'>Account Name</th>
+                    <th className='px-4 py-3'>Task Created By</th>
                     <th className='px-4 py-3'>Assignee</th>
                     <th className='px-4 py-3'>Due Date / Time</th>
                     <th className='px-4 py-3'>Status</th>
@@ -702,6 +704,15 @@ export default function AccountTasksPage() {
                               {task.account_name ||
                                 `Account #${task.account_id}`}
                             </span>
+                          </td>
+
+                          {/* Task Created By */}
+                          <td className='px-4 py-3.5'>
+                            <div className='flex items-center gap-2'>
+                              <span className='text-sm text-foreground font-semibold'>
+                                {users[task.created_by_id] || 'N/A'}
+                              </span>
+                            </div>
                           </td>
 
                           {/* Assignee */}
@@ -837,7 +848,7 @@ export default function AccountTasksPage() {
       <Sheet open={isFilterSheetOpen} onOpenChange={setIsFilterSheetOpen}>
         <SheetContent
           side='right'
-          className='w-[380px] sm:w-[440px] p-0 flex flex-col gap-0 border-l shadow-2xl bg-background'
+          className='w-full sm:w-[500px] sm:max-w-none p-0 flex flex-col gap-0 border-l shadow-2xl bg-background'
         >
           <SheetHeader className='px-6 py-4 border-b border-border/60 flex flex-row items-center justify-between shrink-0 space-y-0'>
             <SheetTitle className='text-base font-bold text-foreground'>

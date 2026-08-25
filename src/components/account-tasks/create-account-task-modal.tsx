@@ -120,7 +120,9 @@ export default function CreateAccountTaskModal({
     enabled: !!accountId && isOpen,
   })
 
-  const lastAccountNote = accountCreateNotes && accountCreateNotes.length > 0 ? accountCreateNotes[0] : null
+  const lastAccountNote = accountCreateNotes && accountCreateNotes.length > 0
+    ? [...accountCreateNotes].sort((a: any, b: any) => new Date(b.Created_Time || b.Created_time || b.created_at || 0).getTime() - new Date(a.Created_Time || a.Created_time || a.created_at || 0).getTime())[0]
+    : null
 
   const createMutation = useMutation({
     mutationFn: async () => {

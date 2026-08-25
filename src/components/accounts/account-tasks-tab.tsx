@@ -24,6 +24,7 @@ import type {
 import CreateAccountTaskModal from '@/components/account-tasks/create-account-task-modal';
 import UpdateAccountTaskModal from '@/components/account-tasks/update-account-task-modal';
 import { useAuth } from '@/context/auth-context';
+import users from '@/utils/users.json';
 
 interface AccountTasksTabProps {
   accountId: string | number;
@@ -237,6 +238,9 @@ export default function AccountTasksTab({
               </TableHead>
               <TableHead className='font-semibold'>Call Back Status</TableHead>
               <TableHead className='font-semibold text-foreground min-w-[150px]'>
+                Created By
+              </TableHead>
+              <TableHead className='font-semibold text-foreground min-w-[150px]'>
                 Created At
               </TableHead>
               <TableHead className='font-semibold text-foreground min-w-[150px]'>
@@ -255,7 +259,7 @@ export default function AccountTasksTab({
             {isLoading ? (
               Array.from({ length: 3 }).map((_, i) => (
                 <TableRow key={i}>
-                  {Array.from({ length: 9 }).map((_, j) => (
+                  {Array.from({ length: 10 }).map((_, j) => (
                     <TableCell key={j}>
                       <Skeleton className='h-4 w-full' />
                     </TableCell>
@@ -265,7 +269,7 @@ export default function AccountTasksTab({
             ) : tasks.length === 0 ? (
               <TableRow>
                 <TableCell
-                  colSpan={9}
+                  colSpan={10}
                   className='text-center py-8 text-muted-foreground text-sm'
                 >
                   No tasks recorded for this account yet.
@@ -330,6 +334,9 @@ export default function AccountTasksTab({
                     </TableCell>
                     <TableCell>
                       {getCallBackBadge(task.call_back_date_status)}
+                    </TableCell>
+                    <TableCell className='text-sm font-semibold text-foreground whitespace-nowrap' title={task.created_by_name}>
+                      {users[task.created_by_id] || 'N/A'}
                     </TableCell>
                     <TableCell className='text-sm font-semibold text-foreground whitespace-nowrap'>
                       {formatISTDateTime(task.created_at)}

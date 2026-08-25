@@ -367,8 +367,8 @@ export default function CreateAccount() {
       </div>
       <form id='create-account-form' onSubmit={handleSubmit(onSubmit)}>
         <Card className='overflow-hidden space-y-1'>
-          {/* ================= Account Status ================= */}
-          <SectionHeader title='Account Status' />
+          {/* ================= Account Details ================= */}
+          <SectionHeader title='Account Details' />
           <CardContent className='p-0 grid grid-cols-1 md:grid-cols-2'>
             <div className='md:border-r'>
               <FieldRow
@@ -497,6 +497,7 @@ export default function CreateAccount() {
                   isEdit={true}
                   showTime={true}
                   disablePast={true}
+                  maxDate={watch('accountStatus') === 'On Hold' ? undefined : new Date(Date.now() + 48 * 60 * 60 * 1000)}
                   onChange={(d) => setValue('callBackDate', d, { shouldValidate: true })}
                 />
               </FieldRow>
@@ -517,6 +518,7 @@ export default function CreateAccount() {
                     'Attention',
                     'Assessment',
                     'Lender Review',
+                    'On Hold',
                     'Not Interested',
                     'Location Unserviceable',
                   ]}
