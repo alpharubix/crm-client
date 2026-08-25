@@ -305,6 +305,7 @@ export default function UpdateDeals({
     data: dealResponse,
     isLoading,
     error,
+    refetch: refetchDeal,
   } = useQuery({
     queryKey: ['deal', id],
     queryFn: async () => {
@@ -1032,7 +1033,12 @@ export default function UpdateDeals({
 
           <DocumentationSection dealId={id!} />
         </CardContent> */}
-        <NestedComments />
+        <NestedComments
+          entityId={id!}
+          moduleName='Deals'
+          notes={notes}
+          onNoteAdded={refetchDeal}
+        />
       </Card>
     </div>
   )

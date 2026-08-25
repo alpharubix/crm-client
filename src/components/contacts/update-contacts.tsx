@@ -135,6 +135,7 @@ export default function UpdateContacts({
     data: apiResponse,
     isLoading,
     error,
+    refetch: refetchContact,
   } = useQuery({
     queryKey: ['contact', id],
     queryFn: async () => {
@@ -560,7 +561,12 @@ export default function UpdateContacts({
 
           <NoteDialog onAddNote={handleAddNote} />
         </CardContent> */}
-        <NestedComments />
+        <NestedComments
+          entityId={contactData?.id ? String(contactData.id) : id}
+          moduleName='Contacts'
+          notes={notes}
+          onNoteAdded={refetchContact}
+        />
       </Card>
     </div>
   )

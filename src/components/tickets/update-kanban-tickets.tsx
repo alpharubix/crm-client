@@ -293,6 +293,7 @@ export default function UpdateKanbanTicket({
     data: dealData,
     isLoading,
     error,
+    refetch: refetchTicket,
   } = useQuery({
     queryKey: ['ticket', id],
     queryFn: async () => {
@@ -1285,7 +1286,12 @@ export default function UpdateKanbanTicket({
 
           <NoteDialog onAddNote={handleAddNote} />
         </CardContent> */}
-        <NestedComments />
+        <NestedComments
+          entityId={id!}
+          moduleName='Tickets'
+          notes={notes}
+          onNoteAdded={refetchTicket}
+        />
       </Card>
     </div>
   )

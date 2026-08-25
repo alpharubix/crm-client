@@ -696,6 +696,7 @@ export default function UpdateAccounts() {
     data: apiResponse,
     isLoading,
     error,
+    refetch: refetchAccount,
   } = useQuery({
     queryKey: ['account', id],
     queryFn: async () => {
@@ -2733,7 +2734,12 @@ export default function UpdateAccounts() {
                   )}
                   <NoteDialog onAddNote={handleAddNote} />
                 </CardContent> */}
-                <NestedComments />
+                <NestedComments
+                  entityId={accountData?.id ? String(accountData.id) : id}
+                  moduleName='Accounts'
+                  notes={notes}
+                  onNoteAdded={refetchAccount}
+                />
               </TabsContent>
             </div>
           </Tabs>

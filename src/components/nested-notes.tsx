@@ -1,16 +1,17 @@
 import * as React from 'react';
-import { MessageCircle, ChevronDown, ChevronRight, X } from 'lucide-react';
+import { MessageCircle, ChevronDown, ChevronRight, X, Plus } from 'lucide-react';
 
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
-import usersData from '@/utils/users.json'
-
+import usersData from '@/utils/users.json';
+import { ENV } from '@/conf';
 
 type User = {
   id: string;
   name: string;
   avatar?: string;
+  email?: string;
 };
 
 export type Comment = {
@@ -74,84 +75,265 @@ const DUMMY_COMMENTS: Comment[] = [
   },
 ];
 
+/**
+ * Transforms a flat array of MongoDB notes (with `_id` and `notesParentId`)
+ * into a nested tree array of `Comment` objects.
+ */
+export function buildCommentTree(rawNotes: any[]): Comment[] {
+  if (!rawNotes || !Array.isArray(rawNotes)) return [];
+
+  const commentMap = new Map<string, Comment>();
+  const rootComments: Comment[] = [];
+
+  // Step 1: Initialize all comments
+  rawNotes.forEach((n) => {
+    const commentId = String(n._id || n.id || '');
+    if (!commentId) return;
+
+    const authorName =
+      n.Created_By?.name ||
+      n.Owner?.first_name ||
+      n.Owner?.name ||
+      'Unknown User';
+
+    const authorId = n.Created_By?.id || n.Owner?.id || 'unknown';
+
+    commentMap.set(commentId, {
+      id: commentId,
+      parentId: n.notesParentId || null,
+      author: {
+        id: authorId,
+        name: authorName,
+        avatar: n.Created_By?.avatar || n.Owner?.avatar,
+        email: n.Created_By?.email || n.Owner?.email,
+      },
+      body: n.Note_Content || '',
+      createdAt: n.Created_Time || new Date().toISOString(),
+      replies: [],
+    });
+  });
+
+  // Step 2: Build tree hierarchy
+  commentMap.forEach((comment) => {
+    if (comment.parentId && commentMap.has(comment.parentId)) {
+      commentMap.get(comment.parentId)!.replies.push(comment);
+    } else {
+      rootComments.push(comment);
+    }
+  });
+
+  return rootComments;
+}
+
 type NestedCommentsProps = {
+  entityId?: string;
+  moduleName?: string;
   initialComments?: Comment[];
+  notes?: any[];
+  onNoteAdded?: () => void;
 };
 
 export function NestedComments({
-  initialComments = DUMMY_COMMENTS,
+  entityId,
+  moduleName = 'Accounts',
+  initialComments,
+  notes,
+  onNoteAdded,
 }: NestedCommentsProps = {}) {
-  const [comments, setComments] = React.useState<Comment[]>(initialComments);
+  const [comments, setComments] = React.useState<Comment[]>(() => {
+    if (notes && Array.isArray(notes)) {
+      return buildCommentTree(notes);
+    }
+    return initialComments || DUMMY_COMMENTS;
+  });
 
+  const [isCreatingNote, setIsCreatingNote] = React.useState(false);
   const [replyingTo, setReplyingTo] = React.useState<string | null>(null);
-
   const [collapsed, setCollapsed] = React.useState<Set<string>>(new Set());
+
+  React.useEffect(() => {
+    if (notes && Array.isArray(notes)) {
+      setComments(buildCommentTree(notes));
+    }
+  }, [notes]);
 
   function toggleCollapsed(commentId: string) {
     setCollapsed((current) => {
       const next = new Set(current);
-
       if (next.has(commentId)) {
         next.delete(commentId);
       } else {
         next.add(commentId);
       }
-
       return next;
     });
   }
 
-  function addReply(parentId: string, body: string) {
-    const newComment: Comment = {
-      id: crypto.randomUUID(),
-      parentId,
-      author: {
-        id: 'current-user',
-        name: 'You',
-      },
-      body,
-      createdAt: new Date().toISOString(),
-      replies: [],
-    };
+  async function addNote(parentId: string | null, body: string) {
+    if (!entityId) {
+      // Offline / Demo fallback
+      const newComment: Comment = {
+        id: crypto.randomUUID(),
+        parentId,
+        author: {
+          id: 'current-user',
+          name: 'You',
+        },
+        body,
+        createdAt: new Date().toISOString(),
+        replies: [],
+      };
 
-    setComments((current) => insertReply(current, parentId, newComment));
+      if (parentId) {
+        setComments((current) => insertReply(current, parentId, newComment));
+      } else {
+        setComments((current) => [newComment, ...current]);
+      }
 
-    setReplyingTo(null);
+      setReplyingTo(null);
+      setIsCreatingNote(false);
+      return;
+    }
 
-    // In a real application:
-    //
-    // await fetch("/api/comments", {
-    //   method: "POST",
-    //   body: JSON.stringify({
-    //     parentId,
-    //     body,
-    //   }),
-    // })
+    try {
+      const res = await fetch(`${ENV.VITE_BACKEND_BASE_URL}/notes`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        credentials: 'include',
+        body: JSON.stringify({
+          id: entityId,
+          module: moduleName,
+          note: body,
+          notesParentId: parentId,
+        }),
+      });
+
+      if (res.ok) {
+        const resultData = await res.json();
+        const rawNote = resultData.data;
+
+        if (rawNote) {
+          const authorName =
+            rawNote.Created_By?.name ||
+            rawNote.Owner?.first_name ||
+            rawNote.Owner?.name ||
+            'You';
+
+          const newComment: Comment = {
+            id: String(rawNote._id || rawNote.id || crypto.randomUUID()),
+            parentId,
+            author: {
+              id: rawNote.Created_By?.id || 'current-user',
+              name: authorName,
+            },
+            body: rawNote.Note_Content || body,
+            createdAt: rawNote.Created_Time || new Date().toISOString(),
+            replies: [],
+          };
+
+          if (parentId) {
+            setComments((current) => insertReply(current, parentId, newComment));
+          } else {
+            setComments((current) => [newComment, ...current]);
+          }
+        }
+
+        if (onNoteAdded) {
+          onNoteAdded();
+        }
+      }
+    } catch (err) {
+      console.error('Failed to create note:', err);
+    } finally {
+      setReplyingTo(null);
+      setIsCreatingNote(false);
+    }
   }
 
+  const INITIAL_VISIBLE_COUNT = 5;
+  const [visibleCount, setVisibleCount] = React.useState(INITIAL_VISIBLE_COUNT);
+
+  const visibleComments = comments.slice(0, visibleCount);
+
   return (
-    <section className='w-full mx-4 max-w-3xl'>
-      <div className='mb-6 flex items-center gap-2'>
-        <MessageCircle className='size-5' />
+    <section className='w-full'>
+      {/* Header section with Create Note button on the right side */}
+      <div className='mb-6 flex items-center justify-between'>
+        <div className='flex items-center gap-2'>
+          <MessageCircle className='size-5' />
+          <h2 className='text-lg font-semibold'>Notes</h2>
+        </div>
 
-        <h2 className='text-lg font-semibold'>Comments</h2>
+        <Button
+          size='sm'
+          onClick={() => setIsCreatingNote((prev) => !prev)}
+          className='gap-1.5'
+        >
+          <Plus className='size-4' />
+          {isCreatingNote ? 'Cancel' : 'Create Note'}
+        </Button>
       </div>
 
-      <div className='space-y-6'>
-        {comments.map((comment) => (
-          <CommentItem
-            key={comment.id}
-            comment={comment}
-            depth={0}
-            replyingTo={replyingTo}
-            collapsed={collapsed}
-            onReply={setReplyingTo}
-            onCancelReply={() => setReplyingTo(null)}
-            onSubmitReply={addReply}
-            onToggleCollapsed={toggleCollapsed}
+      {/* Top Level Note Composer */}
+      {isCreatingNote && (
+        <div className='mb-6'>
+          <ReplyComposer
+            authorName='Top Level Note'
+            isTopLevel
+            onCancel={() => setIsCreatingNote(false)}
+            onSubmit={(body) => addNote(null, body)}
+            placeholder='Add a new top-level note...'
+            buttonText='Create Note'
           />
-        ))}
+        </div>
+      )}
+
+      {/* Comments List */}
+      <div className='space-y-6'>
+        {comments.length === 0 ? (
+          <p className='text-sm text-muted-foreground'>No notes available yet.</p>
+        ) : (
+          visibleComments.map((comment) => (
+            <CommentItem
+              key={comment.id}
+              comment={comment}
+              depth={0}
+              replyingTo={replyingTo}
+              collapsed={collapsed}
+              onReply={setReplyingTo}
+              onCancelReply={() => setReplyingTo(null)}
+              onSubmitReply={(parentId, body) => addNote(parentId, body)}
+              onToggleCollapsed={toggleCollapsed}
+            />
+          ))
+        )}
       </div>
+
+      {/* Load More Pagination */}
+      {comments.length > visibleCount && (
+        <div className='mt-6 text-center'>
+          <Button
+            variant='outline'
+            size='sm'
+            onClick={() => setVisibleCount((prev) => prev + 5)}
+          >
+            Show More Notes ({comments.length - visibleCount} remaining)
+          </Button>
+        </div>
+      )}
+      {visibleCount > INITIAL_VISIBLE_COUNT && visibleCount >= comments.length && (
+        <div className='mt-6 text-center'>
+          <Button
+            variant='ghost'
+            size='sm'
+            onClick={() => setVisibleCount(INITIAL_VISIBLE_COUNT)}
+          >
+            Show Less
+          </Button>
+        </div>
+      )}
     </section>
   );
 }
@@ -182,7 +364,6 @@ function CommentItem({
 }: CommentItemProps) {
   const isReplying = replyingTo === comment.id;
   const isCollapsed = collapsed.has(comment.id);
-
   const hasReplies = comment.replies.length > 0;
 
   return (
@@ -190,14 +371,12 @@ function CommentItem({
       <div className='flex gap-3'>
         <Avatar className='size-9 shrink-0'>
           <AvatarImage src={comment.author.avatar} alt={comment.author.name} />
-
           <AvatarFallback>{getInitials(comment.author.name)}</AvatarFallback>
         </Avatar>
 
         <div className='min-w-0 flex-1'>
           <div className='flex items-center gap-2'>
             <span className='text-sm font-medium'>{comment.author.name}</span>
-
             <span className='text-xs text-muted-foreground'>
               {formatDate(comment.createdAt)}
             </span>
@@ -244,6 +423,8 @@ function CommentItem({
               authorName={comment.author.name}
               onCancel={onCancelReply}
               onSubmit={(body) => onSubmitReply(comment.id, body)}
+              placeholder={`Reply to ${comment.author.name}...`}
+              buttonText='Reply'
             />
           )}
 
@@ -273,118 +454,114 @@ function CommentItem({
 }
 
 type ReplyComposerProps = {
-  authorName: string
-  onCancel: () => void
-  onSubmit: (body: string) => void
-}
+  authorName: string;
+  isTopLevel?: boolean;
+  onCancel: () => void;
+  onSubmit: (body: string) => void;
+  placeholder?: string;
+  buttonText?: string;
+};
 
 function renderMentions(text: string) {
-  return text.replace(
-    /crm\[user#([^\]]+)\]crm/g,
-    (_, userId) => {
-      const userName = (usersData as Record<string, string>)[userId]
-
-      return userName ? `@${userName}` : '@Unknown User'
-    },
-  )
+  return text.replace(/crm\[user#([^\]]+)\]crm/g, (_, userId) => {
+    const userName = (usersData as Record<string, string>)[userId];
+    return userName ? `@${userName}` : '@Unknown User';
+  });
 }
 
 function ReplyComposer({
   authorName,
+  isTopLevel = false,
   onCancel,
   onSubmit,
+  placeholder,
+  buttonText = 'Reply',
 }: ReplyComposerProps) {
-  const [value, setValue] = React.useState('')
-  const [mentionQuery, setMentionQuery] = React.useState<string | null>(null)
-  const [mentionStart, setMentionStart] = React.useState(-1)
+  const [value, setValue] = React.useState('');
+  const [mentionQuery, setMentionQuery] = React.useState<string | null>(null);
+  const [mentionStart, setMentionStart] = React.useState(-1);
   const [mentionedUsers, setMentionedUsers] = React.useState<
     { id: string; name: string }[]
-  >([])
+  >([]);
 
-  const textareaRef = React.useRef<HTMLTextAreaElement | null>(null)
+  const textareaRef = React.useRef<HTMLTextAreaElement | null>(null);
 
   const usersList = Object.entries(usersData).map(([id, name]) => ({
     id,
     name: String(name),
-  }))
+  }));
 
   const filteredUsers =
     mentionQuery !== null
       ? usersList.filter((user) =>
           user.name.toLowerCase().includes(mentionQuery.toLowerCase()),
         )
-      : []
+      : [];
 
   function submit() {
-    let finalBody = value.trim()
+    let finalBody = value.trim();
 
-    if (!finalBody) return
+    if (!finalBody) return;
 
     // Convert @User Name → crm[user#id]crm
     mentionedUsers.forEach((user) => {
       const regex = new RegExp(
         `@${user.name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\b`,
         'g',
-      )
+      );
 
-      finalBody = finalBody.replace(
-        regex,
-        `crm[user#${user.id}]crm`,
-      )
-    })
+      finalBody = finalBody.replace(regex, `crm[user#${user.id}]crm`);
+    });
 
-    onSubmit(finalBody)
+    onSubmit(finalBody);
 
-    setValue('')
-    setMentionQuery(null)
-    setMentionStart(-1)
-    setMentionedUsers([])
+    setValue('');
+    setMentionQuery(null);
+    setMentionStart(-1);
+    setMentionedUsers([]);
   }
 
   const handleMentionSelect = (user: { id: string; name: string }) => {
-    if (mentionStart === -1) return
+    if (mentionStart === -1) return;
 
-    const before = value.substring(0, mentionStart)
+    const before = value.substring(0, mentionStart);
+    const exactEnd = textareaRef.current?.selectionStart ?? value.length;
+    const after = value.substring(exactEnd);
+    const insertText = `@${user.name} `;
 
-    const exactEnd =
-      textareaRef.current?.selectionStart ?? value.length
-
-    const after = value.substring(exactEnd)
-
-    const insertText = `@${user.name} `
-
-    setValue(before + insertText + after)
+    setValue(before + insertText + after);
 
     setMentionedUsers((prev) => {
       if (!prev.some((mentionedUser) => mentionedUser.id === user.id)) {
-        return [...prev, user]
+        return [...prev, user];
       }
+      return prev;
+    });
 
-      return prev
-    })
-
-    setMentionQuery(null)
-    setMentionStart(-1)
+    setMentionQuery(null);
+    setMentionStart(-1);
 
     setTimeout(() => {
-      const newCursorPos = before.length + insertText.length
-
-      textareaRef.current?.focus()
-      textareaRef.current?.setSelectionRange(
-        newCursorPos,
-        newCursorPos,
-      )
-    }, 0)
-  }
+      const newCursorPos = before.length + insertText.length;
+      textareaRef.current?.focus();
+      textareaRef.current?.setSelectionRange(newCursorPos, newCursorPos);
+    }, 0);
+  };
 
   return (
-    <div className='relative mt-3 rounded-lg border bg-muted/30 p-3 w-[500px]'>
+    <div className='relative mt-3 rounded-lg border bg-muted/30 p-3 w-full'>
       <div className='mb-2 flex items-center justify-between'>
         <span className='text-xs text-muted-foreground'>
-          Replying to{' '}
-          <span className='font-medium text-foreground'>
-            {authorName}
-          </span>
+          {isTopLevel ? (
+            <span className='font-semibold text-foreground'>Create Note</span>
+          ) : (
+            <>
+              Replying to{' '}
+              <span className='font-medium text-foreground'>
+                {authorName}
+              </span>
+            </>
+          )}
         </span>
 
         <Button
@@ -394,7 +571,7 @@ function ReplyComposer({
           onClick={onCancel}
         >
           <X className='size-4' />
-          <span className='sr-only'>Cancel reply</span>
+          <span className='sr-only'>Cancel</span>
         </Button>
       </div>
 
@@ -404,26 +581,25 @@ function ReplyComposer({
           autoFocus
           value={value}
           onChange={(e) => {
-            const val = e.target.value
-            const cursor = e.target.selectionStart
+            const val = e.target.value;
+            const cursor = e.target.selectionStart;
 
-            setValue(val)
+            setValue(val);
 
-            const textBeforeCursor = val.substring(0, cursor)
-
+            const textBeforeCursor = val.substring(0, cursor);
             const match = textBeforeCursor.match(
               /(?:^|\s)@([a-zA-Z0-9 ]{0,30})$/,
-            )
+            );
 
             if (match) {
-              setMentionQuery(match[1])
-              setMentionStart(cursor - match[1].length - 1)
+              setMentionQuery(match[1]);
+              setMentionStart(cursor - match[1].length - 1);
             } else {
-              setMentionQuery(null)
-              setMentionStart(-1)
+              setMentionQuery(null);
+              setMentionStart(-1);
             }
           }}
-          placeholder={`Reply to ${authorName}...`}
+          placeholder={placeholder || `Reply to ${authorName}...`}
           className='min-h-20 resize-none bg-background'
         />
 
@@ -449,16 +625,12 @@ function ReplyComposer({
           Cancel
         </Button>
 
-        <Button
-          size='sm'
-          disabled={!value.trim()}
-          onClick={submit}
-        >
-          Reply
+        <Button size='sm' disabled={!value.trim()} onClick={submit}>
+          {buttonText}
         </Button>
       </div>
     </div>
-  )
+  );
 }
 
 /**
@@ -500,9 +672,11 @@ function getInitials(name: string) {
 
 function formatDate(date: string) {
   const value = new Date(date);
+  if (isNaN(value.getTime())) {
+    return date || 'just now';
+  }
 
   const diff = Date.now() - value.getTime();
-
   const minutes = Math.floor(diff / 60000);
 
   if (minutes < 1) {
