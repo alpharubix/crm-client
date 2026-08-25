@@ -136,8 +136,9 @@ export default function DateField({
         <Calendar
           mode='single'
           selected={value}
+          defaultMonth={value}
           onSelect={handleDateSelect}
-            disabled={(date) => {
+          disabled={(date) => {
             let disabled = false
             if (disablePast) {
               disabled = disabled || date < new Date(new Date().setHours(0, 0, 0, 0))

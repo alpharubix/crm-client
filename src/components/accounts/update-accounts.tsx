@@ -872,7 +872,7 @@ export default function UpdateAccounts() {
             <span className='text-xs font-semibold text-muted-foreground uppercase tracking-wide'>
               Account Name:
             </span>
-            {isEdit && isAllow ? (
+            {false && isAllow ? (
               <Input
                 {...register('accountName')}
                 className='h-7 w-48 text-sm font-semibold'
@@ -896,7 +896,7 @@ export default function UpdateAccounts() {
             <span className='text-xs font-semibold text-muted-foreground uppercase tracking-wide'>
               Account Owner:
             </span>
-            {isEdit && isAllow ? (
+            {false && isAllow ? (
               <Controller
                 control={control}
                 name='accountOwnerId'
@@ -1525,7 +1525,7 @@ export default function UpdateAccounts() {
                         render={({ field }) => (
                           <SelectField
                             value={field.value}
-                            isEdit={isEdit}
+                            isEdit={false}
                             options={[
                               'Himalaya',
                               'CavinKare',
@@ -1559,7 +1559,7 @@ export default function UpdateAccounts() {
                         render={({ field }) => (
                           <SelectField
                             value={field.value}
-                            isEdit={isEdit}
+                            isEdit={false}
                             options={[
                               'Direct',
                               'Referral',
@@ -1748,7 +1748,7 @@ export default function UpdateAccounts() {
                       label='Distributor Code'
                       error={errors.distributorCode?.message}
                     >
-                      {isEdit ? (
+                      {false ? (
                         <Input
                           {...register('distributorCode')}
                           className='h-8'
@@ -1801,7 +1801,7 @@ export default function UpdateAccounts() {
                       label='First Name *'
                       error={errors.firstName?.message}
                     >
-                      {isEdit ? (
+                      {false ? (
                         <Input {...register('firstName')} className='h-8' />
                       ) : (
                         <span>{display(data.firstName)}</span>
@@ -1828,7 +1828,7 @@ export default function UpdateAccounts() {
                       label='Last Name *'
                       error={errors.lastName?.message}
                     >
-                      {isEdit ? (
+                      {false ? (
                         <Input {...register('lastName')} className='h-8' />
                       ) : (
                         <span>{display(data.lastName)}</span>
@@ -2219,7 +2219,7 @@ export default function UpdateAccounts() {
                       label='City *'
                       error={errors.businessCity?.message}
                     >
-                      {isEdit ? (
+                      {false ? (
                         <div className='relative'>
                           <Input
                             value={businessCitySearch}
@@ -2334,7 +2334,7 @@ export default function UpdateAccounts() {
                           label='State'
                           value={field.value || ''}
                           onChange={field.onChange}
-                          isEdit={isEdit}
+                          isEdit={false}
                           error={errors.applicantState?.message}
                         />
                       )}
@@ -2381,7 +2381,7 @@ export default function UpdateAccounts() {
                           label='Pincode'
                           value={field.value || ''}
                           onChange={field.onChange}
-                          isEdit={isEdit}
+                          isEdit={false}
                           error={errors.applicantPincode?.message}
                         />
                       )}
