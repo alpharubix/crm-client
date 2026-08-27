@@ -945,100 +945,14 @@ export default function UpdateDeals({
         {/* ================= Notes ================= */}
         <SectionHeader title='Notes' />
 
-        {/* <CardContent className='p-4 space-y-3'>
-          <div className='flex items-center justify-between'>
-            <p className='text-sm text-muted-foreground'>
-              Total Notes:{' '}
-              <span className='font-semibold'>{sortedNotes.length}</span>
-            </p>
-
-            <div className='flex gap-2 items-center'>
-              {showViewMore && (
-                <Dialog open={openAllNotes} onOpenChange={setOpenAllNotes}>
-                  <DialogTrigger asChild>
-                    <Button
-                      size='sm'
-                      className='cursor-pointer'
-                      variant='outline'
-                    >
-                      View More
-                    </Button>
-                  </DialogTrigger>
-
-                  <DialogContent className='min-w-4xl'>
-                    <DialogHeader>
-                      <DialogTitle>
-                        All Notes ({sortedNotes.length})
-                      </DialogTitle>
-                    </DialogHeader>
-
-                    <div className='max-h-[70vh] overflow-y-auto space-y-3 pr-2'>
-                      {sortedNotes.map((note: any, i: number) => (
-                        <div
-                          key={note.parent_id || i}
-                          className='bg-muted/30 p-3 rounded-lg border'
-                        >
-                          <p className='text-sm'>{note.Note_Content}</p>
-
-                          <div className='flex flex-wrap gap-3 text-[11px] text-muted-foreground uppercase mt-2'>
-                            <span>
-                              Created By: {note.Created_By?.name || '—'}
-                            </span>
-                            <span>
-                              Created Date:{' '}
-                              {formatExactDate(
-                                note.Created_Time,
-                                'dd MMM yyyy, hh:mm a',
-                              ) || '—'}
-                            </span>
-                            <div className='font-bold'>
-                              Module : {note.module}
-                            </div>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  </DialogContent>
-                </Dialog>
-              )}
-            </div>
-          </div>
-
-          {notes.length === 0 ? (
-            <p className='text-sm text-muted-foreground'>No notes available</p>
-          ) : (
-            visibleNotes.map((note: any, i: number) => (
-              <div
-                key={note.parent_id || i}
-                className='bg-muted/30 p-3 rounded-lg border'
-              >
-                <p className='text-sm'>{note.Note_Content}</p>
-
-                <div className='flex flex-wrap gap-3 text-[11px] text-muted-foreground uppercase mt-2'>
-                  <span>Created By: {note.Created_By?.name || '—'}</span>
-                  <span>
-                    Created Date:{' '}
-                    {formatExactDate(
-                      note.Created_Time,
-                      'dd MMM yyyy, hh:mm a',
-                    ) || '—'}
-                  </span>
-                  <div className='font-bold'>Module : {note.module}</div>
-                </div>
-              </div>
-            ))
-          )}
-
-          <NoteDialog onAddNote={handleAddNote} />
-
-          <DocumentationSection dealId={id!} />
-        </CardContent> */}
         <NestedComments
           entityId={id!}
           moduleName='Deals'
           notes={notes}
           onNoteAdded={refetchDeal}
         />
+
+        <DocumentationSection dealId={id!} />
       </Card>
     </div>
   )

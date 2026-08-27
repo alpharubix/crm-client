@@ -18,20 +18,7 @@ import users from '@/utils/users.json'
 import { formatExactDate } from '@/utils/date-formatter'
 import { toast } from 'sonner'
 import DateField from '../shared/date-field'
-
-// function toDateInputValue(val: string | undefined): string {
-//   if (!val) return ''
-//   // already YYYY-MM-DD
-//   if (/^\d{4}-\d{2}-\d{2}$/.test(val)) return val
-//   // ISO string like 2026-04-10T00:00:00+00:00
-//   if (val.includes('T')) return val.split('T')[0]
-//   // dd-MM-yy format like "21-03-26"
-//   const parts = val.split('-')
-//   if (parts.length === 3 && parts[2].length === 2) {
-//     return `20${parts[2]}-${parts[1]}-${parts[0]}`
-//   }
-//   return val
-// }
+import { Plus, Loader2, ExternalLink } from 'lucide-react'
 
 const STATUS_OPTIONS = ['Completed', 'Pending', 'In Progress', 'On Hold']
 const MODULE_OPTIONS = [
@@ -45,10 +32,10 @@ const MODULE_OPTIONS = [
 ]
 
 const MODULE_DOCUMENT_MAP: Record<string, string[]> = {
-  'Banking': ['Bank Statement', 'Sanction Letter', 'Loan SOA'],
-  'GST': ['GST Certificate', 'GST 3B'],
-  'ITR': ['ITR ACK', 'ITR', '3CB & 3CD', 'Prov ITR'],
-  'Ledger': ['Anchor Ledger'],
+  Banking: ['Bank Statement', 'Sanction Letter', 'Loan SOA'],
+  GST: ['GST Certificate', 'GST 3B'],
+  ITR: ['ITR ACK', 'ITR', '3CB & 3CD', 'Prov ITR'],
+  Ledger: ['Anchor Ledger'],
   'Credit Bureau': ['Credit Report'],
 }
 
@@ -64,7 +51,8 @@ type DocRow = {
   modified_by?: string
   created_at?: string
   updated_at?: string
-  _isNew?: boolean // local flag for unsaved rows
+  _tempId?: string
+  _isNew?: boolean
   _isCustomDesc?: boolean
 }
 
@@ -72,6 +60,7 @@ export default function DocumentationSection({ dealId }: { dealId: string }) {
   const queryClient = useQueryClient()
   const [isEdit, setIsEdit] = useState(false)
   const [localRows, setLocalRows] = useState<DocRow[]>([])
+  const [editedRows, setEditedRows] = useState<Record<string, DocRow>>({})
 
   const { data, isLoading } = useQuery({
     queryKey: ['deal-documents', dealId],
@@ -89,11 +78,6 @@ export default function DocumentationSection({ dealId }: { dealId: string }) {
   })
 
   const docs: DocRow[] = data?.data ?? []
-
-  // merge API rows with local new rows
-  const rows = isEdit
-    ? [...docs.map((d) => ({ ...d })), ...localRows.filter((r) => r._isNew)]
-    : docs
 
   const createMutation = useMutation({
     mutationFn: async (row: DocRow) => {
@@ -141,52 +125,39 @@ export default function DocumentationSection({ dealId }: { dealId: string }) {
     },
   })
 
-  const deleteMutation = useMutation({
-    mutationFn: async (docId: string) => {
-      const res = await fetch(
-        `${ENV.VITE_BACKEND_BASE_URL}/deals/${dealId}/documents/${docId}`,
-        {
-          method: 'DELETE',
-          credentials: 'include',
-        },
-      )
-      if (!res.ok) throw new Error('Failed to delete')
-      return res.json()
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['deal-documents', dealId] })
-    },
-  })
-
-  // track edits to existing rows locally during edit mode
-  const [editedRows, setEditedRows] = useState<Record<string, DocRow>>({})
-
-  function updateExistingCell(id: string, key: keyof DocRow, value: string | boolean) {
+  function updateExistingCell(
+    id: string,
+    key: keyof DocRow,
+    value: string | boolean,
+  ) {
     setEditedRows((prev) => ({
       ...prev,
       [id]: { ...(prev[id] || docs.find((d) => d.id === id)!), [key]: value },
     }))
   }
 
-  function updateNewCell(index: number, key: keyof DocRow, value: string | boolean) {
+  function updateNewCell(
+    tempId: string,
+    key: keyof DocRow,
+    value: string | boolean,
+  ) {
     setLocalRows((prev) =>
-      prev.map((r, i) => (i === index ? { ...r, [key]: value } : r)),
+      prev.map((r) => (r._tempId === tempId ? { ...r, [key]: value } : r)),
     )
   }
 
   function addRow() {
-    setLocalRows((prev) => [
-      ...prev,
-      {
-        module: 'Banking',
-        description: '',
-        from_date: '',
-        to_date: '',
-        status: 'Pending',
-        link: '',
-        _isNew: true,
-      },
-    ])
+    const newRow: DocRow = {
+      _tempId: `new-${Date.now()}-${Math.random()}`,
+      module: 'Banking',
+      description: '',
+      from_date: '',
+      to_date: '',
+      status: 'Pending',
+      link: '',
+      _isNew: true,
+    }
+    setLocalRows((prev) => [...prev, newRow])
     if (!isEdit) setIsEdit(true)
   }
 
@@ -210,7 +181,7 @@ export default function DocumentationSection({ dealId }: { dealId: string }) {
 
     try {
       // save new rows
-      for (const row of localRows.filter((r) => r._isNew)) {
+      for (const row of newRows) {
         await createMutation.mutateAsync(row)
       }
       // save edited existing rows
@@ -221,7 +192,7 @@ export default function DocumentationSection({ dealId }: { dealId: string }) {
       setLocalRows([])
       setEditedRows({})
       setIsEdit(false)
-      toast.success('Documents saved')
+      toast.success('Documents saved successfully')
     } catch {
       toast.error('Failed to save documents')
     }
@@ -233,108 +204,144 @@ export default function DocumentationSection({ dealId }: { dealId: string }) {
     setIsEdit(false)
   }
 
-  async function handleDelete(docId?: string, localIndex?: number) {
-    if (docId) {
-      await deleteMutation.mutateAsync(docId)
-    } else if (localIndex !== undefined) {
-      setLocalRows((prev) => prev.filter((_, i) => i !== localIndex))
-    }
-  }
+  const isSaving = createMutation.isPending || updateMutation.isPending
 
   return (
     <>
       <SectionHeader title='Documentation' />
       <CardContent className='p-0'>
-        <div className='flex justify-end p-3 border-b gap-2'>
-          {!isEdit ? (
-            <Button
-              size='sm'
-              className='cursor-pointer'
-              onClick={() => setIsEdit(true)}
-            >
-              Update
-            </Button>
-          ) : (
-            <div className='flex gap-2'>
-              <Button size='sm' className='cursor-pointer' onClick={handleSave}>
-                Save
-              </Button>
+        <div className='flex items-center justify-between p-3 border-b bg-muted/20'>
+          <div className='text-xs text-muted-foreground font-medium flex items-center gap-2'>
+            <span>
+              {docs.length} document{docs.length === 1 ? '' : 's'} recorded
+            </span>
+            {localRows.length > 0 && (
+              <span className='text-amber-600 font-semibold bg-amber-100 dark:bg-amber-900/40 px-2 py-0.5 rounded text-[11px]'>
+                {localRows.length} unsaved new
+              </span>
+            )}
+          </div>
+          <div className='flex items-center gap-2'>
+            {!isEdit ? (
               <Button
                 size='sm'
                 variant='outline'
-                className='cursor-pointer'
-                onClick={handleCancel}
+                className='cursor-pointer h-8'
+                onClick={() => setIsEdit(true)}
               >
-                Cancel
+                Update
               </Button>
-            </div>
-          )}
-          <Button size='sm' onClick={addRow}>
-            + Add Row
-          </Button>
+            ) : (
+              <>
+                <Button
+                  size='sm'
+                  className='cursor-pointer h-8'
+                  onClick={handleSave}
+                  disabled={isSaving}
+                >
+                  {isSaving && (
+                    <Loader2 className='mr-1.5 h-3.5 w-3.5 animate-spin' />
+                  )}
+                  Save
+                </Button>
+                <Button
+                  size='sm'
+                  variant='outline'
+                  className='cursor-pointer h-8'
+                  onClick={handleCancel}
+                  disabled={isSaving}
+                >
+                  Cancel
+                </Button>
+              </>
+            )}
+            <Button
+              size='sm'
+              variant={isEdit ? 'secondary' : 'default'}
+              className='cursor-pointer h-8'
+              onClick={addRow}
+              disabled={isSaving}
+            >
+              <Plus className='h-3.5 w-3.5 mr-1' /> Add Row
+            </Button>
+          </div>
         </div>
 
         <div className='overflow-x-auto'>
           <Table>
             <TableHeader className='bg-muted/50 text-xs text-muted-foreground uppercase tracking-wide'>
               <TableRow>
-                <TableHead className='px-3 py-2 border-b'>Module *</TableHead>
-                <TableHead className='px-3 py-2 border-b'>
+                <TableHead className='px-3 py-2 border-b min-w-[140px]'>
+                  Module *
+                </TableHead>
+                <TableHead className='px-3 py-2 border-b min-w-[200px]'>
                   Description *
                 </TableHead>
-                <TableHead className='px-3 py-2 border-b whitespace-nowrap'>
+                <TableHead className='px-3 py-2 border-b min-w-[170px] whitespace-nowrap'>
                   From
                 </TableHead>
-                <TableHead className='px-3 py-2 border-b whitespace-nowrap'>
+                <TableHead className='px-3 py-2 border-b min-w-[170px] whitespace-nowrap'>
                   To
                 </TableHead>
-                <TableHead className='px-3 py-2 border-b'>Status</TableHead>
-                <TableHead className='px-3 py-2 border-b'>Link</TableHead>
-                <TableHead className='px-3 py-2 border-b whitespace-nowrap'>
+                <TableHead className='px-3 py-2 border-b min-w-[140px]'>
+                  Status
+                </TableHead>
+                <TableHead className='px-3 py-2 border-b min-w-[160px]'>
+                  Link
+                </TableHead>
+                <TableHead className='px-3 py-2 border-b min-w-[150px] whitespace-nowrap'>
                   Created At
                 </TableHead>
-                <TableHead className='px-3 py-2 border-b whitespace-nowrap'>
+                <TableHead className='px-3 py-2 border-b min-w-[150px] whitespace-nowrap'>
                   Updated At
                 </TableHead>
-                <TableHead className='px-3 py-2 border-b whitespace-nowrap'>
+                <TableHead className='px-3 py-2 border-b min-w-[130px] whitespace-nowrap'>
                   Created By
                 </TableHead>
-                <TableHead className='px-3 py-2 border-b whitespace-nowrap'>
+                <TableHead className='px-3 py-2 border-b min-w-[130px] whitespace-nowrap'>
                   Modified By
                 </TableHead>
-                <TableHead className='px-3 py-2 border-b w-16' />
               </TableRow>
             </TableHeader>
             <TableBody>
               {isLoading ? (
                 <TableRow>
                   <TableCell
-                    colSpan={11}
-                    className='text-center text-xs text-muted-foreground py-4'
+                    colSpan={10}
+                    className='text-center text-xs text-muted-foreground py-8'
                   >
-                    Loading...
+                    <Loader2 className='h-5 w-5 animate-spin mx-auto mb-2 text-muted-foreground' />
+                    Loading documents...
                   </TableCell>
                 </TableRow>
-              ) : rows.length === 0 ? (
+              ) : docs.length === 0 && localRows.length === 0 ? (
                 <TableRow>
                   <TableCell
-                    colSpan={11}
-                    className='text-center text-xs text-muted-foreground py-4'
+                    colSpan={10}
+                    className='text-center text-xs text-muted-foreground py-8'
                   >
-                    No documents yet
+                    No documents uploaded yet. Click "+ Add Row" to add one.
                   </TableCell>
                 </TableRow>
               ) : (
                 <>
-                  {/* existing rows from API */}
+                  {/* Existing rows from API */}
                   {docs.map((doc) => {
                     const row = editedRows[doc.id!] || doc
+                    const descOptions = MODULE_DOCUMENT_MAP[row.module] || []
+                    const hasPresets = descOptions.length > 0
+                    const isCustomDesc =
+                      row._isCustomDesc ??
+                      (row.description
+                        ? !descOptions.includes(row.description)
+                        : false)
+
                     return (
                       <TableRow
                         key={doc.id}
                         className='border-b hover:bg-muted/30 group'
                       >
-                        <TableCell className='px-3 py-2'>
+                        <TableCell className='px-3 py-2 align-top'>
                           <SelectField
                             isEdit={isEdit}
                             options={MODULE_OPTIONS}
@@ -342,27 +349,47 @@ export default function DocumentationSection({ dealId }: { dealId: string }) {
                             onChange={(v) => {
                               updateExistingCell(doc.id!, 'module', v)
                               updateExistingCell(doc.id!, 'description', '')
-                              updateExistingCell(doc.id!, '_isCustomDesc', false)
+                              updateExistingCell(
+                                doc.id!,
+                                '_isCustomDesc',
+                                false,
+                              )
                             }}
                           />
                         </TableCell>
-                        <TableCell className='px-3 py-2'>
-                          {isEdit ? (() => {
-                            const descOptions = MODULE_DOCUMENT_MAP[row.module] || []
-                            const isCustomDesc = row._isCustomDesc ?? (row.description ? !descOptions.includes(row.description) : false)
-                            return (
-                              <div className="flex flex-col gap-1">
+                        <TableCell className='px-3 py-2 align-top'>
+                          {isEdit ? (
+                            hasPresets ? (
+                              <div className='flex flex-col gap-1.5'>
                                 <SelectField
-                                  isEdit={isEdit}
+                                  isEdit={true}
                                   options={[...descOptions, 'Others']}
-                                  value={isCustomDesc ? 'Others' : row.description}
+                                  value={
+                                    isCustomDesc ? 'Others' : row.description
+                                  }
                                   onChange={(v) => {
                                     if (v === 'Others') {
-                                      updateExistingCell(doc.id!, '_isCustomDesc', true)
-                                      updateExistingCell(doc.id!, 'description', '')
+                                      updateExistingCell(
+                                        doc.id!,
+                                        '_isCustomDesc',
+                                        true,
+                                      )
+                                      updateExistingCell(
+                                        doc.id!,
+                                        'description',
+                                        '',
+                                      )
                                     } else {
-                                      updateExistingCell(doc.id!, '_isCustomDesc', false)
-                                      updateExistingCell(doc.id!, 'description', v)
+                                      updateExistingCell(
+                                        doc.id!,
+                                        '_isCustomDesc',
+                                        false,
+                                      )
+                                      updateExistingCell(
+                                        doc.id!,
+                                        'description',
+                                        v,
+                                      )
                                     }
                                   }}
                                 />
@@ -376,17 +403,32 @@ export default function DocumentationSection({ dealId }: { dealId: string }) {
                                         e.target.value,
                                       )
                                     }
-                                    className='h-7 text-sm'
+                                    className='h-8 text-sm'
                                     placeholder='Enter description'
                                   />
                                 )}
                               </div>
+                            ) : (
+                              <Input
+                                value={row.description}
+                                onChange={(e) =>
+                                  updateExistingCell(
+                                    doc.id!,
+                                    'description',
+                                    e.target.value,
+                                  )
+                                }
+                                className='h-8 text-sm'
+                                placeholder='Enter description'
+                              />
                             )
-                          })() : (
-                            <span>{row.description || '—'}</span>
+                          ) : (
+                            <span className='text-sm'>
+                              {row.description || '—'}
+                            </span>
                           )}
                         </TableCell>
-                        <TableCell className='px-3 py-2'>
+                        <TableCell className='px-3 py-2 align-top'>
                           {isEdit ? (
                             <DateField
                               isEdit={isEdit}
@@ -405,7 +447,7 @@ export default function DocumentationSection({ dealId }: { dealId: string }) {
                               }
                             />
                           ) : (
-                            <span>
+                            <span className='text-xs text-muted-foreground whitespace-nowrap'>
                               {row.from_date
                                 ? formatExactDate(
                                     row.from_date,
@@ -415,7 +457,7 @@ export default function DocumentationSection({ dealId }: { dealId: string }) {
                             </span>
                           )}
                         </TableCell>
-                        <TableCell className='px-3 py-2'>
+                        <TableCell className='px-3 py-2 align-top'>
                           {isEdit ? (
                             <DateField
                               isEdit={isEdit}
@@ -432,7 +474,7 @@ export default function DocumentationSection({ dealId }: { dealId: string }) {
                               }
                             />
                           ) : (
-                            <span>
+                            <span className='text-xs text-muted-foreground whitespace-nowrap'>
                               {row.to_date
                                 ? formatExactDate(
                                     row.to_date,
@@ -442,7 +484,7 @@ export default function DocumentationSection({ dealId }: { dealId: string }) {
                             </span>
                           )}
                         </TableCell>
-                        <TableCell className='px-3 py-2'>
+                        <TableCell className='px-3 py-2 align-top'>
                           <SelectField
                             isEdit={isEdit}
                             options={STATUS_OPTIONS}
@@ -452,7 +494,7 @@ export default function DocumentationSection({ dealId }: { dealId: string }) {
                             }
                           />
                         </TableCell>
-                        <TableCell className='px-3 py-2 max-w-[140px]'>
+                        <TableCell className='px-3 py-2 align-top max-w-[180px]'>
                           {isEdit ? (
                             <Input
                               value={row.link}
@@ -463,113 +505,139 @@ export default function DocumentationSection({ dealId }: { dealId: string }) {
                                   e.target.value,
                                 )
                               }
-                              className='h-7 text-sm'
-                              placeholder='—'
+                              className='h-8 text-sm'
+                              placeholder='https://...'
                             />
                           ) : row.link ? (
                             <a
                               href={row.link}
                               target='_blank'
                               rel='noopener noreferrer'
-                              className='text-primary text-xs truncate block hover:underline'
+                              className='text-primary text-xs truncate inline-flex items-center hover:underline max-w-[160px]'
                             >
-                              {row.link.replace('https://', '')}
+                              <span className='truncate'>
+                                {row.link.replace(/^https?:\/\//, '')}
+                              </span>
+                              <ExternalLink className='h-3 w-3 ml-1 flex-shrink-0' />
                             </a>
                           ) : (
-                            <span>—</span>
+                            <span className='text-sm text-muted-foreground'>
+                              —
+                            </span>
                           )}
                         </TableCell>
-                        <TableCell className='px-3 py-2 text-xs text-muted-foreground whitespace-nowrap'>
+                        <TableCell className='px-3 py-2 align-top text-xs text-muted-foreground whitespace-nowrap'>
                           {doc.created_at
-                            ? formatExactDate(doc.created_at, 'dd MMM yyyy, hh:mm a')
+                            ? formatExactDate(
+                                doc.created_at,
+                                'dd MMM yyyy, hh:mm a',
+                              )
                             : '—'}
                         </TableCell>
-                        <TableCell className='px-3 py-2 text-xs text-muted-foreground whitespace-nowrap'>
+                        <TableCell className='px-3 py-2 align-top text-xs text-muted-foreground whitespace-nowrap'>
                           {doc.updated_at
-                            ? formatExactDate(doc.updated_at, 'dd MMM yyyy, hh:mm a')
+                            ? formatExactDate(
+                                doc.updated_at,
+                                'dd MMM yyyy, hh:mm a',
+                              )
                             : '—'}
                         </TableCell>
-                        <TableCell className='px-3 py-2 text-xs text-muted-foreground'>
+                        <TableCell className='px-3 py-2 align-top text-xs text-muted-foreground'>
                           {(users as Record<string, string>)[
                             doc.created_by ?? ''
                           ] || '—'}
                         </TableCell>
-                        <TableCell className='px-3 py-2 text-xs text-muted-foreground'>
+                        <TableCell className='px-3 py-2 align-top text-xs text-muted-foreground'>
                           {(users as Record<string, string>)[
                             doc.modified_by ?? ''
                           ] || '—'}
-                        </TableCell>
-                        <TableCell className='px-3 py-2'>
-                          {isEdit && (
-                            <Button
-                              size='sm'
-                              variant='ghost'
-                              className='text-destructive hover:text-destructive text-xs h-6 px-2'
-                              onClick={() => handleDelete(doc.id)}
-                            >
-                              Remove
-                            </Button>
-                          )}
                         </TableCell>
                       </TableRow>
                     )
                   })}
 
-                  {/* new unsaved rows */}
-                  {localRows
-                    .filter((r) => r._isNew)
-                    .map((row, i) => (
+                  {/* New unsaved rows */}
+                  {localRows.map((row) => {
+                    const tempId = row._tempId!
+                    const descOptions = MODULE_DOCUMENT_MAP[row.module] || []
+                    const hasPresets = descOptions.length > 0
+                    const isCustomDesc =
+                      row._isCustomDesc ??
+                      (row.description
+                        ? !descOptions.includes(row.description)
+                        : false)
+
+                    return (
                       <TableRow
-                        key={`new-${i}`}
-                        className='border-b hover:bg-muted/30 group bg-muted/10'
+                        key={tempId}
+                        className='border-b hover:bg-muted/30 bg-amber-500/5 dark:bg-amber-500/10'
                       >
-                        <TableCell className='px-3 py-2'>
+                        <TableCell className='px-3 py-2 align-top'>
                           <SelectField
                             isEdit={true}
                             options={MODULE_OPTIONS}
                             value={row.module}
                             onChange={(v) => {
-                              updateNewCell(i, 'module', v)
-                              updateNewCell(i, 'description', '')
-                              updateNewCell(i, '_isCustomDesc', false)
+                              updateNewCell(tempId, 'module', v)
+                              updateNewCell(tempId, 'description', '')
+                              updateNewCell(tempId, '_isCustomDesc', false)
                             }}
                           />
                         </TableCell>
-                        <TableCell className='px-3 py-2'>
-                          {(() => {
-                            const descOptions = MODULE_DOCUMENT_MAP[row.module] || []
-                            const isCustomDesc = row._isCustomDesc ?? (row.description ? !descOptions.includes(row.description) : false)
-                            return (
-                              <div className="flex flex-col gap-1">
-                                <SelectField
-                                  isEdit={true}
-                                  options={[...descOptions, 'Others']}
-                                  value={isCustomDesc ? 'Others' : row.description}
-                                  onChange={(v) => {
-                                    if (v === 'Others') {
-                                      updateNewCell(i, '_isCustomDesc', true)
-                                      updateNewCell(i, 'description', '')
-                                    } else {
-                                      updateNewCell(i, '_isCustomDesc', false)
-                                      updateNewCell(i, 'description', v)
-                                    }
-                                  }}
+                        <TableCell className='px-3 py-2 align-top'>
+                          {hasPresets ? (
+                            <div className='flex flex-col gap-1.5'>
+                              <SelectField
+                                isEdit={true}
+                                options={[...descOptions, 'Others']}
+                                value={
+                                  isCustomDesc ? 'Others' : row.description
+                                }
+                                onChange={(v) => {
+                                  if (v === 'Others') {
+                                    updateNewCell(tempId, '_isCustomDesc', true)
+                                    updateNewCell(tempId, 'description', '')
+                                  } else {
+                                    updateNewCell(
+                                      tempId,
+                                      '_isCustomDesc',
+                                      false,
+                                    )
+                                    updateNewCell(tempId, 'description', v)
+                                  }
+                                }}
+                              />
+                              {isCustomDesc && (
+                                <Input
+                                  value={row.description}
+                                  onChange={(e) =>
+                                    updateNewCell(
+                                      tempId,
+                                      'description',
+                                      e.target.value,
+                                    )
+                                  }
+                                  className='h-8 text-sm'
+                                  placeholder='Enter description'
                                 />
-                                {isCustomDesc && (
-                                  <Input
-                                    value={row.description}
-                                    onChange={(e) =>
-                                      updateNewCell(i, 'description', e.target.value)
-                                    }
-                                    className='h-7 text-sm'
-                                    placeholder='Enter description'
-                                  />
-                                )}
-                              </div>
-                            )
-                          })()}
+                              )}
+                            </div>
+                          ) : (
+                            <Input
+                              value={row.description}
+                              onChange={(e) =>
+                                updateNewCell(
+                                  tempId,
+                                  'description',
+                                  e.target.value,
+                                )
+                              }
+                              className='h-8 text-sm'
+                              placeholder='Enter description'
+                            />
+                          )}
                         </TableCell>
-                        <TableCell className='px-3 py-2'>
+                        <TableCell className='px-3 py-2 align-top'>
                           <DateField
                             isEdit={true}
                             showTime={true}
@@ -580,14 +648,14 @@ export default function DocumentationSection({ dealId }: { dealId: string }) {
                             }
                             onChange={(date) =>
                               updateNewCell(
-                                i,
+                                tempId,
                                 'from_date',
                                 date ? date.toISOString() : '',
                               )
                             }
                           />
                         </TableCell>
-                        <TableCell className='px-3 py-2'>
+                        <TableCell className='px-3 py-2 align-top'>
                           <DateField
                             isEdit={true}
                             showTime={true}
@@ -596,55 +664,48 @@ export default function DocumentationSection({ dealId }: { dealId: string }) {
                             }
                             onChange={(date) =>
                               updateNewCell(
-                                i,
+                                tempId,
                                 'to_date',
                                 date ? date.toISOString() : '',
                               )
                             }
                           />
                         </TableCell>
-                        <TableCell className='px-3 py-2'>
+                        <TableCell className='px-3 py-2 align-top'>
                           <SelectField
                             isEdit={true}
                             options={STATUS_OPTIONS}
                             value={row.status}
-                            onChange={(v) => updateNewCell(i, 'status', v)}
+                            onChange={(v) =>
+                              updateNewCell(tempId, 'status', v)
+                            }
                           />
                         </TableCell>
-                        <TableCell className='px-3 py-2'>
+                        <TableCell className='px-3 py-2 align-top'>
                           <Input
                             value={row.link}
                             onChange={(e) =>
-                              updateNewCell(i, 'link', e.target.value)
+                              updateNewCell(tempId, 'link', e.target.value)
                             }
-                            className='h-7 text-sm'
-                            placeholder='—'
+                            className='h-8 text-sm'
+                            placeholder='https://...'
                           />
                         </TableCell>
-                        <TableCell className='px-3 py-2 text-xs text-muted-foreground'>
+                        <TableCell className='px-3 py-2 align-top text-xs text-muted-foreground italic'>
+                          Unsaved
+                        </TableCell>
+                        <TableCell className='px-3 py-2 align-top text-xs text-muted-foreground italic'>
+                          Unsaved
+                        </TableCell>
+                        <TableCell className='px-3 py-2 align-top text-xs text-muted-foreground italic'>
                           —
                         </TableCell>
-                        <TableCell className='px-3 py-2 text-xs text-muted-foreground'>
+                        <TableCell className='px-3 py-2 align-top text-xs text-muted-foreground italic'>
                           —
-                        </TableCell>
-                        <TableCell className='px-3 py-2 text-xs text-muted-foreground'>
-                          —
-                        </TableCell>
-                        <TableCell className='px-3 py-2 text-xs text-muted-foreground'>
-                          —
-                        </TableCell>
-                        <TableCell className='px-3 py-2'>
-                          <Button
-                            size='sm'
-                            variant='ghost'
-                            className='text-destructive hover:text-destructive text-xs h-6 px-2'
-                            onClick={() => handleDelete(undefined, i)}
-                          >
-                            Remove
-                          </Button>
                         </TableCell>
                       </TableRow>
-                    ))}
+                    )
+                  })}
                 </>
               )}
             </TableBody>
