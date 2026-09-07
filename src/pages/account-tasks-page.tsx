@@ -873,7 +873,9 @@ export default function AccountTasksPage() {
               <Input
                 placeholder='Enter Account ID (e.g. 1001)...'
                 value={filters.accountId}
-                onChange={(e) => handleFilterChange('accountId', e.target.value)}
+                onChange={(e) =>
+                  handleFilterChange('accountId', e.target.value)
+                }
                 className='h-9 text-xs font-mono rounded-lg'
               />
             </div>
@@ -986,7 +988,9 @@ export default function AccountTasksPage() {
                 />
                 <DatePicker
                   value={filters.assignmentToDate}
-                  onChange={(val) => handleFilterChange('assignmentToDate', val)}
+                  onChange={(val) =>
+                    handleFilterChange('assignmentToDate', val)
+                  }
                   placeholder='To Date'
                 />
               </div>
