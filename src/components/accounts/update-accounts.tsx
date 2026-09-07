@@ -73,6 +73,7 @@ import {
 } from '../ui/select';
 import { useAuth } from '@/context/auth-context';
 import { NestedComments } from '../nested-notes';
+import TeleCRMActivityHistory from '@/components/accounts/tele-crm-activity';
 
 const LANGUAGE_OPTIONS = [
   'English',
@@ -711,7 +712,7 @@ export default function UpdateAccounts() {
   });
 
   const accountData = apiResponse?.data?.[0];
-  
+
   const Deals = accountData?.deals || [];
   const contacts = accountData?.account_linked_contact || [];
   const tickets = accountData?.tickets || [];
@@ -1662,7 +1663,11 @@ export default function UpdateAccounts() {
                             isEdit={isEdit}
                             showTime={true}
                             disablePast={true}
-                            maxDate={watch('accountStatus') === 'On Hold' ? undefined : new Date(Date.now() + 48 * 60 * 60 * 1000)}
+                            maxDate={
+                              watch('accountStatus') === 'On Hold'
+                                ? undefined
+                                : new Date(Date.now() + 48 * 60 * 60 * 1000)
+                            }
                             onChange={field.onChange}
                           />
                         )}
@@ -2106,8 +2111,8 @@ export default function UpdateAccounts() {
                       )}
                     </FieldRow>
                     <FieldRow
-                          label='State *'
-                          error={errors.businessState?.message}
+                      label='State *'
+                      error={errors.businessState?.message}
                     >
                       {isEdit ? (
                         <div className='relative'>
@@ -2155,8 +2160,8 @@ export default function UpdateAccounts() {
                       )}
                     </FieldRow>
                     <FieldRow
-                          label='Pincode *'
-                          error={errors.businessPincode?.message}
+                      label='Pincode *'
+                      error={errors.businessPincode?.message}
                     >
                       {isEdit ? (
                         <div className='relative'>
@@ -2178,7 +2183,7 @@ export default function UpdateAccounts() {
                             }
                             placeholder='Search Pincode...'
                             className='h-8'
-                    />
+                          />
                           {businessPincodeOpen &&
                             filteredBusinessPincodes.length > 0 && (
                               <div className='absolute z-10 w-full mt-1 bg-background border rounded-md shadow-lg max-h-60 overflow-auto'>
@@ -2219,8 +2224,8 @@ export default function UpdateAccounts() {
                   </div>
                   <div>
                     <FieldRow
-                          label='City *'
-                          error={errors.businessCity?.message}
+                      label='City *'
+                      error={errors.businessCity?.message}
                     >
                       {isEdit ? (
                         <div className='relative'>
@@ -2239,7 +2244,7 @@ export default function UpdateAccounts() {
                             }
                             placeholder='Search City...'
                             className='h-8'
-                    />
+                          />
                           {businessCityOpen &&
                             filteredBusinessCities.length > 0 && (
                               <div className='absolute z-10 w-full mt-1 bg-background border rounded-md shadow-lg max-h-60 overflow-auto'>
@@ -2458,7 +2463,10 @@ export default function UpdateAccounts() {
                           label='State'
                           value={field.value || ''}
                           onChange={field.onChange}
-                          isEdit={!accountData.co_applicant_residence_address?.state && isEdit}
+                          isEdit={
+                            !accountData.co_applicant_residence_address
+                              ?.state && isEdit
+                          }
                           error={errors.coApplicantState?.message}
                         />
                       )}
@@ -2505,7 +2513,10 @@ export default function UpdateAccounts() {
                           label='Pincode'
                           value={field.value || ''}
                           onChange={field.onChange}
-                          isEdit={!accountData.co_applicant_residence_address?.pincode && isEdit}
+                          isEdit={
+                            !accountData.co_applicant_residence_address
+                              ?.pincode && isEdit
+                          }
                           error={errors.coApplicantPincode?.message}
                         />
                       )}
@@ -2651,6 +2662,16 @@ export default function UpdateAccounts() {
                       )}
                     </FieldRow>
                   </div>
+                </CardContent>
+
+                {/* ================= Tele CRM ================= */}
+                <SectionHeader title='Tele CRM' />
+                <CardContent className='p-0'>
+                  <TeleCRMActivityHistory
+                    leadPhone={data?.phone || accountData?.phone}
+                    leadStatus={data?.status || accountData?.status}
+                    activities={accountData?.telecrm_activities}
+                  />
                 </CardContent>
 
                 {/* ================= Notes ================= */}
