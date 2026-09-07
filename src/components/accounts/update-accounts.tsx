@@ -678,7 +678,7 @@ export default function UpdateAccounts() {
     .toLowerCase()
     .trim()
     .replace(/\s+/g, '_');
-  const isSuperAdmin = ['super_admin'].includes(rawRole);
+  const isAllowedActive = ['super_admin','admin'].includes(rawRole);
 
   const isAllow =
     user?.role === 'super_admin' ||
@@ -1805,7 +1805,7 @@ export default function UpdateAccounts() {
                         )}
                       />
                     </FieldRow>
-                    {isSuperAdmin && (
+                    {isAllowedActive && (
                       <FieldRow label='Is Active?'>
                         <Controller
                           control={control}

@@ -138,7 +138,7 @@ export default function CreateAccount() {
     .toLowerCase()
     .trim()
     .replace(/\s+/g, '_');
-  const isSuperAdmin = ['super_admin'].includes(rawRole);
+  const isAllowedActive = ['super_admin','admin'].includes(rawRole);
   const [businessStateSearch, setBusinessStateSearch] = useState('');
   const [businessStateOpen, setBusinessStateOpen] = useState(false);
   const [businessCitySearch, setBusinessCitySearch] = useState('');
@@ -613,7 +613,7 @@ export default function CreateAccount() {
                 />
               </FieldRow>
 
-              {isSuperAdmin && (
+              {isAllowedActive && (
                 <FieldRow label='Is Active?' error={errors.isActive?.message}>
                   <SelectField
                     value={data.isActive}
