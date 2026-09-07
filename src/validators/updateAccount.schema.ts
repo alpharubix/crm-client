@@ -38,6 +38,7 @@ export const updateAccountSchema = z.object({
   firstName: z.string().min(1, 'First name is required'),
   lastName: z.string().min(1, 'Last name is required'),
   accountName: z.string().min(1, 'Account name is required'),
+  isActive: z.string().optional(),
 
   phone: z
     .string()

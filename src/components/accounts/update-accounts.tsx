@@ -207,6 +207,7 @@ function mapAccountToForm(apiData: any): UpdateAccountFormValues {
     sourceDescription: apiData.source_description ?? '',
     distributorCode: apiData.distributor_code ?? '',
     wabaInterested: apiData.waba_interested ?? false,
+    isActive: apiData.is_active ?? 'no',
     callBackDate: apiData.call_back_date_time
       ? new Date(apiData.call_back_date_time)
       : undefined,
@@ -341,6 +342,7 @@ function mapFormToApi(
     payload.distributor_code = formData.distributorCode;
   if (dirtyFields.wabaInterested)
     payload.waba_interested = formData.wabaInterested;
+  if (dirtyFields.isActive) payload.is_active = formData.isActive;
   if (dirtyFields.callBackDate)
     payload.call_back_date_time = formData.callBackDate;
   if (dirtyFields.accountStatus)
@@ -672,6 +674,12 @@ export default function UpdateAccounts() {
   const [businessPincodeOpen, setBusinessPincodeOpen] = useState(false);
   const { user } = useAuth();
 
+  const rawRole = String(user?.role || '')
+    .toLowerCase()
+    .trim()
+    .replace(/\s+/g, '_');
+  const isSuperAdmin = ['super_admin'].includes(rawRole);
+
   const isAllow =
     user?.role === 'super_admin' ||
     user?.role === 'admin' ||
@@ -711,7 +719,7 @@ export default function UpdateAccounts() {
   });
 
   const accountData = apiResponse?.data?.[0];
-  
+
   const Deals = accountData?.deals || [];
   const contacts = accountData?.account_linked_contact || [];
   const tickets = accountData?.tickets || [];
@@ -1662,7 +1670,11 @@ export default function UpdateAccounts() {
                             isEdit={isEdit}
                             showTime={true}
                             disablePast={true}
-                            maxDate={watch('accountStatus') === 'On Hold' ? undefined : new Date(Date.now() + 48 * 60 * 60 * 1000)}
+                            maxDate={
+                              watch('accountStatus') === 'On Hold'
+                                ? undefined
+                                : new Date(Date.now() + 48 * 60 * 60 * 1000)
+                            }
                             onChange={field.onChange}
                           />
                         )}
@@ -1793,6 +1805,22 @@ export default function UpdateAccounts() {
                         )}
                       />
                     </FieldRow>
+                    {isSuperAdmin && (
+                      <FieldRow label='Is Active?'>
+                        <Controller
+                          control={control}
+                          name='isActive'
+                          render={({ field }) => (
+                            <SelectField
+                              value={field.value}
+                              isEdit={isEdit}
+                              options={['Yes', 'No']}
+                              onChange={field.onChange}
+                            />
+                          )}
+                        />
+                      </FieldRow>
+                    )}
                   </div>
                 </CardContent>
 
@@ -2106,8 +2134,8 @@ export default function UpdateAccounts() {
                       )}
                     </FieldRow>
                     <FieldRow
-                          label='State *'
-                          error={errors.businessState?.message}
+                      label='State *'
+                      error={errors.businessState?.message}
                     >
                       {isEdit ? (
                         <div className='relative'>
@@ -2155,8 +2183,8 @@ export default function UpdateAccounts() {
                       )}
                     </FieldRow>
                     <FieldRow
-                          label='Pincode *'
-                          error={errors.businessPincode?.message}
+                      label='Pincode *'
+                      error={errors.businessPincode?.message}
                     >
                       {isEdit ? (
                         <div className='relative'>
@@ -2178,7 +2206,7 @@ export default function UpdateAccounts() {
                             }
                             placeholder='Search Pincode...'
                             className='h-8'
-                    />
+                          />
                           {businessPincodeOpen &&
                             filteredBusinessPincodes.length > 0 && (
                               <div className='absolute z-10 w-full mt-1 bg-background border rounded-md shadow-lg max-h-60 overflow-auto'>
@@ -2219,8 +2247,8 @@ export default function UpdateAccounts() {
                   </div>
                   <div>
                     <FieldRow
-                          label='City *'
-                          error={errors.businessCity?.message}
+                      label='City *'
+                      error={errors.businessCity?.message}
                     >
                       {isEdit ? (
                         <div className='relative'>
@@ -2239,7 +2267,7 @@ export default function UpdateAccounts() {
                             }
                             placeholder='Search City...'
                             className='h-8'
-                    />
+                          />
                           {businessCityOpen &&
                             filteredBusinessCities.length > 0 && (
                               <div className='absolute z-10 w-full mt-1 bg-background border rounded-md shadow-lg max-h-60 overflow-auto'>
@@ -2458,7 +2486,10 @@ export default function UpdateAccounts() {
                           label='State'
                           value={field.value || ''}
                           onChange={field.onChange}
-                          isEdit={!accountData.co_applicant_residence_address?.state && isEdit}
+                          isEdit={
+                            !accountData.co_applicant_residence_address
+                              ?.state && isEdit
+                          }
                           error={errors.coApplicantState?.message}
                         />
                       )}
@@ -2505,7 +2536,10 @@ export default function UpdateAccounts() {
                           label='Pincode'
                           value={field.value || ''}
                           onChange={field.onChange}
-                          isEdit={!accountData.co_applicant_residence_address?.pincode && isEdit}
+                          isEdit={
+                            !accountData.co_applicant_residence_address
+                              ?.pincode && isEdit
+                          }
                           error={errors.coApplicantPincode?.message}
                         />
                       )}
