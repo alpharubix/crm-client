@@ -676,7 +676,7 @@ export default function UpdateAccounts() {
     .toLowerCase()
     .trim()
     .replace(/\s+/g, '_');
-  const isSuperAdmin = ['super_admin'].includes(rawRole);
+  const isAllowedActive = ['super_admin','admin'].includes(rawRole);
 
   const isAllow =
     user?.role === 'super_admin' ||

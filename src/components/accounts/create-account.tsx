@@ -133,6 +133,11 @@ function MultiSelectField({
 export default function CreateAccount() {
   const navigate = useNavigate();
 
+  const rawRole = String(user?.role || '')
+    .toLowerCase()
+    .trim()
+    .replace(/\s+/g, '_');
+  const isAllowedActive = ['super_admin','admin'].includes(rawRole);
   const [businessStateSearch, setBusinessStateSearch] = useState('');
   const [businessStateOpen, setBusinessStateOpen] = useState(false);
   const [businessCitySearch, setBusinessCitySearch] = useState('');
