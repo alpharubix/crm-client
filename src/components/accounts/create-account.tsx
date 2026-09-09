@@ -132,7 +132,6 @@ function MultiSelectField({
 
 export default function CreateAccount() {
   const navigate = useNavigate();
-  const { user } = useAuth();
 
   const rawRole = String(user?.role || '')
     .toLowerCase()
@@ -152,7 +151,6 @@ export default function CreateAccount() {
     defaultValues: {
       preferredLanguages: [],
       wabaInterested: false,
-      isActive: 'No',
       accountStatus: 'Yet to be dialed',
       businessCountry: 'India',
       applicantCountry: 'India',
@@ -203,7 +201,6 @@ export default function CreateAccount() {
       source_description: formData.sourceDescription,
       distributor_code: formData.distributorCode,
       waba_interested: formData.wabaInterested,
-      is_active: formData.isActive,
       call_back_date_time: formData.callBackDate,
       account_owner_id: formData.accountOwnerId,
       account_status: formData.accountStatus,
@@ -612,17 +609,6 @@ export default function CreateAccount() {
                   onChange={(v) => setValue('priorityAccount', v)}
                 />
               </FieldRow>
-
-              {isAllowedActive && (
-                <FieldRow label='Is Active?' error={errors.isActive?.message}>
-                  <SelectField
-                    value={data.isActive}
-                    isEdit={true}
-                    options={['Yes', 'No']}
-                    onChange={(v) => setValue('isActive', v)}
-                  />
-                </FieldRow>
-              )}
             </div>
           </CardContent>
 

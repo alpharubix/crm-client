@@ -249,6 +249,9 @@ export default function AccountTasksTab({
               <TableHead className='font-semibold text-foreground min-w-[150px]'>
                 Due Date/Time
               </TableHead>
+              <TableHead className='font-semibold text-foreground min-w-[150px]'>
+                COMPLETED AT
+              </TableHead>
               <TableHead className='font-semibold'>Task Status</TableHead>
               <TableHead className='font-semibold text-right'>
                 Actions
@@ -346,6 +349,9 @@ export default function AccountTasksTab({
                     </TableCell>
                     <TableCell className='text-sm font-semibold text-foreground whitespace-nowrap'>
                       {formatISTDateTime(task.task_due_date_time)}
+                    </TableCell>
+                    <TableCell className='text-sm font-semibold text-foreground whitespace-nowrap'>
+                      {formatISTDateTime(task.completed_at)}
                     </TableCell>
                     <TableCell>
                       <div className='flex items-center gap-2'>

@@ -18,6 +18,19 @@ export type CallBackDateStatus =
   | 'Due Next Week'
   | 'Due Dates';
 
+export type TargetAccountStatus =
+  | 'Yet to be dialed'
+  | 'Wrong Number'
+  | 'Contact Established'
+  | 'Contact Not Established'
+  | 'Awareness'
+  | 'Attention'
+  | 'Assessment'
+  | 'Lender Review'
+  | 'On Hold'
+  | 'Not Interested'
+  | 'Location Unserviceable';
+
 export interface AccountTask {
   id: string;
   module_name: string; // default 'Account'
@@ -27,6 +40,8 @@ export interface AccountTask {
   account_owner_id?: string;
   account_status?: string;
   account_stage?: string;
+  target_account_status?: string;
+  target_call_back_date_time?: Date ;
   call_back_date_status?: CallBackDateStatus;
   call_back_date_time?: string;
   account_assigned_date_time?: string;
