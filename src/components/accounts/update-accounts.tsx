@@ -207,7 +207,6 @@ function mapAccountToForm(apiData: any): UpdateAccountFormValues {
     sourceDescription: apiData.source_description ?? '',
     distributorCode: apiData.distributor_code ?? '',
     wabaInterested: apiData.waba_interested ?? false,
-    isActive: apiData.is_active ?? 'no',
     callBackDate: apiData.call_back_date_time
       ? new Date(apiData.call_back_date_time)
       : undefined,
@@ -342,7 +341,6 @@ function mapFormToApi(
     payload.distributor_code = formData.distributorCode;
   if (dirtyFields.wabaInterested)
     payload.waba_interested = formData.wabaInterested;
-  if (dirtyFields.isActive) payload.is_active = formData.isActive;
   if (dirtyFields.callBackDate)
     payload.call_back_date_time = formData.callBackDate;
   if (dirtyFields.accountStatus)
@@ -1805,22 +1803,6 @@ export default function UpdateAccounts() {
                         )}
                       />
                     </FieldRow>
-                    {isSuperAdmin && (
-                      <FieldRow label='Is Active?'>
-                        <Controller
-                          control={control}
-                          name='isActive'
-                          render={({ field }) => (
-                            <SelectField
-                              value={field.value}
-                              isEdit={isEdit}
-                              options={['Yes', 'No']}
-                              onChange={field.onChange}
-                            />
-                          )}
-                        />
-                      </FieldRow>
-                    )}
                   </div>
                 </CardContent>
 

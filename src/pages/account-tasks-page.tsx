@@ -634,6 +634,7 @@ export default function AccountTasksPage() {
                     <th className='px-4 py-3'>Task Created By</th>
                     <th className='px-4 py-3'>Assignee</th>
                     <th className='px-4 py-3'>Due Date / Time</th>
+                    <th className='px-4 py-3'>Completed At</th>
                     <th className='px-4 py-3'>Status</th>
                     <th className='px-4 py-3 text-right pr-6'>Actions</th>
                   </tr>
@@ -661,7 +662,11 @@ export default function AccountTasksPage() {
                       return (
                         <tr
                           key={task.id}
-                          className={`transition-colors border-b border-border/40 ${
+                          onClick={() => {
+                            setSelectedTaskId(task.id);
+                            setIsUpdateModalOpen(true);
+                          }}
+                          className={`transition-colors border-b cursor-pointer border-border/40 ${
                             isSelected
                               ? 'bg-blue-50/60 dark:bg-blue-950/20'
                               : 'hover:bg-slate-50/80 dark:hover:bg-muted/30'
@@ -738,6 +743,10 @@ export default function AccountTasksPage() {
                           {/* Due Date */}
                           <td className='px-4 py-3.5 text-xs text-muted-foreground'>
                             {formatISTDateTime(task.call_back_date_time)}
+                          </td>
+
+                          <td className='px-4 py-3.5 text-xs'>
+                            {formatISTDateTime(task.completed_at)}
                           </td>
 
                           {/* Status */}
@@ -933,6 +942,7 @@ export default function AccountTasksPage() {
                   <SelectItem value='Update Record'>Update Record</SelectItem>
                   <SelectItem value='Email'>Email</SelectItem>
                   <SelectItem value='Move Status'>Move Status</SelectItem>
+                  <SelectItem value='Visit'>Visit</SelectItem>
                 </SelectContent>
               </Select>
             </div>
