@@ -238,9 +238,7 @@ export default function CreateAccountTaskModal({
   const [taskStatus, setTaskStatus] = useState<TaskStatus>('Unassigned');
   const [targetAccountStatus, setTargetAccountStatus] =
     useState<TargetAccountStatus>('Awareness');
-  const [targetCallBackDateTime, setTargetCallBackDateTime] = useState<Date>(
-    new Date(),
-  );
+  const [targetCallBackDateTime, setTargetCallBackDateTime] = useState<Date>();
   const [taskDescription, setTaskDescription] = useState('');
   const [taskAssignedDateTime, setTaskAssignedDateTime] = useState('');
   const [taskDueDateTime, setTaskDueDateTime] = useState('');
@@ -729,12 +727,13 @@ export default function CreateAccountTaskModal({
               </div>
 
               <div className='space-y-1.5 relative'>
-                <Label className='text-xs font-medium'>Account *</Label>
+                <Label className='text-xs font-medium'>Account Name *</Label>
                 {fixedAccountId ? (
                   <Input
                     value={fixedAccountName || `Account #${fixedAccountId}`}
                     disabled
                     className='h-9 text-xs bg-muted'
+                    required={true}
                   />
                 ) : (
                   <div className='relative'>
@@ -861,6 +860,7 @@ export default function CreateAccountTaskModal({
                     <SelectItem value='Assessment'>Assessment</SelectItem>
                     <SelectItem value='Lender Review'>Lender Review</SelectItem>
                     <SelectItem value='On Hold'>On Hold</SelectItem>
+                    <SelectItem value='business closed'>Business Closed</SelectItem>
                     <SelectItem value='Not Interested'>
                       Not Interested
                     </SelectItem>
@@ -873,7 +873,7 @@ export default function CreateAccountTaskModal({
 
               <div className='space-y-1.5'>
                 <Label className='text-xs font-medium'>
-                  Targeted Call Back Date & Time *
+                  Targeted Call Back Date & Time
                 </Label>
                 <DateField
                   value={targetCallBackDateTime}

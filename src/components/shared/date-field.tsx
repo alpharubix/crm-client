@@ -1,3 +1,4 @@
+import { useMemo } from 'react'
 import { Button } from '@/components/ui/button'
 import { Calendar } from '@/components/ui/calendar'
 import {
@@ -16,12 +17,12 @@ import { format } from 'date-fns'
 import { CalendarDays, Clock } from 'lucide-react'
 
 type Props = {
-  value?: Date
+  value?: Date | string | null
   isEdit: boolean
   onChange: (d?: Date) => void
   showTime?: boolean
   disablePast?: boolean
-  maxDate?: Date
+  maxDate?: Date | string | null
 }
 
 export default function DateField({
@@ -32,11 +33,32 @@ export default function DateField({
   disablePast = false,
   maxDate,
 }: Props) {
+  const dateValue = useMemo(() => {
+    if (!value) return undefined
+    const d = value instanceof Date ? value : new Date(value)
+    return !isNaN(d.getTime()) ? d : undefined
+  }, [value])
+
+  const maxDay = useMemo(() => {
+    if (!maxDate) return undefined
+    const m = maxDate instanceof Date ? new Date(maxDate.getTime()) : new Date(maxDate)
+    if (isNaN(m.getTime())) return undefined
+    m.setHours(23, 59, 59, 999)
+    return m
+  }, [maxDate])
+
+  const minDay = useMemo(() => {
+    if (!disablePast) return undefined
+    const m = new Date()
+    m.setHours(0, 0, 0, 0)
+    return m
+  }, [disablePast])
+
   if (!isEdit) {
     const displayFormat = showTime
       ? 'dd-MM-yyyy hh:mm a'
       : 'dd-MM-yyyy'
-    return <span>{value ? format(new Date(value), displayFormat) : '—'}</span>
+    return <span>{dateValue ? format(dateValue, displayFormat) : '—'}</span>
   }
 
   const handleDateSelect = (date?: Date) => {
@@ -44,11 +66,11 @@ export default function DateField({
       onChange(undefined)
       return
     }
-    // Preserve time if value exists, else set to default (e.g., current time or 12:00 PM)
+    // Preserve time if dateValue exists, else set to default (e.g., 12:00 PM)
     const newDate = new Date(date)
-    if (value && showTime) {
-      newDate.setHours(value.getHours())
-      newDate.setMinutes(value.getMinutes())
+    if (dateValue && showTime) {
+      newDate.setHours(dateValue.getHours())
+      newDate.setMinutes(dateValue.getMinutes())
     } else if (showTime) {
       // Default to 12:00 PM if no previous time
       newDate.setHours(12)
@@ -58,41 +80,23 @@ export default function DateField({
   }
 
   const handleTimeChange = (type: 'hour' | 'minute' | 'ampm', val: string) => {
-    if (!value) return
+    if (!dateValue) return
 
-    const newDate = new Date(value)
+    const newDate = new Date(dateValue)
     let currentHours = newDate.getHours()
-    let currentMinutes = newDate.getMinutes()
 
     if (type === 'hour') {
-      const hour12 = parseInt(val)
-      const isPm = currentHours >= 12
-      if (isPm && hour12 !== 12) {
-        currentHours = hour12 + 12
-      } else if (!isPm && hour12 === 12) {
-        currentHours = 0
+      const hour12 = parseInt(val, 10)
+      const wasPm = currentHours >= 12
+      if (hour12 === 12) {
+        currentHours = wasPm ? 12 : 0
       } else {
-        currentHours = isPm && hour12 === 12 ? 12 : hour12
-        // Actually simpler: convert back to linear hours
-        // If it was PM (>=12), and we pick 5, it becomes 17.
-        // If it was AM (<12), and we pick 5, it becomes 5.
-        // Special case 12.
-        // If current is 13 (1 PM), pick 2. -> 14 (2 PM).
-        // If current is 0 (12 AM), pick 2. -> 2 (2 AM).
-
-        // Re-calculate based on AM/PM state
-        const wasPm = currentHours >= 12
-        if (hour12 === 12) {
-          currentHours = wasPm ? 12 : 0
-        } else {
-          currentHours = wasPm ? hour12 + 12 : hour12
-        }
+        currentHours = wasPm ? hour12 + 12 : hour12
       }
       newDate.setHours(currentHours)
     } else if (type === 'minute') {
-      newDate.setMinutes(parseInt(val))
+      newDate.setMinutes(parseInt(val, 10))
     } else if (type === 'ampm') {
-      const hour12 = currentHours % 12 || 12
       if (val === 'PM' && currentHours < 12) {
         newDate.setHours(currentHours + 12)
       } else if (val === 'AM' && currentHours >= 12) {
@@ -119,12 +123,12 @@ export default function DateField({
         <Button
           size='sm'
           variant='outline'
-          className={!value ? 'text-muted-foreground' : ''}
+          className={!dateValue ? 'text-muted-foreground' : ''}
         >
           <CalendarDays className='w-4 h-4 mr-2' />
-          {value
+          {dateValue
             ? format(
-                new Date(value),
+                dateValue,
                 showTime ? 'dd-MM-yyyy hh:mm a' : 'dd-MM-yyyy',
               )
             : showTime
@@ -135,22 +139,14 @@ export default function DateField({
       <PopoverContent className='w-auto p-0' align='start'>
         <Calendar
           mode='single'
-          selected={value}
-          defaultMonth={value}
+          selected={dateValue}
+          defaultMonth={dateValue}
           onSelect={handleDateSelect}
           disabled={(date) => {
-            let disabled = false
-            if (disablePast) {
-              disabled = disabled || date < new Date(new Date().setHours(0, 0, 0, 0))
-            }
-            if (maxDate) {
-              // Compare at start of day so we don't disable the maxDate day itself prematurely
-              const maxDay = new Date(maxDate)
-              maxDay.setHours(23, 59, 59, 999)
-              disabled = disabled || date > maxDay
-            }
-            return disabled
-          }}    
+            if (minDay && date < minDay) return true
+            if (maxDay && date > maxDay) return true
+            return false
+          }}
         />
         {showTime && (
           <div className='p-3 border-t bg-muted/20 space-y-2'>
@@ -163,9 +159,9 @@ export default function DateField({
             <div className='flex items-center gap-2'>
               {/* Hour */}
               <Select
-                value={value ? getHour12(value) : '12'}
+                value={dateValue ? getHour12(dateValue) : '12'}
                 onValueChange={(v) => handleTimeChange('hour', v)}
-                disabled={!value}
+                disabled={!dateValue}
               >
                 <SelectTrigger className='h-8 w-[70px]'>
                   <SelectValue placeholder='HH' />
@@ -185,9 +181,9 @@ export default function DateField({
               <span className='text-muted-foreground'>:</span>
               {/* Minute */}
               <Select
-                value={value ? value.getMinutes().toString() : '0'}
+                value={dateValue ? dateValue.getMinutes().toString() : '0'}
                 onValueChange={(v) => handleTimeChange('minute', v)}
-                disabled={!value}
+                disabled={!dateValue}
               >
                 <SelectTrigger className='h-8 w-[70px]'>
                   <SelectValue placeholder='MM' />
@@ -197,12 +193,6 @@ export default function DateField({
                   side='top'
                   className='h-[200px]'
                 >
-                  {/* Create 5-minute intervals or 1-minute? 5 is standard for bad UX otherwise list is long. user might want precise. 
-                       Let's do 5 min steps + 0. Or just 0, 5, 10... 
-                       Actually standard native picker is better but I agreed to Select.
-                       Let's do 00, 05, 10... 55. And maybe allow typing? No Shadcn select is rigid. 
-                       I will provide 5 minute intervals. 
-                   */}
                   {Array.from({ length: 60 }, (_, i) => i).map((m) => (
                     <SelectItem key={m} value={m.toString()}>
                       {m.toString().padStart(2, '0')}
@@ -213,9 +203,9 @@ export default function DateField({
 
               {/* AM/PM */}
               <Select
-                value={value ? getAmpm(value) : 'AM'}
+                value={dateValue ? getAmpm(dateValue) : 'AM'}
                 onValueChange={(v) => handleTimeChange('ampm', v)}
-                disabled={!value}
+                disabled={!dateValue}
               >
                 <SelectTrigger className='h-8 w-[70px]'>
                   <SelectValue placeholder='AM/PM' />

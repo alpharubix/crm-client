@@ -616,7 +616,7 @@ export default function AccountTasksPage() {
               </div>
             ) : (
               <table className='w-full caption-bottom text-sm'>
-                <thead className='bg-slate-50/80 dark:bg-muted/30 sticky top-0 z-10 border-b border-border/60'>
+                <thead className='bg-background sticky top-0 z-10'>
                   <tr className='text-left text-xs font-semibold text-muted-foreground tracking-wide'>
                     <th className='w-[48px] px-4 py-3 text-center'>
                       <input
@@ -633,6 +633,7 @@ export default function AccountTasksPage() {
                     <th className='px-4 py-3'>Account Name</th>
                     <th className='px-4 py-3'>Task Created By</th>
                     <th className='px-4 py-3'>Assignee</th>
+                    <th className='px-4 py-3'>Assigned Date/Time</th>
                     <th className='px-4 py-3'>Due Date / Time</th>
                     <th className='px-4 py-3'>Completed At</th>
                     <th className='px-4 py-3'>Status</th>
@@ -740,9 +741,15 @@ export default function AccountTasksPage() {
                             </div>
                           </td>
 
+                          <td className='px-4 py-3.5'>
+                            <span className='text-xs font-medium'>
+                              {formatISTDateTime(task.task_assigned_date_time)}
+                            </span>
+                          </td>
+
                           {/* Due Date */}
-                          <td className='px-4 py-3.5 text-xs text-muted-foreground'>
-                            {formatISTDateTime(task.call_back_date_time)}
+                          <td className='px-4 py-3.5 text-xs'>
+                            {formatISTDateTime(task.task_due_date_time)}
                           </td>
 
                           <td className='px-4 py-3.5 text-xs'>

@@ -29,7 +29,8 @@ export type TargetAccountStatus =
   | 'Lender Review'
   | 'On Hold'
   | 'Not Interested'
-  | 'Location Unserviceable';
+  | 'Location Unserviceable'
+  | 'business closed';
 
 export interface AccountTask {
   id: string;
@@ -41,7 +42,7 @@ export interface AccountTask {
   account_status?: string;
   account_stage?: string;
   target_account_status?: string;
-  target_call_back_date_time?: Date ;
+  target_call_back_date_time?: string | Date;
   call_back_date_status?: CallBackDateStatus;
   call_back_date_time?: string;
   account_assigned_date_time?: string;
