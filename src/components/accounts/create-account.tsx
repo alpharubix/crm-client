@@ -132,12 +132,6 @@ function MultiSelectField({
 
 export default function CreateAccount() {
   const navigate = useNavigate();
-
-  const rawRole = String(user?.role || '')
-    .toLowerCase()
-    .trim()
-    .replace(/\s+/g, '_');
-  const isAllowedActive = ['super_admin','admin'].includes(rawRole);
   const [businessStateSearch, setBusinessStateSearch] = useState('');
   const [businessStateOpen, setBusinessStateOpen] = useState(false);
   const [businessCitySearch, setBusinessCitySearch] = useState('');
@@ -551,7 +545,7 @@ export default function CreateAccount() {
                     'On Hold',
                     'Not Interested',
                     'Location Unserviceable',
-                    'business closed'
+                    'business closed',
                   ]}
                   onChange={(v) =>
                     setValue('accountStatus', v, { shouldValidate: true })
