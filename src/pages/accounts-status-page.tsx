@@ -157,6 +157,7 @@ const STATUS_LEGEND = [
     { label: 'On Hold', color: 'yellow' },
     { label: 'Not Interested', color: 'rose' },
     { label: 'Location Unserviceable', color: 'purple' },
+    { label: 'business closed', color: 'red' },
 ]
 
 export default function AccountsStatusPage() {
