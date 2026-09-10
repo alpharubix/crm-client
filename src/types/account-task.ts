@@ -1,6 +1,7 @@
 export type TaskType = 'Call' | 'Update Record' | 'Email' | 'Move Status';
 
 export type TaskStatus =
+  | ''
   | 'Unassigned'
   | 'Assigned'
   | 'Pending'
@@ -19,6 +20,7 @@ export type CallBackDateStatus =
   | 'Due Dates';
 
 export type TargetAccountStatus =
+  | ''
   | 'Yet to be dialed'
   | 'Wrong Number'
   | 'Contact Established'

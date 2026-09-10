@@ -71,9 +71,9 @@ export default function UpdateAccountTaskModal({
   const canEditFields = ['super_admin', 'admin', 'manager'].includes(role);
 
   const [taskType, setTaskType] = useState<TaskType>('Call');
-  const [taskStatus, setTaskStatus] = useState<TaskStatus>('Unassigned');
+  const [taskStatus, setTaskStatus] = useState<TaskStatus>('');
   const [targetAccountStatus, setTargetAccountStatus] =
-    useState<TargetAccountStatus>('Awareness');
+    useState<TargetAccountStatus>('');
   const [targetCallBackDateTime, setTargetCallBackDateTime] = useState<Date>();
   const [taskDescription, setTaskDescription] = useState('');
   const [taskAssignedDateTime, setTaskAssignedDateTime] = useState('');
@@ -340,6 +340,7 @@ export default function UpdateAccountTaskModal({
         'Not Interested',
         'Location Unserviceable',
         'business closed',
+        'N/A',
       ]
     : [
         'Yet to be dialed',
@@ -354,6 +355,7 @@ export default function UpdateAccountTaskModal({
         'Not Interested',
         'Location Unserviceable',
         'business closed',
+        'N/A'
       ];
 
   const targetAccountStatusOptions =
@@ -577,7 +579,7 @@ export default function UpdateAccountTaskModal({
 
                 <div className='grid grid-cols-2 gap-4'>
                   <div className='space-y-1.5'>
-                    <Label className='text-xs font-medium'>Task Status *</Label>
+                    <Label className='text-xs font-medium'>Task Status</Label>
                     <Select
                       key={`task-status-${taskId}-${taskStatus}`}
                       value={taskStatus}
@@ -631,7 +633,7 @@ export default function UpdateAccountTaskModal({
                 <div className='grid grid-cols-2 gap-4'>
                   <div className='space-y-1.5'>
                     <Label className='text-xs font-medium'>
-                      Targeted Account Status *
+                      Targeted Account Status
                     </Label>
                     <Select
                       key={`task-status-${taskId}-${targetAccountStatus}`}
