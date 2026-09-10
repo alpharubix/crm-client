@@ -130,9 +130,9 @@ export default function UpdateAccountTaskModal({
         )[0]
       : null;
 
-  const toLocalISOString = (dateStr?: string | null) => {
-    if (!dateStr) return '';
-    const dt = new Date(dateStr);
+  const toLocalISOString = (dateInput?: string | Date | null) => {
+    if (!dateInput) return '';
+    const dt = typeof dateInput === 'string' ? new Date(dateInput) : dateInput;
     if (isNaN(dt.getTime())) return '';
     const offset = dt.getTimezoneOffset() * 60000;
     return new Date(dt.getTime() - offset).toISOString().slice(0, 16);
@@ -170,9 +170,14 @@ export default function UpdateAccountTaskModal({
         target_call_back_date_time: targetCallBackDateTime
           ? new Date(targetCallBackDateTime).toISOString()
           : null,
-        task_assigned_date_time: taskAssignedDateTime
-          ? new Date(taskAssignedDateTime).toISOString()
-          : null,
+        task_assigned_date_time:
+          taskStatus === 'Assigned' && !taskAssignedDateTime
+            ? new Date().toISOString()
+            : taskStatus === 'Unassigned'
+              ? null
+              : taskAssignedDateTime
+                ? new Date(taskAssignedDateTime).toISOString()
+                : null,
         task_due_date_time: taskDueDateTime
           ? new Date(taskDueDateTime).toISOString()
           : null,
@@ -569,7 +574,16 @@ export default function UpdateAccountTaskModal({
                     <Select
                       key={`task-status-${taskId}-${taskStatus}`}
                       value={taskStatus}
-                      onValueChange={(val: TaskStatus) => setTaskStatus(val)}
+                      onValueChange={(val: TaskStatus) => {
+                        setTaskStatus(val);
+                        if (val === 'Assigned') {
+                          if (!taskAssignedDateTime || taskData?.task_status !== 'Assigned') {
+                            setTaskAssignedDateTime(toLocalISOString(new Date()));
+                          }
+                        } else if (val === 'Unassigned') {
+                          setTaskAssignedDateTime('');
+                        }
+                      }}
                       disabled={isCompleted}
                     >
                       <SelectTrigger className='h-9 text-xs'>

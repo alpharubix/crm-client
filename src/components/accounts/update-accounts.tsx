@@ -676,7 +676,7 @@ export default function UpdateAccounts() {
     .toLowerCase()
     .trim()
     .replace(/\s+/g, '_');
-  const isAllowedActive = ['super_admin','admin'].includes(rawRole);
+  const isAllowedActive = ['super_admin', 'admin'].includes(rawRole);
 
   const isAllow =
     user?.role === 'super_admin' ||
@@ -865,6 +865,15 @@ export default function UpdateAccounts() {
     return <div className='p-4'>Account not found</div>;
   }
 
+  const editableIds = [
+    '3899927000000201013',
+    '3899927000000282463',
+    '3899927000000434365',
+    '3899927000000484472',
+  ];
+
+  const userCanEdit = editableIds.includes(String(user?.user_id));
+
   const MAX_NOTES_VISIBLE = 3;
   const showViewMore = sortedNotes.length > MAX_NOTES_VISIBLE;
   const visibleNotes = showViewMore
@@ -905,7 +914,7 @@ export default function UpdateAccounts() {
             <span className='text-xs font-semibold text-muted-foreground uppercase tracking-wide'>
               Account Owner:
             </span>
-            {false && isAllow ? (
+            {userCanEdit && isEdit ? (
               <Controller
                 control={control}
                 name='accountOwnerId'
