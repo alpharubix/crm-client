@@ -244,6 +244,14 @@ export default function CreateAccountTaskModal({
   const [taskDueDateTime, setTaskDueDateTime] = useState('');
   const [isSearchingAccount, setIsSearchingAccount] = useState(false);
 
+  const toLocalISOString = (dateInput?: string | Date | null) => {
+    if (!dateInput) return '';
+    const dt = typeof dateInput === 'string' ? new Date(dateInput) : dateInput;
+    if (isNaN(dt.getTime())) return '';
+    const offset = dt.getTimezoneOffset() * 60000;
+    return new Date(dt.getTime() - offset).toISOString().slice(0, 16);
+  };
+
   const { user } = useAuth();
 
   const rawRole = String(user?.role || '')
@@ -354,9 +362,14 @@ export default function CreateAccountTaskModal({
         target_call_back_date_time: targetCallBackDateTime
           ? targetCallBackDateTime.toISOString()
           : null,
-        task_assigned_date_time: taskAssignedDateTime
-          ? new Date(taskAssignedDateTime).toISOString()
-          : null,
+        task_assigned_date_time:
+          taskStatus === 'Assigned' && !taskAssignedDateTime
+            ? new Date().toISOString()
+            : taskStatus === 'Unassigned'
+              ? null
+              : taskAssignedDateTime
+                ? new Date(taskAssignedDateTime).toISOString()
+                : null,
         task_due_date_time: taskDueDateTime
           ? new Date(taskDueDateTime).toISOString()
           : null,
@@ -814,7 +827,16 @@ export default function CreateAccountTaskModal({
                 <Label className='text-xs font-medium'>Task Status *</Label>
                 <Select
                   value={taskStatus}
-                  onValueChange={(val: TaskStatus) => setTaskStatus(val)}
+                  onValueChange={(val: TaskStatus) => {
+                    setTaskStatus(val);
+                    if (val === 'Assigned') {
+                      if (!taskAssignedDateTime) {
+                        setTaskAssignedDateTime(toLocalISOString(new Date()));
+                      }
+                    } else if (val === 'Unassigned') {
+                      setTaskAssignedDateTime('');
+                    }
+                  }}
                 >
                   <SelectTrigger className='h-9 text-xs'>
                     <SelectValue placeholder='Select Task Status' />
