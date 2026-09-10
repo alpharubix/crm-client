@@ -292,7 +292,7 @@ export default function UpdateAccountTaskModal({
   const canEditStatus = isAssignee || isAccountOwner || isAdminOrManager;
   const isCompleted = taskData?.task_status === 'Completed';
   const canEditOtherFields =
-    (isAdminOrManager) && !isAssignee;
+    (isAdminOrManager);
 
   const allowedStatuses: TaskStatus[] = isAssignee
     ? ['Pending', 'In Progress', 'Completed', 'Verified']
