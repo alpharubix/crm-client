@@ -830,7 +830,9 @@ export default function CreateAccountTaskModal({
                   value={taskStatus}
                   onValueChange={(val: TaskStatus) => {
                     setTaskStatus(val);
-                    if (val !== 'Unassigned') {
+                    if (val === 'Assigned') {
+                      setTaskAssignedDateTime(toLocalISOString(new Date()));
+                    } else if (val !== 'Unassigned') {
                       if (!taskAssignedDateTime) {
                         setTaskAssignedDateTime(toLocalISOString(new Date()));
                       }
@@ -883,7 +885,7 @@ export default function CreateAccountTaskModal({
                     <SelectItem value='Assessment'>Assessment</SelectItem>
                     <SelectItem value='Lender Review'>Lender Review</SelectItem>
                     <SelectItem value='On Hold'>On Hold</SelectItem>
-                    <SelectItem value='business closed'>
+                    <SelectItem value='Business Closed'>
                       Business Closed
                     </SelectItem>
                     <SelectItem value='Not Interested'>
@@ -926,6 +928,7 @@ export default function CreateAccountTaskModal({
                   type='datetime-local'
                   value={taskAssignedDateTime}
                   onChange={(e) => setTaskAssignedDateTime(e.target.value)}
+                  disabled={taskStatus === 'Assigned'}
                   className='h-9 text-xs'
                 />
               </div>

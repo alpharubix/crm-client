@@ -95,7 +95,7 @@ const ACCOUNT_STATUS_OPTIONS: Option[] = [
   { value: 'On Hold', label: 'On Hold' },
   { value: 'Not Interested', label: 'Not Interested' },
   { value: 'Location Unserviceable', label: 'Location Unserviceable' },
-  { value: 'business closed', label: 'Business Closed' },
+  { value: 'Business closed', label: 'Business Closed' },
 ]
 
 const SOURCE_OPTIONS: Option[] = [
