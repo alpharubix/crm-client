@@ -545,7 +545,7 @@ export default function CreateAccount() {
                     'On Hold',
                     'Not Interested',
                     'Location Unserviceable',
-                    'business closed',
+                    'Business Closed',
                   ]}
                   onChange={(v) =>
                     setValue('accountStatus', v, { shouldValidate: true })

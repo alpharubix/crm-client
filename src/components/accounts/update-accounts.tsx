@@ -38,6 +38,7 @@ import {
 } from '@/validators/updateAccount.schema';
 import { ENV } from '@/conf';
 import { formatExactDate } from '@/utils/date-formatter';
+import { extractErrorMessage } from '@/utils/error-extractor';
 import users from '@/utils/users.json';
 import {
   Plus,
@@ -695,6 +696,7 @@ export default function UpdateAccounts() {
     trigger,
     reset,
     control,
+    setError,
     formState: { errors, isDirty, dirtyFields },
   } = form;
 
@@ -765,7 +767,11 @@ export default function UpdateAccounts() {
         credentials: 'include',
         body: JSON.stringify(payload),
       });
-      if (!res.ok) throw new Error('Failed to update account');
+      if (!res.ok) {
+        const errorData = await res.json().catch(() => null);
+        const errorMsg = extractErrorMessage(errorData, 'Failed to update account');
+        throw new Error(errorMsg);
+      }
       return res.json();
     },
     onSuccess: (data, variables) => {
@@ -773,8 +779,24 @@ export default function UpdateAccounts() {
       setIsEdit(false);
       queryClient.invalidateQueries({ queryKey: ['account', id] });
     },
-    onError: () => {
-      toast.error('Failed to update account');
+    onError: (err: any) => {
+      const errorMsg = err?.message || 'Failed to update account';
+      toast.error(errorMsg);
+
+      // If backend reports date-related error (e.g. past call back date), highlight the field directly
+      if (
+        errorMsg.toLowerCase().includes('date') ||
+        errorMsg.toLowerCase().includes('past') ||
+        errorMsg.toLowerCase().includes('call_back')
+      ) {
+        setError('callBackDate', {
+          type: 'server',
+          message: errorMsg,
+        });
+        if (activeTab !== 'overview') {
+          setActiveTab('overview');
+        }
+      }
     },
   });
 
@@ -816,6 +838,76 @@ export default function UpdateAccounts() {
 
   const onSave = (values: UpdateAccountFormValues) => {
     updateMutation.mutate(values);
+  };
+
+  const onInvalid = (fieldErrors: any) => {
+    console.error('Validation errors:', fieldErrors);
+
+    const fieldLabelMap: Record<string, string> = {
+      callBackDate: 'Call Back Date/Time',
+      source: 'Source',
+      sourceType: 'Source Type',
+      sourceDate: 'Source Date',
+      sourceDescription: 'Source Description',
+      distributorCode: 'Distributor Code',
+      accountStatus: 'Account Status',
+      accountStage: 'Account Stage',
+      businessStatus: 'Business Status',
+      accountOwnerId: 'Account Owner',
+      profileType: 'Profile Type',
+      firstName: 'First Name',
+      lastName: 'Last Name',
+      accountName: 'Account Name',
+      phone: 'Phone Number',
+      email: 'Email',
+      businessCity: 'Business City',
+      businessState: 'Business State',
+      businessPincode: 'Business Pincode',
+      employerName: 'Employer Name',
+      businessVintage: 'Business Vintage',
+      employmentVintage: 'Employment Vintage',
+    };
+
+    const errorEntries = Object.entries(fieldErrors);
+    if (errorEntries.length > 0) {
+      const descriptions = errorEntries.map(([key, err]: [string, any]) => {
+        const label = fieldLabelMap[key] || key;
+        const msg = err?.message || 'is required';
+        return `${label}: ${msg}`;
+      });
+
+      toast.error(
+        `Please fix ${errorEntries.length} required field${errorEntries.length > 1 ? 's' : ''}`,
+        {
+          description:
+            descriptions.slice(0, 4).join(' • ') +
+            (descriptions.length > 4
+              ? ` (+${descriptions.length - 4} more)`
+              : ''),
+          duration: 8000,
+        },
+      );
+    }
+
+    if (activeTab !== 'overview') {
+      setActiveTab('overview');
+    }
+
+    const firstErrorKey = Object.keys(fieldErrors)[0];
+    if (firstErrorKey) {
+      setTimeout(() => {
+        const el =
+          document.querySelector(`[name="${firstErrorKey}"]`) ||
+          document.getElementById(firstErrorKey) ||
+          document.querySelector('.text-destructive');
+        if (el) {
+          el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          if ('focus' in el && typeof (el as any).focus === 'function') {
+            (el as any).focus();
+          }
+        }
+      }, 100);
+    }
   };
 
   const { data: usersData } = useQuery({
@@ -915,27 +1007,34 @@ export default function UpdateAccounts() {
               Account Owner:
             </span>
             {userCanEdit && isEdit ? (
-              <Controller
-                control={control}
-                name='accountOwnerId'
-                render={({ field }) => (
-                  <Select
-                    value={field.value || ''}
-                    onValueChange={field.onChange}
-                  >
-                    <SelectTrigger className='h-7 w-48 text-sm font-semibold'>
-                      <SelectValue placeholder='Select Account Owner' />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {usersList?.map((u: any) => (
-                        <SelectItem key={u.id} value={String(u.id)}>
-                          {u.full_name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+              <div className='flex flex-col'>
+                <Controller
+                  control={control}
+                  name='accountOwnerId'
+                  render={({ field }) => (
+                    <Select
+                      value={field.value || ''}
+                      onValueChange={field.onChange}
+                    >
+                      <SelectTrigger className='h-7 w-48 text-sm font-semibold'>
+                        <SelectValue placeholder='Select Account Owner' />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {usersList?.map((u: any) => (
+                          <SelectItem key={u.id} value={String(u.id)}>
+                            {u.full_name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  )}
+                />
+                {errors.accountOwnerId?.message && (
+                  <span className='text-xs text-destructive mt-0.5'>
+                    {errors.accountOwnerId.message}
+                  </span>
                 )}
-              />
+              </div>
             ) : (
               <span className='text-sm font-bold text-primary'>
                 {ownerName}
@@ -960,7 +1059,7 @@ export default function UpdateAccounts() {
               size='sm'
               className='h-8 cursor-pointer'
               disabled={!isDirty || updateMutation.isPending}
-              onClick={handleSubmit(onSave)}
+              onClick={handleSubmit(onSave, onInvalid)}
             >
               {updateMutation.isPending ? (
                 <Spinner className='mr-2 h-3.5 w-3.5' />
@@ -1711,7 +1810,7 @@ export default function UpdateAccounts() {
                               'On Hold',
                               'Not Interested',
                               'Location Unserviceable',
-                              'business closed',
+                              'Business Closed',
                             ]}
                             onChange={field.onChange}
                           />

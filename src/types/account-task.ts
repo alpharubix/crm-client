@@ -32,7 +32,8 @@ export type TargetAccountStatus =
   | 'On Hold'
   | 'Not Interested'
   | 'Location Unserviceable'
-  | 'business closed';
+  | 'Business Closed'
+  | 'N/A';
 
 export interface AccountTask {
   id: string;
