@@ -34,6 +34,11 @@ import {
   Send,
   CheckCircle2,
   Building2,
+  ShieldAlert,
+  AlertTriangle,
+  Clock,
+  XCircle,
+  History,
 } from 'lucide-react';
 import { useAuth } from '@/context/auth-context';
 import users from '@/utils/users.json';
@@ -55,6 +60,162 @@ function formatDate(dateStr?: string | null): string {
   });
 }
 
+function getOverdueDetails(callBackDateTimeStr?: string | null) {
+  if (!callBackDateTimeStr) {
+    return {
+      isOverdue: false,
+      hasDate: false,
+      days: 0,
+      hours: 0,
+      label: 'No Call Back Date Set',
+      badgeClass:
+        'bg-muted text-muted-foreground border-border dark:bg-muted/50',
+    };
+  }
+  const callBackDate = new Date(callBackDateTimeStr);
+  if (isNaN(callBackDate.getTime())) {
+    return {
+      isOverdue: false,
+      hasDate: false,
+      days: 0,
+      hours: 0,
+      label: 'Invalid Date',
+      badgeClass:
+        'bg-muted text-muted-foreground border-border dark:bg-muted/50',
+    };
+  }
+  const now = new Date();
+  const diffMs = now.getTime() - callBackDate.getTime();
+
+  if (diffMs > 0) {
+    const days = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+    const hours = Math.floor(
+      (diffMs % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60),
+    );
+    const minutes = Math.floor((diffMs % (1000 * 60 * 60)) / (1000 * 60));
+
+    let label = '';
+    if (days > 0) {
+      label = `${days} day${days > 1 ? 's' : ''}${hours > 0 ? ` ${hours} hr${hours > 1 ? 's' : ''}` : ''} overdue`;
+    } else if (hours > 0) {
+      label = `${hours} hr${hours > 1 ? 's' : ''} overdue`;
+    } else {
+      label = `${minutes} min overdue`;
+    }
+
+    return {
+      isOverdue: true,
+      hasDate: true,
+      days,
+      hours,
+      label,
+      badgeClass:
+        'bg-red-50 text-red-700 border-red-200 dark:bg-red-950/40 dark:text-red-300 dark:border-red-800',
+    };
+  } else {
+    const futureMs = callBackDate.getTime() - now.getTime();
+    const futureDays = Math.floor(futureMs / (1000 * 60 * 60 * 24));
+    const futureHours = Math.floor(
+      (futureMs % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60),
+    );
+
+    let label = '';
+    if (futureDays > 0) {
+      label = `Due in ${futureDays} day${futureDays > 1 ? 's' : ''}`;
+    } else if (futureHours > 0) {
+      label = `Due in ${futureHours} hr${futureHours > 1 ? 's' : ''}`;
+    } else {
+      label = 'Due now';
+    }
+
+    return {
+      isOverdue: false,
+      hasDate: true,
+      days: 0,
+      hours: 0,
+      label,
+      badgeClass:
+        'bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-950/40 dark:text-emerald-300 dark:border-emerald-800',
+    };
+  }
+}
+
+function getContactEstablishedAudit(accountData?: any) {
+  if (!accountData) {
+    return {
+      isCurrent: false,
+      hasStayed: false,
+      currentStatus: 'N/A',
+      stayedDuration: '0d',
+      stepsCount: 0,
+      steps: [] as any[],
+      journey: [] as any[],
+    };
+  }
+
+  const currentStatus = String(accountData.account_status || '').trim();
+  const isCurrent = currentStatus.toLowerCase() === 'contact established';
+
+  const journey: any[] =
+    accountData.status_journey || accountData.journey || [];
+
+  const matchedSteps = journey.filter(
+    (s: any) =>
+      String(s?.name || '')
+        .toLowerCase()
+        .trim() === 'contact established',
+  );
+
+  const hasStayed = matchedSteps.length > 0;
+
+  // Aggregate duration across all Contact Established steps
+  let totalMinutes = 0;
+  matchedSteps.forEach((s: any) => {
+    if (s.duration) {
+      const dayMatch = String(s.duration).match(/(\d+)\s*d/i);
+      const hourMatch = String(s.duration).match(/(\d+)\s*h/i);
+      const minMatch = String(s.duration).match(/(\d+)\s*m/i);
+      let mins = 0;
+      if (dayMatch) mins += parseInt(dayMatch[1], 10) * 24 * 60;
+      if (hourMatch) mins += parseInt(hourMatch[1], 10) * 60;
+      if (minMatch) mins += parseInt(minMatch[1], 10);
+      totalMinutes += mins > 0 ? mins : 0;
+    }
+  });
+
+  let formattedDuration = '';
+  if (totalMinutes >= 1440) {
+    const days = Math.floor(totalMinutes / 1440);
+    const hours = Math.floor((totalMinutes % 1440) / 60);
+    formattedDuration = hours > 0 ? `${days}d ${hours}h` : `${days}d`;
+  } else if (totalMinutes >= 60) {
+    const hours = Math.floor(totalMinutes / 60);
+    const mins = totalMinutes % 60;
+    formattedDuration = mins > 0 ? `${hours}h ${mins}m` : `${hours}h`;
+  } else if (totalMinutes > 0) {
+    formattedDuration = `${totalMinutes}m`;
+  } else if (matchedSteps.length > 0) {
+    formattedDuration = matchedSteps
+      .map((s: any) => s.duration)
+      .filter(Boolean)
+      .join(', ');
+  } else if (isCurrent) {
+    formattedDuration = 'Current';
+  } else {
+    formattedDuration = '0d';
+  }
+
+  return {
+    isCurrent,
+    hasStayed,
+    currentStatus,
+    stayedDuration: formattedDuration || '0d',
+    stepsCount: matchedSteps.length,
+    steps: matchedSteps,
+    journey,
+  };
+}
+
 interface UpdateAccountTaskModalProps {
   taskId: string | number | null;
   isOpen: boolean;
@@ -69,6 +230,14 @@ export default function UpdateAccountTaskModal({
   const queryClient = useQueryClient();
   const { user } = useAuth();
   const role = String(user?.role || '').toLowerCase();
+  const rawRole = String(user?.role || '')
+    .toLowerCase()
+    .trim()
+    .replace(/\s+/g, '_');
+  const isAdminOrSuperAdmin =
+    ['super_admin', 'superadmin', 'admin'].includes(rawRole) ||
+    rawRole.includes('admin') ||
+    rawRole.includes('super_admin');
   const canEditFields = ['super_admin', 'admin', 'manager'].includes(role);
 
   const [taskType, setTaskType] = useState<TaskType>('Call');
@@ -130,6 +299,38 @@ export default function UpdateAccountTaskModal({
             ).getTime(),
         )[0]
       : null;
+
+  // Query account details for Audit View
+  const accountId = taskData?.account_id;
+  const { data: selectedAccountDetails } = useQuery({
+    queryKey: ['account-details-for-task', accountId],
+    queryFn: async () => {
+      if (!accountId) return null;
+      const res = await fetch(
+        `${ENV.VITE_BACKEND_BASE_URL}/accounts?account_id=${accountId}`,
+        { credentials: 'include' },
+      );
+      if (!res.ok) return null;
+      return res.json();
+    },
+    enabled: !!accountId && isOpen,
+    staleTime: 0,
+  });
+
+  const accountData = selectedAccountDetails?.data?.[0];
+  const rawBusinessStatus = accountData?.business_status;
+  const isBusinessStatusActive = Boolean(
+    rawBusinessStatus === true ||
+    String(rawBusinessStatus).toLowerCase() === 'true' ||
+    String(rawBusinessStatus).toLowerCase() === 'active' ||
+    (rawBusinessStatus &&
+      String(rawBusinessStatus).trim() !== '' &&
+      String(rawBusinessStatus).toLowerCase() !== 'inactive'),
+  );
+  const overdueInfo = getOverdueDetails(
+    accountData?.call_back_date_time || taskData?.call_back_date_time,
+  );
+  const contactAudit = getContactEstablishedAudit(accountData);
 
   const toLocalISOString = (dateInput?: string | Date | null) => {
     if (!dateInput) return '';
@@ -553,192 +754,410 @@ export default function UpdateAccountTaskModal({
                 </div>
               </div>
 
-              <form onSubmit={handleSubmit} className='space-y-4'>
-                <div className='grid grid-cols-2 gap-4'>
-                  <div className='space-y-1.5'>
-                    <Label className='text-xs font-medium'>Module Name</Label>
-                    <Input
-                      value='Account'
-                      disabled
-                      className='h-9 text-xs bg-muted'
-                    />
-                  </div>
+              {/* Audit View Panel (Visible only for Admin & Super Admin when account business_status is true/active) */}
+              {accountId &&
+                accountData &&
+                isAdminOrSuperAdmin &&
+                isBusinessStatusActive && (
+                  <div className='bg-linear-to-br from-card via-muted/30 to-muted/50 p-3.5 rounded-xl border shadow-xs space-y-3 mt-2'>
+                    <div className='flex items-center justify-between border-b border-border/60 pb-2'>
+                      <div className='flex items-center gap-2'>
+                        <ShieldAlert className='w-4 h-4 text-blue-500' />
+                        <span className='font-semibold text-xs uppercase tracking-wider'>
+                          Audit View
+                        </span>
+                      </div>
+                      <div className='flex items-center gap-1.5 flex-wrap'>
+                        <Badge
+                          variant='outline'
+                          className='text-[10px] font-medium '
+                        >
+                          Admin / Super Admin
+                        </Badge>
+                        <Badge
+                          variant='outline'
+                          className='text-[10px] font-medium '
+                        >
+                          Business Status:{' '}
+                          {String(rawBusinessStatus || 'Active')}
+                        </Badge>
+                      </div>
+                    </div>
 
-                  <div className='space-y-1.5'>
-                    <Label className='text-xs font-medium'>Task Type *</Label>
-                    <Select
-                      key={`task-type-${taskId}-${taskType}`}
-                      value={taskType}
-                      onValueChange={(val: TaskType) => setTaskType(val)}
-                      disabled={!userCanEdit}
-                    >
-                      <SelectTrigger className='h-9 text-xs'>
-                        <SelectValue placeholder='Select Task Type' />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value='Call'>Call</SelectItem>
-                        <SelectItem value='Update Record'>
-                          Update Record
-                        </SelectItem>
-                        <SelectItem value='Email'>Email</SelectItem>
-                        <SelectItem value='Move Status'>Move Status</SelectItem>
-                        <SelectItem value='Visit'>Visit</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </div>
+                    <div className='grid grid-cols-2 sm:grid-cols-4 gap-2.5 text-xs'>
+                      <div>
+                        <span className='text-muted-foreground text-[11px] font-medium block'>
+                          Call Back Date & Time
+                        </span>
+                        <span className='font-semibold text-foreground truncate block'>
+                          {formatDate(
+                            accountData.call_back_date_time ||
+                              taskData?.call_back_date_time,
+                          )}
+                        </span>
+                      </div>
 
-                <div className='grid grid-cols-2 gap-4'>
-                  <div className='space-y-1.5'>
-                    <Label className='text-xs font-medium'>Task Status</Label>
-                    <Select
-                      key={`task-status-${taskId}-${taskStatus}`}
-                      value={taskStatus}
-                      onValueChange={(val: TaskStatus) => {
-                        setTaskStatus(val);
-                        if (val === 'Assigned') {
-                          if (
-                            !taskAssignedDateTime ||
-                            taskData?.task_status !== 'Assigned'
-                          ) {
-                            setTaskAssignedDateTime(
-                              toLocalISOString(new Date()),
-                            );
-                          }
-                        } else if (val === 'Unassigned') {
-                          setTaskAssignedDateTime('');
-                        }
-                      }}
-                      disabled={isCompleted}
-                    >
-                      <SelectTrigger className='h-9 text-xs'>
-                        <SelectValue placeholder='Select Task Status' />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {statusOptions.map((opt) => (
-                          <SelectItem
-                            key={opt.value}
-                            value={opt.value}
-                            disabled={opt.disabled}
+                      <div>
+                        <span className='text-muted-foreground text-[11px] font-medium block'>
+                          Overdue Status
+                        </span>
+                        {overdueInfo.isOverdue ? (
+                          <Badge
+                            variant='outline'
+                            className={`mt-0.5 text-[10px] font-semibold gap-1 flex items-center w-fit ${overdueInfo.badgeClass}`}
                           >
-                            {opt.value}
+                            <AlertTriangle className='w-3 h-3 text-red-600' />
+                            {overdueInfo.days > 0
+                              ? `${overdueInfo.days} Day${overdueInfo.days > 1 ? 's' : ''} Overdue`
+                              : overdueInfo.label}
+                          </Badge>
+                        ) : (
+                          <Badge
+                            variant='outline'
+                            className={`mt-0.5 text-[10px] font-medium flex items-center w-fit ${overdueInfo.badgeClass}`}
+                          >
+                            <Clock className='w-3 h-3 mr-1' />
+                            {overdueInfo.label}
+                          </Badge>
+                        )}
+                      </div>
+
+                      <div>
+                        <span className='text-muted-foreground text-[11px] font-medium block'>
+                          Days Overdue
+                        </span>
+                        <span
+                          className={`font-semibold truncate block ${
+                            overdueInfo.isOverdue
+                              ? 'text-red-600 dark:text-red-400 font-bold'
+                              : 'text-foreground/80'
+                          }`}
+                        >
+                          {overdueInfo.isOverdue
+                            ? `${overdueInfo.days} day${overdueInfo.days === 1 ? '' : 's'} overdue`
+                            : overdueInfo.hasDate
+                              ? '0 days (Not Overdue)'
+                              : 'N/A'}
+                        </span>
+                      </div>
+
+                      <div>
+                        <span className='text-muted-foreground text-[11px] font-medium block'>
+                          Contact Established
+                        </span>
+                        {contactAudit.isCurrent ? (
+                          <div className='space-y-0.5 mt-0.5'>
+                            <Badge
+                              variant='outline'
+                              className='text-[10px] font-semibold bg-emerald-50 text-emerald-700 border-emerald-300 dark:bg-emerald-950/40 dark:text-emerald-300 dark:border-emerald-700 flex items-center w-fit'
+                            >
+                              <CheckCircle2 className='w-3 h-3 text-emerald-600 mr-1' />
+                              Current Status
+                            </Badge>
+                            <span className='text-[11px] text-emerald-700 dark:text-emerald-400 font-medium block'>
+                              Active now ({contactAudit.stayedDuration})
+                            </span>
+                          </div>
+                        ) : contactAudit.hasStayed ? (
+                          <div className='space-y-0.5 mt-0.5'>
+                            <Badge
+                              variant='outline'
+                              className='text-[10px] font-semibold bg-blue-50 text-blue-700 border-blue-300 dark:bg-blue-950/40 dark:text-blue-300 dark:border-blue-700 flex items-center w-fit'
+                            >
+                              <History className='w-3 h-3 text-blue-600 mr-1' />
+                              Previously Stayed
+                            </Badge>
+                            <span className='text-[11px] text-blue-700 dark:text-blue-400 font-medium block'>
+                              Stayed: {contactAudit.stayedDuration}
+                            </span>
+                          </div>
+                        ) : (
+                          <div className='space-y-0.5 mt-0.5'>
+                            <Badge
+                              variant='outline'
+                              className='text-[10px] font-medium bg-muted/60 text-muted-foreground border-border flex items-center w-fit'
+                            >
+                              <XCircle className='w-3 h-3 text-muted-foreground mr-1' />
+                              Never Stayed
+                            </Badge>
+                            <span className='text-[11px] text-muted-foreground block truncate'>
+                              Current:{' '}
+                              {accountData.account_status ||
+                                taskData?.account_status ||
+                                'N/A'}
+                            </span>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Status Journey History Timeline */}
+                    <div className='mt-2.5 pt-2.5 border-t border-border/60 space-y-1.5'>
+                      <div className='flex items-center justify-between text-[11px] text-muted-foreground'>
+                        <span className='font-semibold flex items-center gap-1.5 text-foreground'>
+                          <History className='w-3.5 h-3.5 text-blue-500' /> Status
+                          Journey History
+                        </span>
+                        <span>
+                          Current Status:{' '}
+                          <strong className='text-foreground font-semibold'>
+                            {accountData.account_status ||
+                              taskData?.account_status ||
+                              'N/A'}
+                          </strong>
+                        </span>
+                      </div>
+
+                      {contactAudit.journey &&
+                      contactAudit.journey.length > 0 ? (
+                        <div className='flex items-center gap-1.5 flex-wrap pt-0.5'>
+                          {contactAudit.journey.map(
+                            (step: any, idx: number) => {
+                              const isCE =
+                                String(step.name || '')
+                                  .toLowerCase()
+                                  .trim() === 'contact established';
+                              return (
+                                <div
+                                  key={idx}
+                                  className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs border ${
+                                    isCE
+                                      ? 'bg-emerald-50 text-emerald-800 border-emerald-300 dark:bg-emerald-950/50 dark:text-emerald-200 dark:border-emerald-700 font-semibold ring-1 ring-emerald-400/50'
+                                      : 'bg-muted/40 text-foreground/80 border-border/70 font-medium'
+                                  }`}
+                                  title={`${step.name} (${step.duration || 'N/A'})${
+                                    step.startDate
+                                      ? ` | ${step.startDate} - ${step.endDate || 'Present'}`
+                                      : ''
+                                  }${step.updatedBy ? ` | by ${step.updatedBy}` : ''}`}
+                                >
+                                  <span
+                                    className={`w-1.5 h-1.5 rounded-full ${
+                                      isCE
+                                        ? 'bg-emerald-500'
+                                        : 'bg-muted-foreground/60'
+                                    }`}
+                                  />
+                                  <span>{step.name}</span>
+                                  <span className='text-[10px] font-mono opacity-80'>
+                                    · {step.duration || 'N/A'}
+                                  </span>
+                                  {idx < contactAudit.journey.length - 1 && (
+                                    <span className='text-muted-foreground/40 ml-1'>
+                                      →
+                                    </span>
+                                  )}
+                                </div>
+                              );
+                            },
+                          )}
+                        </div>
+                      ) : (
+                        <p className='text-xs text-muted-foreground italic'>
+                          No status journey recorded for this account.
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                )}
+
+              <div className='bg-linear-to-br from-card via-muted/30 to-muted/50 p-3.5 rounded-xl border shadow-xs space-y-3 mt-2'>
+                <div className='text-lg font-semibold'>
+                  Account Task Information
+                </div>
+                <form onSubmit={handleSubmit} className='space-y-4'>
+                  <div className='grid grid-cols-2 gap-4'>
+                    <div className='space-y-1.5'>
+                      <Label className='text-xs font-medium'>Module Name</Label>
+                      <Input
+                        value='Account'
+                        disabled
+                        className='h-9 text-xs bg-muted'
+                      />
+                    </div>
+
+                    <div className='space-y-1.5'>
+                      <Label className='text-xs font-medium'>Task Type *</Label>
+                      <Select
+                        key={`task-type-${taskId}-${taskType}`}
+                        value={taskType}
+                        onValueChange={(val: TaskType) => setTaskType(val)}
+                        disabled={!userCanEdit}
+                      >
+                        <SelectTrigger className='h-9 text-xs'>
+                          <SelectValue placeholder='Select Task Type' />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value='Call'>Call</SelectItem>
+                          <SelectItem value='Update Record'>
+                            Update Record
                           </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                          <SelectItem value='Email'>Email</SelectItem>
+                          <SelectItem value='Move Status'>
+                            Move Status
+                          </SelectItem>
+                          <SelectItem value='Visit'>Visit</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
                   </div>
 
+                  <div className='grid grid-cols-2 gap-4'>
+                    <div className='space-y-1.5'>
+                      <Label className='text-xs font-medium'>Task Status</Label>
+                      <Select
+                        key={`task-status-${taskId}-${taskStatus}`}
+                        value={taskStatus}
+                        onValueChange={(val: TaskStatus) => {
+                          setTaskStatus(val);
+                          if (val === 'Assigned') {
+                            if (
+                              !taskAssignedDateTime ||
+                              taskData?.task_status !== 'Assigned'
+                            ) {
+                              setTaskAssignedDateTime(
+                                toLocalISOString(new Date()),
+                              );
+                            }
+                          } else if (val === 'Unassigned') {
+                            setTaskAssignedDateTime('');
+                          }
+                        }}
+                        disabled={isCompleted}
+                      >
+                        <SelectTrigger className='h-9 text-xs'>
+                          <SelectValue placeholder='Select Task Status' />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {statusOptions.map((opt) => (
+                            <SelectItem
+                              key={opt.value}
+                              value={opt.value}
+                              disabled={opt.disabled}
+                            >
+                              {opt.value}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    <div className='space-y-1.5'>
+                      <Label className='text-xs font-medium'>
+                        Assigned Date/Time
+                      </Label>
+                      <Input
+                        type='datetime-local'
+                        value={taskAssignedDateTime}
+                        onChange={(e) =>
+                          setTaskAssignedDateTime(e.target.value)
+                        }
+                        disabled={!userCanEdit}
+                        className='h-9 text-xs'
+                      />
+                    </div>
+                  </div>
+                  <div className='grid grid-cols-2 gap-4'>
+                    <div className='space-y-1.5'>
+                      <Label className='text-xs font-medium'>
+                        Targeted Account Status
+                      </Label>
+                      <Select
+                        key={`task-status-${taskId}-${targetAccountStatus}`}
+                        value={targetAccountStatus}
+                        onValueChange={(val: TargetAccountStatus) =>
+                          setTargetAccountStatus(val)
+                        }
+                        disabled={!userCanEdit}
+                      >
+                        <SelectTrigger className='h-9 text-xs'>
+                          <SelectValue placeholder='Select Task Status' />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {targetAccountStatusOptions.map((opt) => (
+                            <SelectItem
+                              key={opt.value}
+                              value={opt.value}
+                              disabled={opt.disabled}
+                            >
+                              {opt.value}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    <div className='space-y-1.5'>
+                      <Label className='text-xs font-medium'>
+                        Target Call Back Date/Time
+                      </Label>
+                      <div className='space-y-1.5'>
+                        <DateField
+                          value={targetCallBackDateTime}
+                          isEdit={userCanEdit}
+                          showTime={true}
+                          disablePast={true}
+                          maxDate={
+                            targetAccountStatus === 'On Hold'
+                              ? undefined
+                              : new Date(Date.now() + 48 * 60 * 60 * 1000)
+                          }
+                          onChange={(d) => setTargetCallBackDateTime(d)}
+                        />
+                      </div>
+                    </div>
+                  </div>
                   <div className='space-y-1.5'>
-                    <Label className='text-xs font-medium'>
-                      Assigned Date/Time
-                    </Label>
+                    <Label className='text-xs font-medium'>Due Date/Time</Label>
                     <Input
                       type='datetime-local'
-                      value={taskAssignedDateTime}
-                      onChange={(e) => setTaskAssignedDateTime(e.target.value)}
+                      value={taskDueDateTime}
+                      onChange={(e) => setTaskDueDateTime(e.target.value)}
                       disabled={!userCanEdit}
                       className='h-9 text-xs'
                     />
                   </div>
-                </div>
-                <div className='grid grid-cols-2 gap-4'>
+
                   <div className='space-y-1.5'>
-                    <Label className='text-xs font-medium'>
-                      Targeted Account Status
-                    </Label>
-                    <Select
-                      key={`task-status-${taskId}-${targetAccountStatus}`}
-                      value={targetAccountStatus}
-                      onValueChange={(val: TargetAccountStatus) =>
-                        setTargetAccountStatus(val)
-                      }
+                    <Label className='text-xs font-medium'>Description</Label>
+                    <Textarea
+                      value={taskDescription}
+                      onChange={(e) => setTaskDescription(e.target.value)}
                       disabled={!userCanEdit}
-                    >
-                      <SelectTrigger className='h-9 text-xs'>
-                        <SelectValue placeholder='Select Task Status' />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {targetAccountStatusOptions.map((opt) => (
-                          <SelectItem
-                            key={opt.value}
-                            value={opt.value}
-                            disabled={opt.disabled}
-                          >
-                            {opt.value}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                      rows={3}
+                      className='text-xs resize-none'
+                    />
                   </div>
 
-                  <div className='space-y-1.5'>
-                    <Label className='text-xs font-medium'>
-                      Target Call Back Date/Time
-                    </Label>
-                    <div className='space-y-1.5'>
-                      <DateField
-                        value={targetCallBackDateTime}
-                        isEdit={userCanEdit}
-                        showTime={true}
-                        disablePast={true}
-                        maxDate={
-                          targetAccountStatus === 'On Hold'
-                            ? undefined
-                            : new Date(Date.now() + 48 * 60 * 60 * 1000)
-                        }
-                        onChange={(d) => setTargetCallBackDateTime(d)}
-                      />
-                    </div>
-                  </div>
-                </div>
-                <div className='space-y-1.5'>
-                  <Label className='text-xs font-medium'>Due Date/Time</Label>
-                  <Input
-                    type='datetime-local'
-                    value={taskDueDateTime}
-                    onChange={(e) => setTaskDueDateTime(e.target.value)}
-                    disabled={!userCanEdit}
-                    className='h-9 text-xs'
-                  />
-                </div>
-
-                <div className='space-y-1.5'>
-                  <Label className='text-xs font-medium'>Description</Label>
-                  <Textarea
-                    value={taskDescription}
-                    onChange={(e) => setTaskDescription(e.target.value)}
-                    disabled={!userCanEdit}
-                    rows={3}
-                    className='text-xs resize-none'
-                  />
-                </div>
-
-                <DialogFooter className='pt-2 gap-2 flex-wrap'>
-                  <Button type='button' variant='outline' onClick={onClose}>
-                    Close
-                  </Button>
-
-                  {taskStatus !== 'Completed' && isAccountOwner && (
-                    <Button
-                      type='button'
-                      className='bg-green-600 hover:bg-green-700 text-white'
-                      onClick={() => markAsCompletedMutation.mutate()}
-                      disabled={markAsCompletedMutation.isPending}
-                    >
-                      <CheckCircle2 className='w-4 h-4 mr-1.5' />
-                      {markAsCompletedMutation.isPending
-                        ? 'Marking...'
-                        : 'Mark as Completed'}
+                  <DialogFooter className='pt-2 gap-2 flex-wrap'>
+                    <Button type='button' variant='outline' onClick={onClose}>
+                      Close
                     </Button>
-                  )}
 
-                  {canEditStatus && (
-                    <Button type='submit' disabled={updateMutation.isPending}>
-                      {updateMutation.isPending ? 'Saving...' : 'Save Changes'}
-                    </Button>
-                  )}
-                </DialogFooter>
-              </form>
+                    {taskStatus !== 'Completed' && isAccountOwner && (
+                      <Button
+                        type='button'
+                        className='bg-green-600 hover:bg-green-700 text-white'
+                        onClick={() => markAsCompletedMutation.mutate()}
+                        disabled={markAsCompletedMutation.isPending}
+                      >
+                        <CheckCircle2 className='w-4 h-4 mr-1.5' />
+                        {markAsCompletedMutation.isPending
+                          ? 'Marking...'
+                          : 'Mark as Completed'}
+                      </Button>
+                    )}
+
+                    {canEditStatus && (
+                      <Button type='submit' disabled={updateMutation.isPending}>
+                        {updateMutation.isPending
+                          ? 'Saving...'
+                          : 'Save Changes'}
+                      </Button>
+                    )}
+                  </DialogFooter>
+                </form>
+              </div>
             </TabsContent>
 
             {/* Notes Tab */}
