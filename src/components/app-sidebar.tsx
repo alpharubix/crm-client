@@ -41,7 +41,7 @@ const data = {
   ],
   navMain: [
     {
-      title: 'Accounts & Tasks',
+      title: 'Accounts',
       url: '#',
       icon: Building2,
       items: [
@@ -60,7 +60,7 @@ const data = {
       ],
     },
     {
-      title: 'Deals & Pipeline',
+      title: 'Deals',
       url: '#',
       icon: Briefcase,
       items: [
@@ -71,6 +71,10 @@ const data = {
         {
           title: 'Deals Kanban',
           url: '/kanban-deals',
+        },
+        {
+          title: 'Deal Tasks',
+          url: '/deal-tasks',
         },
       ],
     },
@@ -191,9 +195,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
     rawRole.includes('super_admin') ||
     rawRole.includes('superadmin');
   const isAdminOrSuperAdmin =
-    isSuperAdmin ||
-    ['admin'].includes(rawRole) ||
-    rawRole.includes('admin');
+    isSuperAdmin || ['admin'].includes(rawRole) || rawRole.includes('admin');
 
   // Isolate user identity signatures
   const isSarada = currentUserId === '3899927000000221552';
@@ -260,7 +262,10 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                 items = items?.filter((subItem) => subItem.url === '/hiring');
               } else {
                 items = items?.filter((subItem) => {
-                  if (subItem.url === '/acc-status-journey' && !isAdminOrSuperAdmin) {
+                  if (
+                    subItem.url === '/acc-status-journey' &&
+                    !isAdminOrSuperAdmin
+                  ) {
                     return false;
                   }
                   return true;
