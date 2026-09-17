@@ -1,55 +1,45 @@
-import { useState, useEffect } from 'react';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { toast } from 'sonner';
+import { useState, useEffect } from 'react'
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import { toast } from 'sonner'
 import {
   Dialog,
   DialogContent,
   DialogHeader,
   DialogTitle,
   DialogFooter,
-} from '@/components/ui/dialog';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
-import { Badge } from '@/components/ui/badge';
-import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
+} from '@/components/ui/dialog'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import { Textarea } from '@/components/ui/textarea'
+import { Badge } from '@/components/ui/badge'
+import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs'
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from '@/components/ui/select';
-import { ENV } from '@/conf';
-import type {
-  AccountTask,
-  TaskType,
-  TaskStatus,
-  TargetAccountStatus,
-} from '@/types/account-task';
+} from '@/components/ui/select'
+import { ENV } from '@/conf'
+import type { DealTask, TaskType, TaskStatus } from '@/types/deal-task'
 import {
   MessageSquare,
-  Plus,
   Send,
   CheckCircle2,
-  Building2,
-  ShieldAlert,
-  AlertTriangle,
+  Briefcase,
   Clock,
-  XCircle,
-  History,
-} from 'lucide-react';
-import { useAuth } from '@/context/auth-context';
-import users from '@/utils/users.json';
-import DateField from '../shared/date-field';
-import usersData from '@/utils/users.json';
-import { extractErrorMessage } from '@/utils/error-extractor';
+} from 'lucide-react'
+import { useAuth } from '@/context/auth-context'
+import users from '@/utils/users.json'
+import usersData from '@/utils/users.json'
+import { extractErrorMessage } from '@/utils/error-extractor'
+import { DEAL_STATUS_OPTIONS } from './create-deal-task-modal'
 
 function formatDate(dateStr?: string | null): string {
-  if (!dateStr) return 'N/A';
-  const dt = new Date(dateStr);
-  if (isNaN(dt.getTime())) return dateStr;
+  if (!dateStr) return 'N/A'
+  const dt = new Date(dateStr)
+  if (isNaN(dt.getTime())) return dateStr
   return dt.toLocaleString('en-IN', {
     day: '2-digit',
     month: 'short',
@@ -57,169 +47,13 @@ function formatDate(dateStr?: string | null): string {
     hour: '2-digit',
     minute: '2-digit',
     hour12: true,
-  });
-}
-
-function getOverdueDetails(callBackDateTimeStr?: string | null) {
-  if (!callBackDateTimeStr) {
-    return {
-      isOverdue: false,
-      hasDate: false,
-      days: 0,
-      hours: 0,
-      label: 'No Call Back Date Set',
-      badgeClass:
-        'bg-muted text-muted-foreground border-border dark:bg-muted/50',
-    };
-  }
-  const callBackDate = new Date(callBackDateTimeStr);
-  if (isNaN(callBackDate.getTime())) {
-    return {
-      isOverdue: false,
-      hasDate: false,
-      days: 0,
-      hours: 0,
-      label: 'Invalid Date',
-      badgeClass:
-        'bg-muted text-muted-foreground border-border dark:bg-muted/50',
-    };
-  }
-  const now = new Date();
-  const diffMs = now.getTime() - callBackDate.getTime();
-
-  if (diffMs > 0) {
-    const days = Math.floor(diffMs / (1000 * 60 * 60 * 24));
-    const hours = Math.floor(
-      (diffMs % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60),
-    );
-    const minutes = Math.floor((diffMs % (1000 * 60 * 60)) / (1000 * 60));
-
-    let label = '';
-    if (days > 0) {
-      label = `${days} day${days > 1 ? 's' : ''}${hours > 0 ? ` ${hours} hr${hours > 1 ? 's' : ''}` : ''} overdue`;
-    } else if (hours > 0) {
-      label = `${hours} hr${hours > 1 ? 's' : ''} overdue`;
-    } else {
-      label = `${minutes} min overdue`;
-    }
-
-    return {
-      isOverdue: true,
-      hasDate: true,
-      days,
-      hours,
-      label,
-      badgeClass:
-        'bg-red-50 text-red-700 border-red-200 dark:bg-red-950/40 dark:text-red-300 dark:border-red-800',
-    };
-  } else {
-    const futureMs = callBackDate.getTime() - now.getTime();
-    const futureDays = Math.floor(futureMs / (1000 * 60 * 60 * 24));
-    const futureHours = Math.floor(
-      (futureMs % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60),
-    );
-
-    let label = '';
-    if (futureDays > 0) {
-      label = `Due in ${futureDays} day${futureDays > 1 ? 's' : ''}`;
-    } else if (futureHours > 0) {
-      label = `Due in ${futureHours} hr${futureHours > 1 ? 's' : ''}`;
-    } else {
-      label = 'Due now';
-    }
-
-    return {
-      isOverdue: false,
-      hasDate: true,
-      days: 0,
-      hours: 0,
-      label,
-      badgeClass:
-        'bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-950/40 dark:text-emerald-300 dark:border-emerald-800',
-    };
-  }
-}
-
-function getContactEstablishedAudit(accountData?: any) {
-  if (!accountData) {
-    return {
-      isCurrent: false,
-      hasStayed: false,
-      currentStatus: 'N/A',
-      stayedDuration: '0d',
-      stepsCount: 0,
-      steps: [] as any[],
-      journey: [] as any[],
-    };
-  }
-
-  const currentStatus = String(accountData.account_status || '').trim();
-  const isCurrent = currentStatus.toLowerCase() === 'contact established';
-
-  const journey: any[] =
-    accountData.status_journey || accountData.journey || [];
-
-  const matchedSteps = journey.filter(
-    (s: any) =>
-      String(s?.name || '')
-        .toLowerCase()
-        .trim() === 'contact established',
-  );
-
-  const hasStayed = matchedSteps.length > 0;
-
-  // Aggregate duration across all Contact Established steps
-  let totalMinutes = 0;
-  matchedSteps.forEach((s: any) => {
-    if (s.duration) {
-      const dayMatch = String(s.duration).match(/(\d+)\s*d/i);
-      const hourMatch = String(s.duration).match(/(\d+)\s*h/i);
-      const minMatch = String(s.duration).match(/(\d+)\s*m/i);
-      let mins = 0;
-      if (dayMatch) mins += parseInt(dayMatch[1], 10) * 24 * 60;
-      if (hourMatch) mins += parseInt(hourMatch[1], 10) * 60;
-      if (minMatch) mins += parseInt(minMatch[1], 10);
-      totalMinutes += mins > 0 ? mins : 0;
-    }
-  });
-
-  let formattedDuration = '';
-  if (totalMinutes >= 1440) {
-    const days = Math.floor(totalMinutes / 1440);
-    const hours = Math.floor((totalMinutes % 1440) / 60);
-    formattedDuration = hours > 0 ? `${days}d ${hours}h` : `${days}d`;
-  } else if (totalMinutes >= 60) {
-    const hours = Math.floor(totalMinutes / 60);
-    const mins = totalMinutes % 60;
-    formattedDuration = mins > 0 ? `${hours}h ${mins}m` : `${hours}h`;
-  } else if (totalMinutes > 0) {
-    formattedDuration = `${totalMinutes}m`;
-  } else if (matchedSteps.length > 0) {
-    formattedDuration = matchedSteps
-      .map((s: any) => s.duration)
-      .filter(Boolean)
-      .join(', ');
-  } else if (isCurrent) {
-    formattedDuration = 'Current';
-  } else {
-    formattedDuration = '0d';
-  }
-
-  return {
-    isCurrent,
-    hasStayed,
-    currentStatus,
-    stayedDuration: formattedDuration || '0d',
-    stepsCount: matchedSteps.length,
-    steps: matchedSteps,
-    journey,
-  };
+  })
 }
 
 interface UpdateDealTaskModalProps {
-  taskId: string | number | null;
-  isOpen: boolean;
-  onClose: () => void;
+  taskId: string | number | null
+  isOpen: boolean
+  onClose: () => void
 }
 
 export default function UpdateDealTaskModal({
@@ -227,151 +61,73 @@ export default function UpdateDealTaskModal({
   isOpen,
   onClose,
 }: UpdateDealTaskModalProps) {
-  const queryClient = useQueryClient();
-  const { user } = useAuth();
-  const role = String(user?.role || '').toLowerCase();
-  const rawRole = String(user?.role || '')
-    .toLowerCase()
-    .trim()
-    .replace(/\s+/g, '_');
-  const isAdminOrSuperAdmin =
-    ['super_admin', 'superadmin', 'admin'].includes(rawRole) ||
-    rawRole.includes('admin') ||
-    rawRole.includes('super_admin');
-  const canEditFields = ['super_admin', 'admin', 'manager'].includes(role);
+  const queryClient = useQueryClient()
+  const { user } = useAuth()
+  const role = String(user?.role || '').toLowerCase()
+  const canEditFields = ['super_admin', 'admin', 'manager'].includes(role)
 
-  const [taskType, setTaskType] = useState<TaskType>('Call');
-  const [taskStatus, setTaskStatus] = useState<TaskStatus>('');
-  const [targetAccountStatus, setTargetAccountStatus] =
-    useState<TargetAccountStatus>('');
-  const [targetCallBackDateTime, setTargetCallBackDateTime] = useState<Date>();
-  const [taskDescription, setTaskDescription] = useState('');
-  const [taskAssignedDateTime, setTaskAssignedDateTime] = useState('');
-  const [taskDueDateTime, setTaskDueDateTime] = useState('');
-  const [newNote, setNewNote] = useState('');
-  const [isAddingNote, setIsAddingNote] = useState(false);
+  const [taskType, setTaskType] = useState<TaskType>('Call')
+  const [taskStatus, setTaskStatus] = useState<TaskStatus>('Unassigned')
+  const [targetDealStatus, setTargetDealStatus] = useState<string>('')
+  const [taskDescription, setTaskDescription] = useState('')
+  const [taskAssignedDateTime, setTaskAssignedDateTime] = useState('')
+  const [taskDueDateTime, setTaskDueDateTime] = useState('')
 
-  // Fetch task details
+  // Tab State
+  const [activeTab, setActiveTab] = useState<'details' | 'notes'>('details')
+
+  // New Note State
+  const [newNote, setNewNote] = useState('')
+  const [isAddingNote, setIsAddingNote] = useState(false)
+
+  // Fetch Task Details
   const { data: taskData, isLoading } = useQuery({
-    queryKey: ['account-task-detail', taskId],
+    queryKey: ['deal-task-detail', taskId],
     queryFn: async () => {
-      if (!taskId) return null;
+      if (!taskId) return null
       const res = await fetch(
-        `${ENV.VITE_BACKEND_BASE_URL}/account-tasks/${taskId}`,
+        `${ENV.VITE_BACKEND_BASE_URL}/deal-tasks/${taskId}`,
         {
           credentials: 'include',
         },
-      );
-      if (!res.ok) throw new Error('Failed to fetch task details');
-      return res.json() as Promise<AccountTask>;
+      )
+      if (!res.ok) throw new Error('Failed to fetch deal task details')
+      return res.json() as Promise<DealTask>
     },
     enabled: !!taskId && isOpen,
-  });
+  })
 
-  const notesData = (taskData as any)?.notes || [];
-
-  // Query Account notes directly for the Account Information panel
-  const accountIdForNotes = taskData?.account_id;
-  const { data: accountNotesRes } = useQuery({
-    queryKey: ['account-direct-notes', accountIdForNotes],
-    queryFn: async () => {
-      if (!accountIdForNotes) return [];
-      const res = await fetch(
-        `${ENV.VITE_BACKEND_BASE_URL}/notes/${accountIdForNotes}`,
-        { credentials: 'include' },
-      );
-      if (!res.ok) return [];
-      const data = await res.json();
-      return data.data || [];
-    },
-    enabled: !!accountIdForNotes && isOpen,
-  });
-
-  const lastAccountNote =
-    accountNotesRes && accountNotesRes.length > 0
-      ? [...accountNotesRes].sort(
-          (a: any, b: any) =>
-            new Date(
-              b.Created_Time || b.Created_time || b.created_at || 0,
-            ).getTime() -
-            new Date(
-              a.Created_Time || a.Created_time || a.created_at || 0,
-            ).getTime(),
-        )[0]
-      : null;
-
-  // Query account details for Audit View
-  const accountId = taskData?.account_id;
-  const { data: selectedAccountDetails } = useQuery({
-    queryKey: ['account-details-for-task', accountId],
-    queryFn: async () => {
-      if (!accountId) return null;
-      const res = await fetch(
-        `${ENV.VITE_BACKEND_BASE_URL}/accounts?account_id=${accountId}`,
-        { credentials: 'include' },
-      );
-      if (!res.ok) return null;
-      return res.json();
-    },
-    enabled: !!accountId && isOpen,
-    staleTime: 0,
-  });
-
-  const accountData = selectedAccountDetails?.data?.[0];
-  const rawBusinessStatus = accountData?.business_status;
-  const isBusinessStatusActive = Boolean(
-    rawBusinessStatus === true ||
-    String(rawBusinessStatus).toLowerCase() === 'true' ||
-    String(rawBusinessStatus).toLowerCase() === 'active' ||
-    (rawBusinessStatus &&
-      String(rawBusinessStatus).trim() !== '' &&
-      String(rawBusinessStatus).toLowerCase() !== 'inactive'),
-  );
-  const overdueInfo = getOverdueDetails(
-    accountData?.call_back_date_time || taskData?.call_back_date_time,
-  );
-  const contactAudit = getContactEstablishedAudit(accountData);
+  const notesData = (taskData as any)?.notes || []
 
   const toLocalISOString = (dateInput?: string | Date | null) => {
-    if (!dateInput) return '';
-    const dt = typeof dateInput === 'string' ? new Date(dateInput) : dateInput;
-    if (isNaN(dt.getTime())) return '';
-    const offset = dt.getTimezoneOffset() * 60000;
-    return new Date(dt.getTime() - offset).toISOString().slice(0, 16);
-  };
+    if (!dateInput) return ''
+    const dt = typeof dateInput === 'string' ? new Date(dateInput) : dateInput
+    if (isNaN(dt.getTime())) return ''
+    const offset = dt.getTimezoneOffset() * 60000
+    return new Date(dt.getTime() - offset).toISOString().slice(0, 16)
+  }
 
   useEffect(() => {
     if (taskData && isOpen) {
-      setTaskType(taskData.task_type as TaskType);
-      setTaskStatus(taskData.task_status as TaskStatus);
-      setTaskDescription(taskData.task_description || '');
-      setTargetAccountStatus(
-        taskData.target_account_status as TargetAccountStatus,
-      );
-      if (taskData.target_call_back_date_time) {
-        const d = new Date(taskData.target_call_back_date_time);
-        setTargetCallBackDateTime(!isNaN(d.getTime()) ? d : undefined);
-      } else {
-        setTargetCallBackDateTime(undefined);
-      }
+      setTaskType(taskData.task_type as TaskType)
+      setTaskStatus(taskData.task_status as TaskStatus)
+      setTaskDescription(taskData.task_description || '')
+      setTargetDealStatus(taskData.target_deal_status || '')
       setTaskAssignedDateTime(
         toLocalISOString(taskData.task_assigned_date_time),
-      );
-      setTaskDueDateTime(toLocalISOString(taskData.task_due_date_time));
+      )
+      setTaskDueDateTime(toLocalISOString(taskData.task_due_date_time))
     }
-  }, [taskData, isOpen, taskId]);
+  }, [taskData, isOpen, taskId])
 
   const updateMutation = useMutation({
     mutationFn: async () => {
-      if (!taskId) return;
-      const payload = {
+      if (!taskId) return
+      const payload: any = {
         task_type: taskType,
         task_status: taskStatus,
         task_description: taskDescription,
-        target_account_status: targetAccountStatus,
-        target_call_back_date_time: targetCallBackDateTime
-          ? new Date(targetCallBackDateTime).toISOString()
-          : null,
+        target_deal_status: targetDealStatus || null,
         task_assigned_date_time:
           taskStatus === 'Assigned' && !taskAssignedDateTime
             ? new Date().toISOString()
@@ -383,84 +139,86 @@ export default function UpdateDealTaskModal({
         task_due_date_time: taskDueDateTime
           ? new Date(taskDueDateTime).toISOString()
           : null,
-      };
+      }
 
       const res = await fetch(
-        `${ENV.VITE_BACKEND_BASE_URL}/account-tasks/${taskId}`,
+        `${ENV.VITE_BACKEND_BASE_URL}/deal-tasks/${taskId}`,
         {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
           credentials: 'include',
           body: JSON.stringify(payload),
         },
-      );
+      )
 
       if (!res.ok) {
-        const errorData = await res.json().catch(() => null);
+        const errorData = await res.json().catch(() => null)
         throw new Error(
-          extractErrorMessage(errorData, 'Failed to update task'),
-        );
+          extractErrorMessage(errorData, 'Failed to update deal task'),
+        )
       }
-      return res.json();
+      return res.json()
     },
     onSuccess: () => {
-      toast.success('Account Task updated successfully');
-      queryClient.invalidateQueries({ queryKey: ['account-tasks'] });
+      toast.success('Deal Task updated successfully')
+      queryClient.invalidateQueries({ queryKey: ['deal-tasks'] })
+      queryClient.invalidateQueries({ queryKey: ['deal-tasks-list'] })
       queryClient.invalidateQueries({
-        queryKey: ['account-task-detail', taskId],
-      });
-      onClose();
+        queryKey: ['deal-task-detail', taskId],
+      })
+      onClose()
     },
     onError: (err: any) => {
-      toast.error(err?.message || 'Failed to update task');
+      toast.error(err?.message || 'Failed to update deal task')
     },
-  });
+  })
 
   const markAsCompletedMutation = useMutation({
     mutationFn: async () => {
-      if (!taskId) return;
+      if (!taskId) return
       const payload = {
         task_status: 'Completed',
-        target_account_status: targetAccountStatus,
-        target_call_back_date_time: targetCallBackDateTime
-          ? new Date(targetCallBackDateTime).toISOString()
-          : null,
-      };
+        target_deal_status: targetDealStatus || null,
+      }
       const res = await fetch(
-        `${ENV.VITE_BACKEND_BASE_URL}/account-tasks/${taskId}`,
+        `${ENV.VITE_BACKEND_BASE_URL}/deal-tasks/${taskId}`,
         {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
           credentials: 'include',
           body: JSON.stringify(payload),
         },
-      );
+      )
 
       if (!res.ok) {
-        const errorData = await res.json().catch(() => null);
+        const errorData = await res.json().catch(() => null)
         throw new Error(
-          extractErrorMessage(errorData, 'Failed to mark task as completed'),
-        );
+          extractErrorMessage(
+            errorData,
+            'Failed to mark deal task as completed',
+          ),
+        )
       }
-      return res.json();
+      return res.json()
     },
     onSuccess: () => {
-      toast.success('Task marked as Completed!');
-      queryClient.invalidateQueries({ queryKey: ['account-tasks'] });
+      toast.success('Deal Task marked as Completed!')
+      queryClient.invalidateQueries({ queryKey: ['deal-tasks'] })
+      queryClient.invalidateQueries({ queryKey: ['deal-tasks-list'] })
       queryClient.invalidateQueries({
-        queryKey: ['account-task-detail', taskId],
-      });
-      onClose();
+        queryKey: ['deal-task-detail', taskId],
+      })
+      onClose()
     },
     onError: (err: any) => {
-      toast.error(err?.message || 'Failed to mark task as completed');
+      toast.error(err?.message || 'Failed to mark deal task as completed')
     },
-  });
+  })
 
   const handleAddNote = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!newNote.trim() || !taskId) return;
-    setIsAddingNote(true);
+    e.preventDefault()
+    if (!newNote.trim() || !taskId) return
+    setIsAddingNote(true)
 
     try {
       const res = await fetch(`${ENV.VITE_BACKEND_BASE_URL}/notes`, {
@@ -470,53 +228,45 @@ export default function UpdateDealTaskModal({
         body: JSON.stringify({
           id: taskId.toString(),
           note: newNote,
-          module: 'Account_Tasks',
+          module: 'Deal_Tasks',
         }),
-      });
+      })
 
       if (res.ok) {
-        toast.success('Note added successfully');
-        setNewNote('');
+        toast.success('Note added successfully')
+        setNewNote('')
         queryClient.invalidateQueries({
-          queryKey: ['account-task-detail', taskId],
-        });
+          queryKey: ['deal-task-detail', taskId],
+        })
       } else {
-        toast.error('Failed to add note');
+        toast.error('Failed to add note')
       }
     } catch {
-      toast.error('Failed to add note');
+      toast.error('Failed to add note')
     } finally {
-      setIsAddingNote(false);
+      setIsAddingNote(false)
     }
-  };
+  }
+
   const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    updateMutation.mutate();
-  };
+    e.preventDefault()
+    updateMutation.mutate()
+  }
 
   const currentUserId =
-    user?.user_id || (user as any)?.id || (user as any)?.zuid;
-  const isAccountOwner = Boolean(
-    taskData?.account_owner_id &&
-    String(taskData.account_owner_id) === String(currentUserId),
-  );
+    user?.user_id || (user as any)?.id || (user as any)?.zuid
+  const isDealOwner = Boolean(
+    taskData?.deal_owner_id &&
+    String(taskData.deal_owner_id) === String(currentUserId),
+  )
   const isAssignee = Boolean(
     taskData?.assigned_to_id &&
     String(taskData.assigned_to_id) === String(currentUserId),
-  );
-  const isAdminOrManager = ['super_admin', 'admin', 'manager'].includes(role);
+  )
+  const isAdminOrManager = ['super_admin', 'admin', 'manager'].includes(role)
 
-  const canEditStatus = isAssignee || isAccountOwner || isAdminOrManager;
-  const isCompleted = taskData?.task_status === 'Completed';
-
-  const editableIds = [
-    '3899927000000201013',
-    '3899927000000282463',
-    '3899927000000434365',
-    '3899927000000484472',
-  ];
-
-  const userCanEdit = editableIds.includes(String(user?.user_id));
+  const canEditStatus = isAssignee || isDealOwner || isAdminOrManager
+  const isCompleted = taskData?.task_status === 'Completed'
 
   const allowedStatuses: TaskStatus[] = isAssignee
     ? ['Pending', 'In Progress', 'Completed', 'Verified']
@@ -528,7 +278,7 @@ export default function UpdateDealTaskModal({
         'Completed',
         'Verified',
         'Overdue',
-      ];
+      ]
 
   const statusOptions =
     isAssignee && !allowedStatuses.includes(taskStatus)
@@ -536,59 +286,13 @@ export default function UpdateDealTaskModal({
           { value: taskStatus, disabled: true },
           ...allowedStatuses.map((s) => ({ value: s, disabled: false })),
         ]
-      : allowedStatuses.map((s) => ({ value: s, disabled: false }));
-
-  const allowedTargetAccountStatuses: TargetAccountStatus[] = isAssignee
-    ? [
-        'Yet to be dialed',
-        'Wrong Number',
-        'Contact Established',
-        'Contact Not Established',
-        'Awareness',
-        'Attention',
-        'Assessment',
-        'Lender Review',
-        'On Hold',
-        'Not Interested',
-        'Location Unserviceable',
-        'Business Closed',
-        'N/A',
-      ]
-    : [
-        'Yet to be dialed',
-        'Wrong Number',
-        'Contact Established',
-        'Contact Not Established',
-        'Awareness',
-        'Attention',
-        'Assessment',
-        'Lender Review',
-        'On Hold',
-        'Not Interested',
-        'Location Unserviceable',
-        'Business Closed',
-        'N/A',
-      ];
-
-  const targetAccountStatusOptions =
-    isAssignee && !allowedTargetAccountStatuses.includes(targetAccountStatus)
-      ? [
-          { value: targetAccountStatus, disabled: true },
-          ...allowedTargetAccountStatuses.map((s) => ({
-            value: s,
-            disabled: false,
-          })),
-        ]
-      : allowedTargetAccountStatuses.map((s) => ({
-          value: s,
-          disabled: false,
-        }));
+      : allowedStatuses.map((s) => ({ value: s, disabled: false }))
 
   function renderMentions(text: string) {
     return text.replace(/crm\[user#([^\]]+)\]crm/g, (_, userId) => {
-      const userName = (usersData as Record<string, string>)[userId];
-      return userName ? `@${userName}` : '@Unknown User';
-    });
+      const userName = (usersData as Record<string, string>)[userId]
+      return userName ? `@${userName}` : '@Unknown User'
+    })
   }
 
   return (
@@ -596,622 +300,391 @@ export default function UpdateDealTaskModal({
       <DialogContent className='sm:max-w-[650px] max-h-[90vh] overflow-y-auto'>
         <DialogHeader>
           <DialogTitle className='flex items-center justify-between pr-6'>
-            <span>Task #{taskId} Details</span>
+            <span>Deal Task #{taskId} Details</span>
             {taskData?.call_back_date_status && (
-              <Badge variant='outline' className='text-xs font-normal'>
-                Call Back: {taskData.call_back_date_status}
+              <Badge variant='outline' className='text-xs'>
+                {taskData.call_back_date_status}
               </Badge>
             )}
           </DialogTitle>
         </DialogHeader>
 
-        {isLoading ? (
-          <div className='py-8 text-center text-muted-foreground'>
-            Loading task details...
-          </div>
-        ) : (
-          <Tabs defaultValue='details' className='w-full mt-2'>
-            <TabsList className='w-full grid grid-cols-2'>
-              <TabsTrigger value='details'>Task Overview & Edit</TabsTrigger>
-              <TabsTrigger value='notes'>
-                Notes ({notesData?.length || 0})
-              </TabsTrigger>
-            </TabsList>
+        {/* Readonly Deal Information Panel */}
+        {taskData && (
+          <div className='bg-linear-to-br from-card via-muted/30 to-muted/50 p-3.5 rounded-xl border shadow-xs space-y-3 mt-2'>
+            <div className='flex items-center justify-between border-b border-border/60 pb-2'>
+              <div className='flex items-center gap-2'>
+                <Briefcase className='w-4 h-4 text-primary' />
+                <span className='font-semibold text-xs uppercase tracking-wider text-muted-foreground'>
+                  Deal Information
+                </span>
+              </div>
+              <div className='flex items-center gap-1.5 flex-wrap'>
+                <Badge
+                  variant='outline'
+                  className='text-[10px] font-mono bg-background/80'
+                >
+                  Deal #{taskData.deal_id}
+                </Badge>
+                <Badge variant='secondary' className='text-[10px] font-mono'>
+                  Module: Deal
+                </Badge>
+              </div>
+            </div>
 
-            {/* Overview / Edit Tab */}
-            <TabsContent value='details' className='pt-3 space-y-4'>
-              {/* Linked Account Readonly Summary Panel with 9 Fields */}
-              <div className='bg-linear-to-br from-card via-muted/30 to-muted/50 p-3.5 rounded-xl border shadow-xs space-y-3'>
-                <div className='flex items-center justify-between border-b border-border/60 pb-2'>
-                  <div className='flex items-center gap-2'>
-                    <Building2 className='w-4 h-4 text-primary' />
-                    <span className='font-semibold text-xs uppercase tracking-wider text-muted-foreground'>
-                      Account Information
-                    </span>
-                  </div>
-                  <div className='flex items-center gap-1.5 flex-wrap'>
-                    <Badge
-                      variant='outline'
-                      className='text-[10px] font-mono bg-background/80'
-                    >
-                      Record #{taskData?.account_id || 'N/A'}
-                    </Badge>
-                    <Badge
-                      variant='secondary'
-                      className='text-[10px] font-mono'
-                    >
-                      Module: {taskData?.module_name || 'Account'}
-                    </Badge>
-                  </div>
-                </div>
-
-                <div className='grid grid-cols-2 sm:grid-cols-3 gap-2.5 text-xs'>
-                  <div>
-                    <span className='text-muted-foreground text-[11px] font-medium block'>
-                      Account Name
-                    </span>
-                    <span
-                      className='font-semibold text-foreground truncate block'
-                      title={taskData?.account_name}
-                    >
-                      {taskData?.account_name || 'N/A'}
-                    </span>
-                  </div>
-
-                  <div>
-                    <span className='text-muted-foreground text-[11px] font-medium block'>
-                      Created By
-                    </span>
-                    <span
-                      className='font-semibold text-foreground truncate block'
-                      title={taskData?.created_by_id}
-                    >
-                      {(users as Record<string, string>)[
-                        taskData?.created_by_id
-                      ] || 'N/A'}
-                    </span>
-                  </div>
-
-                  <div>
-                    <span className='text-muted-foreground text-[11px] font-medium block'>
-                      Account Owner
-                    </span>
-                    <span
-                      className='font-semibold text-foreground truncate block'
-                      title={taskData?.account_owner}
-                    >
-                      {taskData?.account_owner || 'Unassigned'}
-                    </span>
-                  </div>
-
-                  <div>
-                    <span className='text-muted-foreground text-[11px] font-medium block'>
-                      Assigned Date & Time
-                    </span>
-                    <span
-                      className='font-medium text-foreground/90 truncate block'
-                      title={formatDate(taskData?.account_assigned_date_time)}
-                    >
-                      {formatDate(taskData?.account_assigned_date_time)}
-                    </span>
-                  </div>
-
-                  <div>
-                    <span className='text-muted-foreground text-[11px] font-medium block'>
-                      Account Status
-                    </span>
-                    <Badge
-                      variant='outline'
-                      className='mt-0.5 text-[10px] font-medium bg-blue-50/60 text-blue-700 border-blue-200'
-                    >
-                      {taskData?.account_status || 'N/A'}
-                    </Badge>
-                  </div>
-
-                  <div>
-                    <span className='text-muted-foreground text-[11px] font-medium block'>
-                      Call Back Date
-                    </span>
-                    <span
-                      className='font-medium text-foreground/90 truncate block'
-                      title={
-                        formatDate(taskData?.call_back_date_time) !== 'N/A'
-                          ? formatDate(taskData?.call_back_date_time)
-                          : taskData?.call_back_date_status
-                      }
-                    >
-                      {formatDate(taskData?.call_back_date_time) !== 'N/A'
-                        ? formatDate(taskData?.call_back_date_time)
-                        : taskData?.call_back_date_status || 'N/A'}
-                    </span>
-                  </div>
-                </div>
-
-                {/* Last Account Note Section */}
-                <div className='mt-2.5 pt-2.5 border-t border-border/60 bg-background/90 p-2.5 rounded-lg border space-y-1.5'>
-                  <div className='flex items-center justify-between text-[11px] text-muted-foreground'>
-                    <span className='font-semibold flex items-center gap-1.5 text-foreground'>
-                      <MessageSquare className='w-3.5 h-3.5 text-primary' />{' '}
-                      Last Account Note
-                      {lastAccountNote?.Owner?.first_name ||
-                      lastAccountNote?.Created_By?.name ? (
-                        <span className='font-normal text-muted-foreground'>
-                          by{' '}
-                          {lastAccountNote?.Owner?.first_name ||
-                            lastAccountNote?.Created_By?.name}
-                        </span>
-                      ) : null}
-                    </span>
-                    <span className='font-mono text-[10px] font-semibold text-primary bg-primary/10 px-2 py-0.5 rounded border border-primary/20'>
-                      {lastAccountNote?.Created_Time ||
-                        lastAccountNote?.Modified_Time ||
-                        'Date N/A'}
-                    </span>
-                  </div>
-                  <p className='text-xs text-foreground/90 line-clamp-3 italic bg-muted/20 p-2 rounded border border-muted/40'>
-                    {renderMentions(lastAccountNote?.Note_Content || '')}
-                  </p>
-                </div>
+            <div className='grid grid-cols-2 sm:grid-cols-3 gap-2.5 text-xs'>
+              <div>
+                <span className='text-muted-foreground text-[11px] font-medium block'>
+                  Deal Name
+                </span>
+                <span
+                  className='font-semibold text-foreground truncate block'
+                  title={taskData.deal_name || taskData.account_name}
+                >
+                  {taskData.deal_name || taskData.account_name || 'N/A'}
+                </span>
               </div>
 
-              {/* Audit View Panel (Visible only for Admin & Super Admin when account business_status is true/active) */}
-              {accountId &&
-                accountData &&
-                isAdminOrSuperAdmin &&
-                isBusinessStatusActive && (
-                  <div className='bg-linear-to-br from-card via-muted/30 to-muted/50 p-3.5 rounded-xl border shadow-xs space-y-3 mt-2'>
-                    <div className='flex items-center justify-between border-b border-border/60 pb-2'>
-                      <div className='flex items-center gap-2'>
-                        <ShieldAlert className='w-4 h-4 text-blue-500' />
-                        <span className='font-semibold text-xs uppercase tracking-wider'>
-                          Audit View
-                        </span>
-                      </div>
-                      <div className='flex items-center gap-1.5 flex-wrap'>
-                        <Badge
-                          variant='outline'
-                          className='text-[10px] font-medium '
-                        >
-                          Admin / Super Admin
-                        </Badge>
-                        <Badge
-                          variant='outline'
-                          className='text-[10px] font-medium '
-                        >
-                          Business Status:{' '}
-                          {String(rawBusinessStatus || 'Active')}
-                        </Badge>
-                      </div>
-                    </div>
+              <div>
+                <span className='text-muted-foreground text-[11px] font-medium block'>
+                  Account Name
+                </span>
+                <span className='font-semibold text-foreground truncate block'>
+                  {taskData.account_name || 'N/A'}
+                </span>
+              </div>
 
-                    <div className='grid grid-cols-2 sm:grid-cols-4 gap-2.5 text-xs'>
-                      <div>
-                        <span className='text-muted-foreground text-[11px] font-medium block'>
-                          Call Back Date & Time
-                        </span>
-                        <span className='font-semibold text-foreground truncate block'>
-                          {formatDate(
-                            accountData.call_back_date_time ||
-                              taskData?.call_back_date_time,
-                          )}
-                        </span>
-                      </div>
+              <div>
+                <span className='text-muted-foreground text-[11px] font-medium block'>
+                  Deal Owner
+                </span>
+                <span className='font-semibold text-foreground truncate block'>
+                  {taskData.deal_owner ||
+                    (usersData as Record<string, string>)[
+                      taskData.deal_owner_id || ''
+                    ] ||
+                    'Unassigned'}
+                </span>
+              </div>
 
-                      <div>
-                        <span className='text-muted-foreground text-[11px] font-medium block'>
-                          Overdue Status
-                        </span>
-                        {overdueInfo.isOverdue ? (
-                          <Badge
-                            variant='outline'
-                            className={`mt-0.5 text-[10px] font-semibold gap-1 flex items-center w-fit ${overdueInfo.badgeClass}`}
-                          >
-                            <AlertTriangle className='w-3 h-3 text-red-600' />
-                            {overdueInfo.days > 0
-                              ? `${overdueInfo.days} Day${overdueInfo.days > 1 ? 's' : ''} Overdue`
-                              : overdueInfo.label}
-                          </Badge>
-                        ) : (
-                          <Badge
-                            variant='outline'
-                            className={`mt-0.5 text-[10px] font-medium flex items-center w-fit ${overdueInfo.badgeClass}`}
-                          >
-                            <Clock className='w-3 h-3 mr-1' />
-                            {overdueInfo.label}
-                          </Badge>
-                        )}
-                      </div>
+              <div>
+                <span className='text-muted-foreground text-[11px] font-medium block'>
+                  Deal Status
+                </span>
+                <Badge
+                  variant='outline'
+                  className='mt-0.5 text-[10px] font-medium bg-blue-50/60 text-blue-700 border-blue-200'
+                >
+                  {taskData.deal_status || 'N/A'}
+                </Badge>
+              </div>
 
-                      <div>
-                        <span className='text-muted-foreground text-[11px] font-medium block'>
-                          Days Overdue
-                        </span>
-                        <span
-                          className={`font-semibold truncate block ${
-                            overdueInfo.isOverdue
-                              ? 'text-red-600 dark:text-red-400 font-bold'
-                              : 'text-foreground/80'
-                          }`}
-                        >
-                          {overdueInfo.isOverdue
-                            ? `${overdueInfo.days} day${overdueInfo.days === 1 ? '' : 's'} overdue`
-                            : overdueInfo.hasDate
-                              ? '0 days (Not Overdue)'
-                              : 'N/A'}
-                        </span>
-                      </div>
+              <div>
+                <span className='text-muted-foreground text-[11px] font-medium block'>
+                  Loan Type
+                </span>
+                <span className='font-medium text-foreground/90 truncate block'>
+                  {taskData.loan_type || 'N/A'}
+                </span>
+              </div>
 
-                      <div>
-                        <span className='text-muted-foreground text-[11px] font-medium block'>
-                          Contact Established
-                        </span>
-                        {contactAudit.isCurrent ? (
-                          <div className='space-y-0.5 mt-0.5'>
-                            <Badge
-                              variant='outline'
-                              className='text-[10px] font-semibold bg-emerald-50 text-emerald-700 border-emerald-300 dark:bg-emerald-950/40 dark:text-emerald-300 dark:border-emerald-700 flex items-center w-fit'
-                            >
-                              <CheckCircle2 className='w-3 h-3 text-emerald-600 mr-1' />
-                              Current Status
-                            </Badge>
-                            <span className='text-[11px] text-emerald-700 dark:text-emerald-400 font-medium block'>
-                              Active now ({contactAudit.stayedDuration})
-                            </span>
-                          </div>
-                        ) : contactAudit.hasStayed ? (
-                          <div className='space-y-0.5 mt-0.5'>
-                            <Badge
-                              variant='outline'
-                              className='text-[10px] font-semibold bg-blue-50 text-blue-700 border-blue-300 dark:bg-blue-950/40 dark:text-blue-300 dark:border-blue-700 flex items-center w-fit'
-                            >
-                              <History className='w-3 h-3 text-blue-600 mr-1' />
-                              Previously Stayed
-                            </Badge>
-                            <span className='text-[11px] text-blue-700 dark:text-blue-400 font-medium block'>
-                              Stayed: {contactAudit.stayedDuration}
-                            </span>
-                          </div>
-                        ) : (
-                          <div className='space-y-0.5 mt-0.5'>
-                            <Badge
-                              variant='outline'
-                              className='text-[10px] font-medium bg-muted/60 text-muted-foreground border-border flex items-center w-fit'
-                            >
-                              <XCircle className='w-3 h-3 text-muted-foreground mr-1' />
-                              Never Stayed
-                            </Badge>
-                            <span className='text-[11px] text-muted-foreground block truncate'>
-                              Current:{' '}
-                              {accountData.account_status ||
-                                taskData?.account_status ||
-                                'N/A'}
-                            </span>
-                          </div>
-                        )}
-                      </div>
-                    </div>
+              <div>
+                <span className='text-muted-foreground text-[11px] font-medium block'>
+                  Lender Name
+                </span>
+                <span className='font-medium text-foreground/90 truncate block'>
+                  {taskData.lender_name || 'N/A'}
+                </span>
+              </div>
+            </div>
+          </div>
+        )}
 
-                    {/* Status Journey History Timeline */}
-                    <div className='mt-2.5 pt-2.5 border-t border-border/60 space-y-1.5'>
-                      <div className='flex items-center justify-between text-[11px] text-muted-foreground'>
-                        <span className='font-semibold flex items-center gap-1.5 text-foreground'>
-                          <History className='w-3.5 h-3.5 text-blue-500' /> Status
-                          Journey History
-                        </span>
-                        <span>
-                          Current Status:{' '}
-                          <strong className='text-foreground font-semibold'>
-                            {accountData.account_status ||
-                              taskData?.account_status ||
-                              'N/A'}
-                          </strong>
-                        </span>
-                      </div>
+        <Tabs
+          value={activeTab}
+          onValueChange={(val: any) => setActiveTab(val)}
+          className='w-full'
+        >
+          <TabsList className='grid grid-cols-2 w-full'>
+            <TabsTrigger value='details' className='text-xs'>
+              Task Details
+            </TabsTrigger>
+            <TabsTrigger
+              value='notes'
+              className='text-xs flex items-center gap-1.5'
+            >
+              <MessageSquare className='w-3.5 h-3.5' />
+              Notes ({notesData.length})
+            </TabsTrigger>
+          </TabsList>
 
-                      {contactAudit.journey &&
-                      contactAudit.journey.length > 0 ? (
-                        <div className='flex items-center gap-1.5 flex-wrap pt-0.5'>
-                          {contactAudit.journey.map(
-                            (step: any, idx: number) => {
-                              const isCE =
-                                String(step.name || '')
-                                  .toLowerCase()
-                                  .trim() === 'contact established';
-                              return (
-                                <div
-                                  key={idx}
-                                  className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs border ${
-                                    isCE
-                                      ? 'bg-emerald-50 text-emerald-800 border-emerald-300 dark:bg-emerald-950/50 dark:text-emerald-200 dark:border-emerald-700 font-semibold ring-1 ring-emerald-400/50'
-                                      : 'bg-muted/40 text-foreground/80 border-border/70 font-medium'
-                                  }`}
-                                  title={`${step.name} (${step.duration || 'N/A'})${
-                                    step.startDate
-                                      ? ` | ${step.startDate} - ${step.endDate || 'Present'}`
-                                      : ''
-                                  }${step.updatedBy ? ` | by ${step.updatedBy}` : ''}`}
-                                >
-                                  <span
-                                    className={`w-1.5 h-1.5 rounded-full ${
-                                      isCE
-                                        ? 'bg-emerald-500'
-                                        : 'bg-muted-foreground/60'
-                                    }`}
-                                  />
-                                  <span>{step.name}</span>
-                                  <span className='text-[10px] font-mono opacity-80'>
-                                    · {step.duration || 'N/A'}
-                                  </span>
-                                  {idx < contactAudit.journey.length - 1 && (
-                                    <span className='text-muted-foreground/40 ml-1'>
-                                      →
-                                    </span>
-                                  )}
-                                </div>
-                              );
-                            },
-                          )}
-                        </div>
-                      ) : (
-                        <p className='text-xs text-muted-foreground italic'>
-                          No status journey recorded for this account.
-                        </p>
-                      )}
-                    </div>
+          <TabsContent value='details' className='mt-3 space-y-4'>
+            {isLoading ? (
+              <div className='py-8 text-center text-xs text-muted-foreground'>
+                Loading task details...
+              </div>
+            ) : (
+              <form onSubmit={handleSubmit} className='space-y-4'>
+                {/* Module Name & Deal */}
+                <div className='grid grid-cols-2 gap-4'>
+                  <div className='space-y-1.5'>
+                    <Label className='text-xs font-medium'>Module Name</Label>
+                    <Input
+                      value='Deal'
+                      disabled
+                      className='h-9 text-xs bg-muted'
+                    />
                   </div>
-                )}
 
-              <div className='bg-linear-to-br from-card via-muted/30 to-muted/50 p-3.5 rounded-xl border shadow-xs space-y-3 mt-2'>
-                <div className='text-lg font-semibold'>
-                  Account Task Information
+                  <div className='space-y-1.5'>
+                    <Label className='text-xs font-medium'>
+                      Deal / Account Name
+                    </Label>
+                    <Input
+                      value={
+                        taskData?.deal_name ||
+                        taskData?.account_name ||
+                        `Deal #${taskData?.deal_id}`
+                      }
+                      disabled
+                      className='h-9 text-xs bg-muted'
+                    />
+                  </div>
                 </div>
-                <form onSubmit={handleSubmit} className='space-y-4'>
-                  <div className='grid grid-cols-2 gap-4'>
-                    <div className='space-y-1.5'>
-                      <Label className='text-xs font-medium'>Module Name</Label>
-                      <Input
-                        value='Account'
-                        disabled
-                        className='h-9 text-xs bg-muted'
-                      />
-                    </div>
 
-                    <div className='space-y-1.5'>
-                      <Label className='text-xs font-medium'>Task Type *</Label>
-                      <Select
-                        key={`task-type-${taskId}-${taskType}`}
-                        value={taskType}
-                        onValueChange={(val: TaskType) => setTaskType(val)}
-                        disabled={!userCanEdit}
-                      >
-                        <SelectTrigger className='h-9 text-xs'>
-                          <SelectValue placeholder='Select Task Type' />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value='Call'>Call</SelectItem>
-                          <SelectItem value='Update Record'>
-                            Update Record
+                {/* Task Type & Task Status */}
+                <div className='grid grid-cols-2 gap-4'>
+                  <div className='space-y-1.5'>
+                    <Label className='text-xs font-medium'>Task Type *</Label>
+                    <Select
+                      value={taskType}
+                      onValueChange={(val: TaskType) => setTaskType(val)}
+                      disabled={!canEditFields}
+                    >
+                      <SelectTrigger className='h-9 text-xs'>
+                        <SelectValue placeholder='Select Type' />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value='Call'>Call</SelectItem>
+                        <SelectItem value='Update Record'>
+                          Update Record
+                        </SelectItem>
+                        <SelectItem value='Email'>Email</SelectItem>
+                        <SelectItem value='Move Status'>Move Status</SelectItem>
+                        <SelectItem value='Visit'>Visit</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div className='space-y-1.5'>
+                    <Label className='text-xs font-medium'>Task Status</Label>
+                    <Select
+                      value={taskStatus}
+                      onValueChange={(val: TaskStatus) => setTaskStatus(val)}
+                      disabled={!canEditStatus || isCompleted}
+                    >
+                      <SelectTrigger className='h-9 text-xs'>
+                        <SelectValue placeholder='Select Status' />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {statusOptions.map((opt) => (
+                          <SelectItem
+                            key={opt.value}
+                            value={opt.value}
+                            disabled={opt.disabled}
+                          >
+                            {opt.value}
                           </SelectItem>
-                          <SelectItem value='Email'>Email</SelectItem>
-                          <SelectItem value='Move Status'>
-                            Move Status
-                          </SelectItem>
-                          <SelectItem value='Visit'>Visit</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+
+                {/* Target Deal Status */}
+                <div className='space-y-1.5'>
+                  <Label className='text-xs font-medium'>
+                    Targeted Deal Status
+                  </Label>
+                  <Select
+                    value={targetDealStatus}
+                    onValueChange={(val: string) => setTargetDealStatus(val)}
+                    disabled={isCompleted}
+                  >
+                    <SelectTrigger className='h-9 text-xs'>
+                      <SelectValue placeholder='Select Target Deal Status' />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {DEAL_STATUS_OPTIONS.map((st) => (
+                        <SelectItem key={st} value={st}>
+                          {st}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                {/* Assigned & Due Dates */}
+                <div className='grid grid-cols-2 gap-4'>
+                  <div className='space-y-1.5'>
+                    <Label className='text-xs font-medium'>
+                      Assigned Date/Time
+                    </Label>
+                    <Input
+                      type='datetime-local'
+                      value={taskAssignedDateTime}
+                      onChange={(e) => setTaskAssignedDateTime(e.target.value)}
+                      disabled={!canEditFields || taskStatus === 'Assigned'}
+                      className='h-9 text-xs'
+                    />
                   </div>
 
-                  <div className='grid grid-cols-2 gap-4'>
-                    <div className='space-y-1.5'>
-                      <Label className='text-xs font-medium'>Task Status</Label>
-                      <Select
-                        key={`task-status-${taskId}-${taskStatus}`}
-                        value={taskStatus}
-                        onValueChange={(val: TaskStatus) => {
-                          setTaskStatus(val);
-                          if (val === 'Assigned') {
-                            if (
-                              !taskAssignedDateTime ||
-                              taskData?.task_status !== 'Assigned'
-                            ) {
-                              setTaskAssignedDateTime(
-                                toLocalISOString(new Date()),
-                              );
-                            }
-                          } else if (val === 'Unassigned') {
-                            setTaskAssignedDateTime('');
-                          }
-                        }}
-                        disabled={isCompleted}
-                      >
-                        <SelectTrigger className='h-9 text-xs'>
-                          <SelectValue placeholder='Select Task Status' />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {statusOptions.map((opt) => (
-                            <SelectItem
-                              key={opt.value}
-                              value={opt.value}
-                              disabled={opt.disabled}
-                            >
-                              {opt.value}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-
-                    <div className='space-y-1.5'>
-                      <Label className='text-xs font-medium'>
-                        Assigned Date/Time
-                      </Label>
-                      <Input
-                        type='datetime-local'
-                        value={taskAssignedDateTime}
-                        onChange={(e) =>
-                          setTaskAssignedDateTime(e.target.value)
-                        }
-                        disabled={!userCanEdit}
-                        className='h-9 text-xs'
-                      />
-                    </div>
-                  </div>
-                  <div className='grid grid-cols-2 gap-4'>
-                    <div className='space-y-1.5'>
-                      <Label className='text-xs font-medium'>
-                        Targeted Account Status
-                      </Label>
-                      <Select
-                        key={`task-status-${taskId}-${targetAccountStatus}`}
-                        value={targetAccountStatus}
-                        onValueChange={(val: TargetAccountStatus) =>
-                          setTargetAccountStatus(val)
-                        }
-                        disabled={!userCanEdit}
-                      >
-                        <SelectTrigger className='h-9 text-xs'>
-                          <SelectValue placeholder='Select Task Status' />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {targetAccountStatusOptions.map((opt) => (
-                            <SelectItem
-                              key={opt.value}
-                              value={opt.value}
-                              disabled={opt.disabled}
-                            >
-                              {opt.value}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-
-                    <div className='space-y-1.5'>
-                      <Label className='text-xs font-medium'>
-                        Target Call Back Date/Time
-                      </Label>
-                      <div className='space-y-1.5'>
-                        <DateField
-                          value={targetCallBackDateTime}
-                          isEdit={userCanEdit}
-                          showTime={true}
-                          disablePast={true}
-                          maxDate={
-                            targetAccountStatus === 'On Hold'
-                              ? undefined
-                              : new Date(Date.now() + 48 * 60 * 60 * 1000)
-                          }
-                          onChange={(d) => setTargetCallBackDateTime(d)}
-                        />
-                      </div>
-                    </div>
-                  </div>
                   <div className='space-y-1.5'>
                     <Label className='text-xs font-medium'>Due Date/Time</Label>
                     <Input
                       type='datetime-local'
                       value={taskDueDateTime}
                       onChange={(e) => setTaskDueDateTime(e.target.value)}
-                      disabled={!userCanEdit}
+                      disabled={!canEditFields}
                       className='h-9 text-xs'
                     />
                   </div>
+                </div>
 
-                  <div className='space-y-1.5'>
-                    <Label className='text-xs font-medium'>Description</Label>
-                    <Textarea
-                      value={taskDescription}
-                      onChange={(e) => setTaskDescription(e.target.value)}
-                      disabled={!userCanEdit}
-                      rows={3}
-                      className='text-xs resize-none'
-                    />
+                {/* Task Description */}
+                <div className='space-y-1.5'>
+                  <Label className='text-xs font-medium'>Description</Label>
+                  <Textarea
+                    placeholder='Enter task description...'
+                    value={taskDescription}
+                    onChange={(e) => setTaskDescription(e.target.value)}
+                    disabled={!canEditFields}
+                    className='text-xs resize-none h-20'
+                  />
+                </div>
+
+                {/* Audit Information */}
+                <div className='border-t pt-3 grid grid-cols-2 gap-2 text-xs text-muted-foreground'>
+                  <div>
+                    Created By:{' '}
+                    <span className='font-medium text-foreground'>
+                      {(users as Record<string, string>)[
+                        taskData?.created_by_id || ''
+                      ] ||
+                        taskData?.created_by_name ||
+                        'N/A'}
+                    </span>
                   </div>
+                  <div>
+                    Created At:{' '}
+                    <span className='font-medium text-foreground'>
+                      {formatDate(taskData?.created_at)}
+                    </span>
+                  </div>
+                  {taskData?.completed_at && (
+                    <div className='col-span-2 text-emerald-600 font-medium'>
+                      Completed At: {formatDate(taskData.completed_at)}
+                    </div>
+                  )}
+                </div>
 
-                  <DialogFooter className='pt-2 gap-2 flex-wrap'>
-                    <Button type='button' variant='outline' onClick={onClose}>
-                      Close
-                    </Button>
-
-                    {taskStatus !== 'Completed' && isAccountOwner && (
+                <DialogFooter className='pt-3 flex items-center justify-between'>
+                  <div>
+                    {!isCompleted && canEditStatus && (
                       <Button
                         type='button'
-                        className='bg-green-600 hover:bg-green-700 text-white'
+                        variant='default'
+                        size='sm'
                         onClick={() => markAsCompletedMutation.mutate()}
                         disabled={markAsCompletedMutation.isPending}
+                        className='bg-emerald-600 hover:bg-emerald-700 text-white gap-1.5 text-xs h-9 cursor-pointer'
                       >
-                        <CheckCircle2 className='w-4 h-4 mr-1.5' />
-                        {markAsCompletedMutation.isPending
-                          ? 'Marking...'
-                          : 'Mark as Completed'}
+                        <CheckCircle2 className='w-4 h-4' /> Mark as Completed
                       </Button>
                     )}
+                  </div>
 
-                    {canEditStatus && (
-                      <Button type='submit' disabled={updateMutation.isPending}>
+                  <div className='flex items-center gap-2'>
+                    <Button
+                      type='button'
+                      variant='outline'
+                      onClick={onClose}
+                      className='text-xs h-9 cursor-pointer'
+                    >
+                      Close
+                    </Button>
+                    {!isCompleted && (
+                      <Button
+                        type='submit'
+                        disabled={updateMutation.isPending}
+                        className='text-xs h-9 cursor-pointer'
+                      >
                         {updateMutation.isPending
                           ? 'Saving...'
                           : 'Save Changes'}
                       </Button>
                     )}
-                  </DialogFooter>
-                </form>
-              </div>
-            </TabsContent>
-
-            {/* Notes Tab */}
-            <TabsContent value='notes' className='pt-3 space-y-4'>
-              <form onSubmit={handleAddNote} className='space-y-2'>
-                <div className='flex gap-2'>
-                  <Textarea
-                    placeholder='Add a note to this task...'
-                    value={newNote}
-                    onChange={(e) => setNewNote(e.target.value)}
-                    rows={2}
-                    className='flex-1'
-                  />
-                  <Button
-                    type='submit'
-                    size='icon'
-                    className='h-auto self-end p-3'
-                    disabled={isAddingNote || !newNote.trim()}
-                  >
-                    <Send className='h-4 w-4' />
-                  </Button>
-                </div>
-              </form>
-
-              <div className='space-y-3 mt-4 max-h-60 overflow-y-auto pr-1'>
-                {notesData && notesData.length > 0 ? (
-                  notesData.map((note: any, idx: number) => (
-                    <div
-                      key={note._id || idx}
-                      className='p-3 border rounded-lg bg-card text-sm space-y-1'
-                    >
-                      <div className='flex justify-between items-center text-xs text-muted-foreground'>
-                        <span className='font-medium text-foreground'>
-                          {note.Owner?.first_name ||
-                            note.Created_By?.name ||
-                            'User'}
-                        </span>
-                        <span>{note.Created_Time || ''}</span>
-                      </div>
-                      <p className='text-foreground whitespace-pre-wrap'>
-                        {note.Note_Content}
-                      </p>
-                    </div>
-                  ))
-                ) : (
-                  <div className='text-center py-6 text-muted-foreground text-sm'>
-                    No notes available for this task yet.
                   </div>
-                )}
+                </DialogFooter>
+              </form>
+            )}
+          </TabsContent>
+
+          {/* Notes Tab */}
+          <TabsContent value='notes' className='mt-3 space-y-4'>
+            {/* Add Note Input */}
+            <form onSubmit={handleAddNote} className='space-y-2'>
+              <Textarea
+                placeholder='Add a note to this deal task...'
+                value={newNote}
+                onChange={(e) => setNewNote(e.target.value)}
+                className='text-xs resize-none h-18'
+              />
+              <div className='flex justify-end'>
+                <Button
+                  type='submit'
+                  size='sm'
+                  disabled={isAddingNote || !newNote.trim()}
+                  className='text-xs gap-1.5 cursor-pointer'
+                >
+                  <Send className='w-3 h-3' />
+                  {isAddingNote ? 'Adding...' : 'Post Note'}
+                </Button>
               </div>
-            </TabsContent>
-          </Tabs>
-        )}
+            </form>
+
+            {/* Notes List */}
+            <div className='space-y-2.5 max-h-72 overflow-y-auto pr-1'>
+              {notesData.length === 0 ? (
+                <div className='text-center py-8 text-xs text-muted-foreground'>
+                  No notes added to this task yet.
+                </div>
+              ) : (
+                notesData.map((note: any, idx: number) => (
+                  <div
+                    key={note.id || idx}
+                    className='bg-muted/40 p-3 rounded-lg border text-xs space-y-1'
+                  >
+                    <div className='flex items-center justify-between text-muted-foreground text-[11px]'>
+                      <span className='font-semibold text-foreground'>
+                        {note.Created_By?.name ||
+                          note.Owner?.first_name ||
+                          'CRM User'}
+                      </span>
+                      <span>
+                        {note.Created_Time || note.created_at || 'Recently'}
+                      </span>
+                    </div>
+                    <p className='text-foreground/90 whitespace-pre-wrap'>
+                      {renderMentions(note.Note_Content || note.note || '')}
+                    </p>
+                  </div>
+                ))
+              )}
+            </div>
+          </TabsContent>
+        </Tabs>
       </DialogContent>
     </Dialog>
-  );
+  )
 }
