@@ -266,8 +266,17 @@ export default function UpdateDealTaskModal({
   )
   const isAdminOrManager = ['super_admin', 'admin', 'manager'].includes(role)
 
-  const canEditStatus = isAssignee || isDealOwner || isAdminOrManager
-  const isCompleted = taskData?.task_status === 'Completed'
+  const canEditStatus = isAssignee || isDealOwner || isAdminOrManager;
+  const isCompleted = taskData?.task_status === 'Completed';
+
+  const editableIds = [
+    '3899927000000201013',
+    '3899927000000282463',
+    '3899927000000434365',
+    '3899927000000484472',
+  ];
+
+  const userCanEdit = editableIds.includes(String(user?.user_id));
 
   const allowedStatuses: TaskStatus[] = isAssignee
     ? ['Pending', 'In Progress', 'Completed', 'Verified']
@@ -464,7 +473,7 @@ export default function UpdateDealTaskModal({
                     <Select
                       value={taskType}
                       onValueChange={(val: TaskType) => setTaskType(val)}
-                      disabled={!canEditFields}
+                      disabled={!userCanEdit}
                     >
                       <SelectTrigger className='h-9 text-xs'>
                         <SelectValue placeholder='Select Type' />
@@ -486,10 +495,10 @@ export default function UpdateDealTaskModal({
                     <Select
                       value={taskStatus || undefined}
                       onValueChange={(val: TaskStatus) => setTaskStatus(val)}
-                      disabled={!canEditStatus || isCompleted}
+                      disabled={isCompleted}
                     >
                       <SelectTrigger className='h-9 text-xs'>
-                        <SelectValue placeholder='Select Status' />
+                          <SelectValue placeholder='Select Task Status' />
                       </SelectTrigger>
                       <SelectContent>
                         {statusOptions.map((opt) => (
@@ -514,7 +523,7 @@ export default function UpdateDealTaskModal({
                   <Select
                     value={targetDealStatus || undefined}
                     onValueChange={(val: string) => setTargetDealStatus(val)}
-                    disabled={isCompleted}
+                    disabled={!userCanEdit}
                   >
                     <SelectTrigger className='h-9 text-xs'>
                       <SelectValue placeholder='Select Target Deal Status' />
@@ -539,7 +548,7 @@ export default function UpdateDealTaskModal({
                       type='datetime-local'
                       value={taskAssignedDateTime}
                       onChange={(e) => setTaskAssignedDateTime(e.target.value)}
-                      disabled={!canEditFields || taskStatus === 'Assigned'}
+                      disabled={!userCanEdit}
                       className='h-9 text-xs'
                     />
                   </div>
@@ -550,7 +559,7 @@ export default function UpdateDealTaskModal({
                       type='datetime-local'
                       value={taskDueDateTime}
                       onChange={(e) => setTaskDueDateTime(e.target.value)}
-                      disabled={!canEditFields}
+                      disabled={!userCanEdit}
                       className='h-9 text-xs'
                     />
                   </div>
@@ -563,7 +572,7 @@ export default function UpdateDealTaskModal({
                     placeholder='Enter task description...'
                     value={taskDescription}
                     onChange={(e) => setTaskDescription(e.target.value)}
-                    disabled={!canEditFields}
+                    disabled={!userCanEdit}
                     className='text-xs resize-none h-20'
                   />
                 </div>
