@@ -25,6 +25,7 @@ import {
   GalleryVerticalEnd,
 } from 'lucide-react';
 import { useAuth } from '@/context/auth-context';
+import SailLogo from '@/assets/sail-logo-3-cropped.svg';
 
 const data = {
   user: {
@@ -41,7 +42,7 @@ const data = {
   ],
   navMain: [
     {
-      title: 'Accounts & Tasks',
+      title: 'Accounts',
       url: '#',
       icon: Building2,
       items: [
@@ -60,7 +61,7 @@ const data = {
       ],
     },
     {
-      title: 'Deals & Pipeline',
+      title: 'Deals',
       url: '#',
       icon: Briefcase,
       items: [
@@ -71,6 +72,10 @@ const data = {
         {
           title: 'Deals Kanban',
           url: '/kanban-deals',
+        },
+        {
+          title: 'Deal Tasks',
+          url: '/deal-tasks',
         },
       ],
     },
@@ -191,9 +196,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
     rawRole.includes('super_admin') ||
     rawRole.includes('superadmin');
   const isAdminOrSuperAdmin =
-    isSuperAdmin ||
-    ['admin'].includes(rawRole) ||
-    rawRole.includes('admin');
+    isSuperAdmin || ['admin'].includes(rawRole) || rawRole.includes('admin');
 
   // Isolate user identity signatures
   const isSarada = currentUserId === '3899927000000221552';
@@ -210,34 +213,26 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
     <Sidebar collapsible='icon' {...props}>
       <SidebarHeader className='border-b border-border/50'>
         <div className='flex items-center justify-between h-14 px-3 group-data-[collapsible=icon]:px-0 group-data-[collapsible=icon]:justify-center'>
-          <div className='flex items-center gap-2.5 overflow-hidden group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:w-full'>
-            {/* Logo Icon - Fixed sizing to prevent squeezing */}
-            <div className='flex h-8 w-8 min-w-8 min-h-8 aspect-square shrink-0 items-center justify-center rounded-lg bg-gradient-to-br from-blue-600 to-blue-500 text-white shadow-md shadow-blue-500/25'>
-              <svg
-                className='h-4.5 w-4.5 shrink-0'
-                viewBox='0 0 24 24'
-                fill='none'
-                stroke='currentColor'
-                strokeWidth='2.5'
-                strokeLinecap='round'
-                strokeLinejoin='round'
-              >
-                <path d='M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2' />
-                <circle cx='9' cy='7' r='4' />
-                <polyline points='16 11 18 13 22 9' />
-              </svg>
+          <div className='flex items-center gap-2 overflow-hidden group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:w-full'>
+            {/* Collapsed Icon - Shown only when sidebar is collapsed */}
+            <div className='hidden group-data-[collapsible=icon]:flex h-8 w-8 min-w-8 min-h-8 aspect-square shrink-0 items-center justify-center shadow-md shadow-blue-500/25'>
+              <img
+                src={SailLogo}
+                alt='R1X SAIL'
+                className='h-5 dark:brightness-125'
+              />
             </div>
-            {/* Brand Name */}
+
+            {/* Brand Logo - Shown only when expanded */}
             <div className='flex flex-col group-data-[collapsible=icon]:hidden min-w-0'>
-              <span className='text-base font-bold tracking-tight text-foreground leading-none'>
-                R1X <span className='text-blue-500'>CRM</span>
-              </span>
-              <span className='text-[10px] text-muted-foreground/70 leading-none mt-0.5 tracking-wide'>
-                AlphaRubix
-              </span>
+              <img
+                src={SailLogo}
+                alt='R1X SAIL'
+                className='h-14 ml-7 dark:brightness-125'
+              />
             </div>
           </div>
-          <SidebarTrigger className='group-data-[collapsible=icon]:hidden text-muted-foreground hover:text-foreground' />
+          <SidebarTrigger className='group-data-[collapsible=icon]:hidden text-muted-foreground hover:text-foreground gap-2' />
         </div>
       </SidebarHeader>
       <SidebarContent>
@@ -260,7 +255,10 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                 items = items?.filter((subItem) => subItem.url === '/hiring');
               } else {
                 items = items?.filter((subItem) => {
-                  if (subItem.url === '/acc-status-journey' && !isAdminOrSuperAdmin) {
+                  if (
+                    subItem.url === '/acc-status-journey' &&
+                    !isAdminOrSuperAdmin
+                  ) {
                     return false;
                   }
                   return true;

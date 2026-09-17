@@ -25,6 +25,7 @@ import DistributorMasterPage from './pages/distributor-master';
 // Lazy loaded pages and heavy route components
 const AccountPage = lazy(() => import('./pages/accounts-page'));
 const AccountTasksPage = lazy(() => import('./pages/account-tasks-page'));
+const DealTasksPage = lazy(()=>import('./pages/deal-tasks-page'))
 const ContactPage = lazy(() => import('./pages/contact-page'));
 const UpdateAccounts = lazy(
   () => import('./components/accounts/update-accounts'),
@@ -115,6 +116,7 @@ export default function App() {
               <Route path='/deals-create' element={<CreateDeal />} />
               {/* /deals/:id */}
               <Route path='/deals/:id' element={<UpdateDeals />} />
+              <Route path='/deal-tasks' element={<DealTasksPage />} />
               <Route path='/kanban-deals' element={<DealsKanban />} />
 
               <Route path='/tickets' element={<TicketsPage />} />
