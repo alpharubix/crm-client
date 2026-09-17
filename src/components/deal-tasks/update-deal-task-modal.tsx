@@ -110,13 +110,18 @@ export default function UpdateDealTaskModal({
 
   useEffect(() => {
     if (taskData && isOpen) {
+      const status = (taskData.task_status || 'Unassigned') as TaskStatus
       setTaskType((taskData.task_type || 'Call') as TaskType)
-      setTaskStatus((taskData.task_status || 'Unassigned') as TaskStatus)
+      setTaskStatus(status)
       setTaskDescription(taskData.task_description || '')
       setTargetDealStatus(taskData.target_deal_status || '')
-      setTaskAssignedDateTime(
-        toLocalISOString(taskData.task_assigned_date_time),
-      )
+      if (status === 'Assigned') {
+        setTaskAssignedDateTime(
+          toLocalISOString(taskData.task_assigned_date_time) || toLocalISOString(new Date()),
+        )
+      } else {
+        setTaskAssignedDateTime('')
+      }
       setTaskDueDateTime(toLocalISOString(taskData.task_due_date_time))
     }
   }, [taskData, isOpen, taskId])
@@ -130,13 +135,9 @@ export default function UpdateDealTaskModal({
         task_description: taskDescription,
         target_deal_status: targetDealStatus || null,
         task_assigned_date_time:
-          taskStatus === 'Assigned' && !taskAssignedDateTime
-            ? new Date().toISOString()
-            : taskStatus === 'Unassigned'
-              ? null
-              : taskAssignedDateTime
-                ? new Date(taskAssignedDateTime).toISOString()
-                : null,
+          taskStatus === 'Assigned'
+            ? (taskAssignedDateTime ? new Date(taskAssignedDateTime).toISOString() : new Date().toISOString())
+            : null,
         task_due_date_time: taskDueDateTime
           ? new Date(taskDueDateTime).toISOString()
           : null,
@@ -278,26 +279,29 @@ export default function UpdateDealTaskModal({
 
   const userCanEdit = editableIds.includes(String(user?.user_id));
 
-  const allowedStatuses: TaskStatus[] = isAssignee
-    ? ['Pending', 'In Progress', 'Completed', 'Verified']
-    : [
-        'Unassigned',
-        'Assigned',
-        'Pending',
-        'In Progress',
-        'Completed',
-        'Verified',
-        'Overdue',
-      ]
+  const isSavedAssignedOrBeyond = Boolean(
+    taskData?.task_status && taskData.task_status !== 'Unassigned',
+  )
 
-  const statusOptions = (
-    isAssignee && taskStatus && !allowedStatuses.includes(taskStatus)
-      ? [
-          { value: taskStatus, disabled: true },
-          ...allowedStatuses.map((s) => ({ value: s, disabled: false })),
-        ]
-      : allowedStatuses.map((s) => ({ value: s, disabled: false }))
-  ).filter((opt) => Boolean(opt.value && String(opt.value).trim() !== ''))
+  const operationalStatuses: TaskStatus[] = isAssignee
+    ? ['Pending', 'In Progress', 'Completed', 'Verified']
+    : ['Pending', 'In Progress', 'Completed', 'Verified', 'Overdue']
+
+  const allowedStatuses: TaskStatus[] = isSavedAssignedOrBeyond
+    ? operationalStatuses
+    : taskStatus === 'Unassigned'
+      ? ['Unassigned', 'Assigned', ...operationalStatuses]
+      : ['Assigned', ...operationalStatuses]
+
+  const statusOptions = allowedStatuses
+    .map((s) => ({ value: s, disabled: false }))
+    .filter((opt) => Boolean(opt.value && String(opt.value).trim() !== ''))
+
+  const targetDealStatusOptions = (
+    targetDealStatus && !DEAL_STATUS_OPTIONS.includes(targetDealStatus)
+      ? [targetDealStatus, ...DEAL_STATUS_OPTIONS]
+      : DEAL_STATUS_OPTIONS
+  ).filter((st) => Boolean(st && String(st).trim() !== ''))
 
   function renderMentions(text: string) {
     return text.replace(/crm\[user#([^\]]+)\]crm/g, (_, userId) => {
@@ -365,6 +369,19 @@ export default function UpdateDealTaskModal({
                 </span>
                 <span className='font-semibold text-foreground truncate block'>
                   {taskData.account_name || 'N/A'}
+                </span>
+              </div>
+
+              <div>
+                <span className='text-muted-foreground text-[11px] font-medium block'>
+                  Account Owner
+                </span>
+                <span className='font-semibold text-foreground truncate block'>
+                  {taskData.account_owner ||
+                    (usersData as Record<string, string>)[
+                      taskData.account_owner_id || ''
+                    ] ||
+                    'Unassigned'}
                 </span>
               </div>
 
@@ -452,7 +469,7 @@ export default function UpdateDealTaskModal({
 
                   <div className='space-y-1.5'>
                     <Label className='text-xs font-medium'>
-                      Deal / Account Name
+                      Deal Name
                     </Label>
                     <Input
                       value={
@@ -494,11 +511,22 @@ export default function UpdateDealTaskModal({
                     <Label className='text-xs font-medium'>Task Status</Label>
                     <Select
                       value={taskStatus || undefined}
-                      onValueChange={(val: TaskStatus) => setTaskStatus(val)}
+                      onValueChange={(val: TaskStatus) => {
+                        setTaskStatus(val)
+                        if (val === 'Assigned') {
+                          setTaskAssignedDateTime(
+                            toLocalISOString(taskData?.task_assigned_date_time) || toLocalISOString(new Date()),
+                          )
+                        } else {
+                          setTaskAssignedDateTime('')
+                        }
+                      }}
                       disabled={isCompleted}
                     >
                       <SelectTrigger className='h-9 text-xs'>
-                          <SelectValue placeholder='Select Task Status' />
+                        <SelectValue placeholder='Select Task Status'>
+                          {taskStatus || 'Select Task Status'}
+                        </SelectValue>
                       </SelectTrigger>
                       <SelectContent>
                         {statusOptions.map((opt) => (
@@ -529,7 +557,7 @@ export default function UpdateDealTaskModal({
                       <SelectValue placeholder='Select Target Deal Status' />
                     </SelectTrigger>
                     <SelectContent>
-                      {DEAL_STATUS_OPTIONS.filter((st) => Boolean(st && String(st).trim() !== '')).map((st) => (
+                      {targetDealStatusOptions.map((st) => (
                         <SelectItem key={st} value={st}>
                           {st}
                         </SelectItem>
@@ -546,10 +574,10 @@ export default function UpdateDealTaskModal({
                     </Label>
                     <Input
                       type='datetime-local'
-                      value={taskAssignedDateTime}
-                      onChange={(e) => setTaskAssignedDateTime(e.target.value)}
-                      disabled={!userCanEdit}
-                      className='h-9 text-xs'
+                      value={taskStatus === 'Assigned' ? taskAssignedDateTime : ''}
+                      disabled={true}
+                      readOnly={true}
+                      className='h-9 text-xs bg-muted cursor-not-allowed'
                     />
                   </div>
 

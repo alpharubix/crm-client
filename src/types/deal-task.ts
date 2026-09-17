@@ -9,6 +9,8 @@ export interface DealTask {
   deal_name?: string
   account_id?: string
   account_name?: string
+  account_owner?: string
+  account_owner_id?: string
   deal_owner?: string
   deal_owner_id?: string
   deal_status?: string

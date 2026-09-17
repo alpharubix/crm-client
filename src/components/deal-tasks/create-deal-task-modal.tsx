@@ -27,17 +27,11 @@ import { useAuth } from '@/context/auth-context'
 import usersData from '@/utils/users.json'
 
 export const DEAL_STATUS_OPTIONS = [
-  'Yet to Lender Login',
-  'Lender Review',
-  'In Credit',
-  'Approved',
-  'Disbursed',
-  'Rejected',
-  'Not Interested',
   'Deal Created',
+  'Lender Review',
+  'Lender Rejected',
   'Achievement',
-  'On Hold',
-  'Closed',
+  'Not Interested',
 ]
 
 function formatDate(dateStr?: string | null): string {
@@ -183,13 +177,9 @@ export default function CreateDealTaskModal({
         task_description: taskDescription,
         target_deal_status: targetDealStatus || null,
         task_assigned_date_time:
-          taskStatus !== 'Unassigned' && !taskAssignedDateTime
-            ? new Date().toISOString()
-            : taskStatus === 'Unassigned'
-              ? null
-              : taskAssignedDateTime
-                ? new Date(taskAssignedDateTime).toISOString()
-                : null,
+          taskStatus === 'Assigned'
+            ? (taskAssignedDateTime ? new Date(taskAssignedDateTime).toISOString() : new Date().toISOString())
+            : null,
         task_due_date_time: taskDueDateTime
           ? new Date(taskDueDateTime).toISOString()
           : null,
@@ -303,6 +293,19 @@ export default function CreateDealTaskModal({
 
               <div>
                 <span className='text-muted-foreground text-[11px] font-medium block'>
+                  Account Owner
+                </span>
+                <span className='font-semibold text-foreground truncate block'>
+                  {dealData.account_owner ||
+                    (usersData as Record<string, string>)[
+                      dealData.account_owner_id
+                    ] ||
+                    'Unassigned'}
+                </span>
+              </div>
+
+              <div>
+                <span className='text-muted-foreground text-[11px] font-medium block'>
                   Deal Owner
                 </span>
                 <span className='font-semibold text-foreground truncate block'>
@@ -379,7 +382,7 @@ export default function CreateDealTaskModal({
 
               <div className='space-y-1.5 relative'>
                 <Label className='text-xs font-medium'>
-                  Deal / Account Name *
+                  Deal Name *
                 </Label>
                 {fixedDealId ? (
                   <Input
@@ -479,26 +482,40 @@ export default function CreateDealTaskModal({
                     setTaskStatus(val)
                     if (val === 'Assigned') {
                       setTaskAssignedDateTime(toLocalISOString(new Date()))
-                    } else if (val !== 'Unassigned') {
-                      if (!taskAssignedDateTime) {
-                        setTaskAssignedDateTime(toLocalISOString(new Date()))
-                      }
-                    } else if (val === 'Unassigned') {
+                    } else {
                       setTaskAssignedDateTime('')
                     }
                   }}
                 >
                   <SelectTrigger className='h-9 text-xs'>
-                    <SelectValue placeholder='Select Task Status' />
+                    <SelectValue placeholder='Select Task Status'>
+                      {taskStatus || 'Select Task Status'}
+                    </SelectValue>
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value='Unassigned'>Unassigned</SelectItem>
-                    <SelectItem value='Assigned'>Assigned</SelectItem>
-                    <SelectItem value='Pending'>Pending</SelectItem>
-                    <SelectItem value='In Progress'>In Progress</SelectItem>
-                    <SelectItem value='Completed'>Completed</SelectItem>
-                    <SelectItem value='Verified'>Verified</SelectItem>
-                    <SelectItem value='Overdue'>Overdue</SelectItem>
+                    {(taskStatus === 'Unassigned'
+                      ? [
+                          'Unassigned',
+                          'Assigned',
+                          'Pending',
+                          'In Progress',
+                          'Completed',
+                          'Verified',
+                          'Overdue',
+                        ]
+                      : [
+                          'Assigned',
+                          'Pending',
+                          'In Progress',
+                          'Completed',
+                          'Verified',
+                          'Overdue',
+                        ]
+                    ).map((status) => (
+                      <SelectItem key={status} value={status}>
+                        {status}
+                      </SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
               </div>
@@ -534,10 +551,10 @@ export default function CreateDealTaskModal({
                 </Label>
                 <Input
                   type='datetime-local'
-                  value={taskAssignedDateTime}
-                  onChange={(e) => setTaskAssignedDateTime(e.target.value)}
-                  disabled={taskStatus === 'Assigned'}
-                  className='h-9 text-xs'
+                  value={taskStatus === 'Assigned' ? taskAssignedDateTime : ''}
+                  disabled={true}
+                  readOnly={true}
+                  className='h-9 text-xs bg-muted cursor-not-allowed'
                 />
               </div>
 
