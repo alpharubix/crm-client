@@ -4,6 +4,7 @@ import { toast } from 'sonner'
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogHeader,
   DialogTitle,
   DialogFooter,
@@ -109,8 +110,8 @@ export default function UpdateDealTaskModal({
 
   useEffect(() => {
     if (taskData && isOpen) {
-      setTaskType(taskData.task_type as TaskType)
-      setTaskStatus(taskData.task_status as TaskStatus)
+      setTaskType((taskData.task_type || 'Call') as TaskType)
+      setTaskStatus((taskData.task_status || 'Unassigned') as TaskStatus)
       setTaskDescription(taskData.task_description || '')
       setTargetDealStatus(taskData.target_deal_status || '')
       setTaskAssignedDateTime(
@@ -280,13 +281,14 @@ export default function UpdateDealTaskModal({
         'Overdue',
       ]
 
-  const statusOptions =
-    isAssignee && !allowedStatuses.includes(taskStatus)
+  const statusOptions = (
+    isAssignee && taskStatus && !allowedStatuses.includes(taskStatus)
       ? [
           { value: taskStatus, disabled: true },
           ...allowedStatuses.map((s) => ({ value: s, disabled: false })),
         ]
       : allowedStatuses.map((s) => ({ value: s, disabled: false }))
+  ).filter((opt) => Boolean(opt.value && String(opt.value).trim() !== ''))
 
   function renderMentions(text: string) {
     return text.replace(/crm\[user#([^\]]+)\]crm/g, (_, userId) => {
@@ -307,6 +309,9 @@ export default function UpdateDealTaskModal({
               </Badge>
             )}
           </DialogTitle>
+          <DialogDescription className='sr-only'>
+            View and manage deal task #{taskId} details
+          </DialogDescription>
         </DialogHeader>
 
         {/* Readonly Deal Information Panel */}
@@ -479,7 +484,7 @@ export default function UpdateDealTaskModal({
                   <div className='space-y-1.5'>
                     <Label className='text-xs font-medium'>Task Status</Label>
                     <Select
-                      value={taskStatus}
+                      value={taskStatus || undefined}
                       onValueChange={(val: TaskStatus) => setTaskStatus(val)}
                       disabled={!canEditStatus || isCompleted}
                     >
@@ -507,7 +512,7 @@ export default function UpdateDealTaskModal({
                     Targeted Deal Status
                   </Label>
                   <Select
-                    value={targetDealStatus}
+                    value={targetDealStatus || undefined}
                     onValueChange={(val: string) => setTargetDealStatus(val)}
                     disabled={isCompleted}
                   >
@@ -515,7 +520,7 @@ export default function UpdateDealTaskModal({
                       <SelectValue placeholder='Select Target Deal Status' />
                     </SelectTrigger>
                     <SelectContent>
-                      {DEAL_STATUS_OPTIONS.map((st) => (
+                      {DEAL_STATUS_OPTIONS.filter((st) => Boolean(st && String(st).trim() !== '')).map((st) => (
                         <SelectItem key={st} value={st}>
                           {st}
                         </SelectItem>

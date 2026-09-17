@@ -4,6 +4,7 @@ import { toast } from 'sonner';
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogHeader,
   DialogTitle,
   DialogFooter,
@@ -530,13 +531,14 @@ export default function UpdateAccountTaskModal({
         'Overdue',
       ];
 
-  const statusOptions =
-    isAssignee && !allowedStatuses.includes(taskStatus)
+  const statusOptions = (
+    isAssignee && taskStatus && !allowedStatuses.includes(taskStatus)
       ? [
           { value: taskStatus, disabled: true },
           ...allowedStatuses.map((s) => ({ value: s, disabled: false })),
         ]
-      : allowedStatuses.map((s) => ({ value: s, disabled: false }));
+      : allowedStatuses.map((s) => ({ value: s, disabled: false }))
+  ).filter((opt) => Boolean(opt.value && String(opt.value).trim() !== ''));
 
   const allowedTargetAccountStatuses: TargetAccountStatus[] = isAssignee
     ? [
@@ -570,8 +572,8 @@ export default function UpdateAccountTaskModal({
         'N/A',
       ];
 
-  const targetAccountStatusOptions =
-    isAssignee && !allowedTargetAccountStatuses.includes(targetAccountStatus)
+  const targetAccountStatusOptions = (
+    isAssignee && targetAccountStatus && !allowedTargetAccountStatuses.includes(targetAccountStatus)
       ? [
           { value: targetAccountStatus, disabled: true },
           ...allowedTargetAccountStatuses.map((s) => ({
@@ -582,7 +584,8 @@ export default function UpdateAccountTaskModal({
       : allowedTargetAccountStatuses.map((s) => ({
           value: s,
           disabled: false,
-        }));
+        }))
+  ).filter((opt) => Boolean(opt.value && String(opt.value).trim() !== ''));
 
   function renderMentions(text: string) {
     return text.replace(/crm\[user#([^\]]+)\]crm/g, (_, userId) => {
@@ -603,6 +606,9 @@ export default function UpdateAccountTaskModal({
               </Badge>
             )}
           </DialogTitle>
+          <DialogDescription className='sr-only'>
+            View and manage account task #{taskId} details
+          </DialogDescription>
         </DialogHeader>
 
         {isLoading ? (
