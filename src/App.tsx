@@ -25,6 +25,7 @@ import DistributorMasterPage from './pages/distributor-master';
 // Lazy loaded pages and heavy route components
 const AccountPage = lazy(() => import('./pages/accounts-page'));
 const AccountTasksPage = lazy(() => import('./pages/account-tasks-page'));
+const CallRecordingsPage = lazy(() => import('./pages/call-recordings-page'));
 const DealTasksPage = lazy(()=>import('./pages/deal-tasks-page'))
 const ContactPage = lazy(() => import('./pages/contact-page'));
 const UpdateAccounts = lazy(
@@ -93,6 +94,7 @@ export default function App() {
             >
               <Route path='/accounts' element={<AccountPage />} />
               <Route path='/account-tasks' element={<AccountTasksPage />} />
+              <Route path='/call-recordings' element={<CallRecordingsPage />} />
               {/* <Route path='/acc-status-journey' element={<AccStatusJourney />} /> */}
               <Route path='/accounts/:id' element={<UpdateAccounts />} />
               <Route path='/accounts/:id/bsa' element={<BsaAnalysisPage />} />

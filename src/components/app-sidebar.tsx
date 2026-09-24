@@ -54,6 +54,10 @@ const data = {
           title: 'Account Tasks',
           url: '/account-tasks',
         },
+        {
+          title: 'Call Recordings',
+          url: '/call-recordings',
+        },
         // {
         //   title: 'Acccounts Status Journey',
         //   url: '/acc-status-journey',
