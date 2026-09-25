@@ -54,6 +54,7 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import Pagination from '@/components/shared/pagination';
+import telecrmUsers from '@/utils/telecrm_users.json';
 import { ENV } from '@/conf';
 
 export interface CallRecordingItem {
@@ -122,6 +123,82 @@ function getInitials(nameOrEmail?: string): string {
   return clean.slice(0, 2).toUpperCase();
 }
 
+// Map for fast user lookup from telecrm_users.json
+const callerMap = new Map<string, string>(
+  telecrmUsers.map((u) => [u.email.toLowerCase(), u.name]),
+);
+
+// Extract first name before dot(.) from actor employee email or telecrm_users mapping
+export function formatActorName(nameOrEmail?: string): string {
+  if (!nameOrEmail) return '—';
+  const str = String(nameOrEmail).trim();
+  if (!str || str === '—') return '—';
+
+  const lower = str.toLowerCase();
+  if (callerMap.has(lower)) {
+    return callerMap.get(lower)!;
+  }
+
+  // Get username part before '@' if email
+  const username = str.includes('@') ? str.split('@')[0] : str;
+  // Get first name before the dot '.'
+  const firstName = username.split('.')[0].trim();
+  if (!firstName) return str;
+
+  // Capitalize first letter (e.g. "sandip" -> "Sandip")
+  return firstName.charAt(0).toUpperCase() + firstName.slice(1);
+}
+
+// Format timestamp into 12-hour format time & date
+export function formatCreationTimestamp(ts?: string | null): string {
+  if (!ts || ts === '—') return '—';
+  const clean = String(ts).trim();
+  if (!clean) return '—';
+
+  // Match DD/MM/YYYY HH:mm:ss or DD-MM-YYYY HH:mm:ss
+  const dmyMatch = clean.match(
+    /^(\d{1,2})[/-](\d{1,2})[/-](\d{4})(?:\s+(\d{1,2}):(\d{2})(?::(\d{2}))?)?/,
+  );
+  if (dmyMatch) {
+    const day = dmyMatch[1].padStart(2, '0');
+    const month = dmyMatch[2].padStart(2, '0');
+    const year = dmyMatch[3];
+    const rawHour = dmyMatch[4];
+    const mins = dmyMatch[5];
+    const secs = dmyMatch[6];
+
+    if (rawHour !== undefined && mins !== undefined) {
+      const h24 = parseInt(rawHour, 10);
+      const period = h24 >= 12 ? 'PM' : 'AM';
+      const h12 = h24 % 12 === 0 ? 12 : h24 % 12;
+      const h12Str = String(h12).padStart(2, '0');
+      const timeStr =
+        secs !== undefined
+          ? `${h12Str}:${mins.padStart(2, '0')}:${secs.padStart(2, '0')} ${period}`
+          : `${h12Str}:${mins.padStart(2, '0')} ${period}`;
+      return `${day}/${month}/${year}, ${timeStr}`;
+    }
+    return `${day}/${month}/${year}`;
+  }
+
+  // Fallback for ISO format or standard date string
+  const parsed = new Date(clean);
+  if (!isNaN(parsed.getTime())) {
+    const day = String(parsed.getDate()).padStart(2, '0');
+    const month = String(parsed.getMonth() + 1).padStart(2, '0');
+    const year = parsed.getFullYear();
+    const h24 = parsed.getHours();
+    const period = h24 >= 12 ? 'PM' : 'AM';
+    const h12 = h24 % 12 === 0 ? 12 : h24 % 12;
+    const h12Str = String(h12).padStart(2, '0');
+    const mins = String(parsed.getMinutes()).padStart(2, '0');
+    const secs = String(parsed.getSeconds()).padStart(2, '0');
+    return `${day}/${month}/${year}, ${h12Str}:${mins}:${secs} ${period}`;
+  }
+
+  return clean;
+}
+
 export default function CallRecordingsPage() {
   const navigate = useNavigate();
 
@@ -131,6 +208,7 @@ export default function CallRecordingsPage() {
   const [searchInput, setSearchInput] = useState<string>('');
   const [appliedSearch, setAppliedSearch] = useState<string>('');
   const [callTypeFilter, setCallTypeFilter] = useState<string>('all');
+  const [userFilter, setUserFilter] = useState<string>('all');
 
   // Copy feedback state
   const [copiedId, setCopiedId] = useState<string | null>(null);
@@ -148,6 +226,7 @@ export default function CallRecordingsPage() {
         pageSize,
         appliedSearch,
         callTypeFilter,
+        userFilter,
       ],
       queryFn: async () => {
         const params = new URLSearchParams({
@@ -156,9 +235,19 @@ export default function CallRecordingsPage() {
         });
         if (appliedSearch.trim()) {
           params.append('search', appliedSearch.trim());
+        } else if (userFilter && userFilter !== 'all') {
+          // Use username prefix before '@' (e.g. 'digamber.pandey') to avoid backend regex
+          // matching phone numbers on digit '1' from domain '@r1xchange.com'
+          const userSearchParam = userFilter.includes('@')
+            ? userFilter.split('@')[0]
+            : userFilter;
+          params.append('search', userSearchParam);
         }
         if (callTypeFilter && callTypeFilter !== 'all') {
           params.append('call_type', callTypeFilter);
+        }
+        if (userFilter && userFilter !== 'all') {
+          params.append('user', userFilter);
         }
 
         const res = await fetch(
@@ -182,6 +271,47 @@ export default function CallRecordingsPage() {
     total_pages: 1,
   };
 
+  // User options for filter loaded from telecrm_users.json
+  const availableUsers = useMemo(() => {
+    const list = telecrmUsers.map((u) => ({
+      name: u.name,
+      email: u.email,
+    }));
+    const existingEmails = new Set(list.map((u) => u.email.toLowerCase()));
+    recordings.forEach((r) => {
+      if (r.actor_employee_email && r.actor_employee_email.trim()) {
+        const email = r.actor_employee_email.trim().toLowerCase();
+        if (!existingEmails.has(email)) {
+          existingEmails.add(email);
+          list.push({
+            name: formatActorName(email),
+            email,
+          });
+        }
+      }
+    });
+    return list.sort((a, b) => a.name.localeCompare(b.name));
+  }, [recordings]);
+
+  // Strictly filter displayed recordings to ensure only the selected user's calls are shown
+  const displayedRecordings = useMemo(() => {
+    if (userFilter && userFilter !== 'all') {
+      const filterLower = userFilter.toLowerCase().trim();
+      const filterPrefix = filterLower.includes('@')
+        ? filterLower.split('@')[0]
+        : filterLower;
+      return recordings.filter((r) => {
+        const email = (r.actor_employee_email || '').toLowerCase().trim();
+        return (
+          email === filterLower ||
+          email.startsWith(filterPrefix) ||
+          email.includes(filterPrefix)
+        );
+      });
+    }
+    return recordings;
+  }, [recordings, userFilter]);
+
   // Search handler
   const handleSearchSubmit = (e?: React.FormEvent) => {
     if (e) e.preventDefault();
@@ -193,6 +323,15 @@ export default function CallRecordingsPage() {
   const handleClearSearch = () => {
     setSearchInput('');
     setAppliedSearch('');
+    setCurrentPage(1);
+  };
+
+  // Reset all filters
+  const handleResetAllFilters = () => {
+    setSearchInput('');
+    setAppliedSearch('');
+    setCallTypeFilter('all');
+    setUserFilter('all');
     setCurrentPage(1);
   };
 
@@ -208,9 +347,10 @@ export default function CallRecordingsPage() {
 
   // Count metrics for the current view
   const matchedAccountsCount = useMemo(() => {
-    return recordings.filter((r) => Boolean(r.account_id && r.account_name))
-      .length;
-  }, [recordings]);
+    return displayedRecordings.filter((r) =>
+      Boolean(r.account_id && r.account_name),
+    ).length;
+  }, [displayedRecordings]);
 
   return (
     <TooltipProvider>
@@ -262,7 +402,7 @@ export default function CallRecordingsPage() {
                   {isLoading ? (
                     <Skeleton className='h-4 w-10 rounded' />
                   ) : (
-                    `${matchedAccountsCount} / ${recordings.length}`
+                    `${matchedAccountsCount} / ${displayedRecordings.length}`
                   )}
                 </span>
               </div>
@@ -295,7 +435,7 @@ export default function CallRecordingsPage() {
               <div className='relative w-full'>
                 <Search className='absolute left-3 top-2.5 h-4 w-4 text-muted-foreground' />
                 <Input
-                  placeholder='Search by account name, telecrm name, phone, or caller email...'
+                  placeholder='Search by account name, telecrm name, phone, or caller...'
                   value={searchInput}
                   onChange={(e) => setSearchInput(e.target.value)}
                   className='pl-9 pr-8 h-9 text-xs rounded-lg bg-background'
@@ -321,6 +461,49 @@ export default function CallRecordingsPage() {
 
             {/* Filters & Page Size */}
             <div className='flex items-center gap-2.5 flex-wrap'>
+              {/* User Filter */}
+              <div className='flex items-center gap-1.5'>
+                <span className='text-xs text-muted-foreground whitespace-nowrap font-medium'>
+                  User:
+                </span>
+                <div className='flex items-center gap-1'>
+                  <Select
+                    value={userFilter}
+                    onValueChange={(val) => {
+                      setUserFilter(val);
+                      setCurrentPage(1);
+                    }}
+                  >
+                    <SelectTrigger className='h-9 text-xs w-[140px] rounded-lg bg-background'>
+                      <SelectValue placeholder='All Users' />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value='all'>All Users</SelectItem>
+                      {availableUsers.map((user) => (
+                        <SelectItem key={user.email} value={user.email}>
+                          {user.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  {userFilter !== 'all' && (
+                    <Button
+                      variant='ghost'
+                      size='icon'
+                      type='button'
+                      onClick={() => {
+                        setUserFilter('all');
+                        setCurrentPage(1);
+                      }}
+                      title='Clear user filter'
+                      className='h-8 w-8 text-muted-foreground hover:text-foreground cursor-pointer rounded-md'
+                    >
+                      <X className='h-3.5 w-3.5' />
+                    </Button>
+                  )}
+                </div>
+              </div>
+
               {/* Call Type Filter */}
               <div className='flex items-center gap-1.5'>
                 <span className='text-xs text-muted-foreground whitespace-nowrap font-medium'>
@@ -389,10 +572,8 @@ export default function CallRecordingsPage() {
                     <TableHead className='min-w-[130px] text-right'>
                       Duration & Audio
                     </TableHead>
-                    <TableHead className='min-w-[210px]'>
-                      Caller / Employee Email
-                    </TableHead>
-                    <TableHead className='min-w-[160px]'>
+                    <TableHead className='min-w-[160px]'>Caller</TableHead>
+                    <TableHead className='min-w-[190px]'>
                       Creation Timestamp
                     </TableHead>
                   </TableRow>
@@ -453,7 +634,7 @@ export default function CallRecordingsPage() {
                         </div>
                       </TableCell>
                     </TableRow>
-                  ) : recordings.length === 0 ? (
+                  ) : displayedRecordings.length === 0 ? (
                     // Empty State
                     <TableRow>
                       <TableCell colSpan={8} className='h-56 text-center'>
@@ -465,19 +646,16 @@ export default function CallRecordingsPage() {
                             No call recordings found
                           </p>
                           <p className='text-xs text-muted-foreground max-w-sm'>
-                            {appliedSearch || callTypeFilter !== 'all'
+                            {appliedSearch || callTypeFilter !== 'all' || userFilter !== 'all'
                               ? 'Try adjusting your search query or filters to find what you are looking for.'
                               : 'No call records have been logged in the collection yet.'}
                           </p>
-                          {(appliedSearch || callTypeFilter !== 'all') && (
+                          {(appliedSearch || callTypeFilter !== 'all' || userFilter !== 'all') && (
                             <Button
                               variant='outline'
                               size='sm'
-                              onClick={() => {
-                                handleClearSearch();
-                                setCallTypeFilter('all');
-                              }}
-                              className='mt-2 text-xs'
+                              onClick={handleResetAllFilters}
+                              className='mt-2 text-xs cursor-pointer'
                             >
                               Reset Filters
                             </Button>
@@ -487,7 +665,7 @@ export default function CallRecordingsPage() {
                     </TableRow>
                   ) : (
                     // Data Rows
-                    recordings.map((item, index) => {
+                    displayedRecordings.map((item, index) => {
                       const rowNumber =
                         (pagination.page - 1) * pagination.limit + index + 1;
                       const hasAccount = Boolean(
@@ -649,17 +827,17 @@ export default function CallRecordingsPage() {
                             </div>
                           </TableCell>
 
-                          {/* Actor Employee Email */}
+                          {/* Caller Name */}
                           <TableCell>
-                            <div className='flex items-center gap-2 max-w-[230px]'>
+                            <div className='flex items-center gap-2 max-w-[200px]'>
                               <div className='h-6 w-6 rounded-full bg-muted flex items-center justify-center text-[10px] font-semibold text-muted-foreground border border-border/60 shrink-0'>
                                 {getInitials(item.actor_employee_email)}
                               </div>
                               <span
-                                className='text-xs text-foreground truncate'
+                                className='text-xs font-medium text-foreground truncate'
                                 title={item.actor_employee_email || '—'}
                               >
-                                {item.actor_employee_email || '—'}
+                                {formatActorName(item.actor_employee_email)}
                               </span>
                             </div>
                           </TableCell>
@@ -668,11 +846,13 @@ export default function CallRecordingsPage() {
                           <TableCell>
                             <div className='flex flex-col'>
                               <span className='text-xs font-medium text-foreground whitespace-nowrap'>
-                                {item.creation_timestamp || '—'}
+                                {formatCreationTimestamp(item.creation_timestamp)}
                               </span>
                               {item.relative_time && (
                                 <span className='text-[10px] text-muted-foreground'>
-                                  {formatDuration(item.relative_time)} ago
+                                  {item.relative_time.endsWith('ago')
+                                    ? item.relative_time
+                                    : `${item.relative_time} ago`}
                                 </span>
                               )}
                             </div>
@@ -690,7 +870,7 @@ export default function CallRecordingsPage() {
               <span className='text-xs text-muted-foreground'>
                 Showing{' '}
                 <span className='font-medium text-foreground'>
-                  {recordings.length > 0
+                  {displayedRecordings.length > 0
                     ? (pagination.page - 1) * pagination.limit + 1
                     : 0}
                 </span>{' '}
@@ -754,14 +934,17 @@ export default function CallRecordingsPage() {
                   </div>
                   <div className='flex justify-between'>
                     <span className='text-muted-foreground'>Caller:</span>
-                    <span className='font-medium text-foreground truncate max-w-[200px]'>
-                      {activeAudioItem.actor_employee_email || '—'}
+                    <span
+                      className='font-medium text-foreground truncate max-w-[200px]'
+                      title={activeAudioItem.actor_employee_email || '—'}
+                    >
+                      {formatActorName(activeAudioItem.actor_employee_email)}
                     </span>
                   </div>
                   <div className='flex justify-between'>
                     <span className='text-muted-foreground'>Timestamp:</span>
                     <span className='font-medium text-foreground'>
-                      {activeAudioItem.creation_timestamp}
+                      {formatCreationTimestamp(activeAudioItem.creation_timestamp)}
                     </span>
                   </div>
                 </div>
