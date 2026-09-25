@@ -15,7 +15,9 @@ import {
   Lock,
   Headphones,
   Volume2,
-  Calendar,
+  Calendar as CalendarIcon,
+  Clock,
+  RotateCcw,
   User,
   X,
   Play,
@@ -53,9 +55,29 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
+import { DatePicker } from '@/components/ui/date-picker';
+import { format, subDays, startOfWeek, startOfMonth } from 'date-fns';
 import Pagination from '@/components/shared/pagination';
 import telecrmUsers from '@/utils/telecrm_users.json';
 import { ENV } from '@/conf';
+
+export type PeriodPresetId =
+  | 'ALL'
+  | 'TODAY'
+  | 'YESTERDAY'
+  | 'THIS_WEEK'
+  | 'THIS_MONTH'
+  | 'LAST_30_DAYS'
+  | 'CUSTOM';
+
+export const PERIOD_PRESETS: { id: PeriodPresetId; label: string }[] = [
+  { id: 'ALL', label: 'All Time' },
+  { id: 'TODAY', label: 'Today' },
+  { id: 'YESTERDAY', label: 'Yesterday' },
+  { id: 'THIS_WEEK', label: 'This Week' },
+  { id: 'THIS_MONTH', label: 'This Month' },
+  { id: 'LAST_30_DAYS', label: 'Last 30 Days' },
+];
 
 export interface CallRecordingItem {
   id: string;
@@ -209,6 +231,11 @@ export default function CallRecordingsPage() {
   const [appliedSearch, setAppliedSearch] = useState<string>('');
   const [callTypeFilter, setCallTypeFilter] = useState<string>('all');
   const [userFilter, setUserFilter] = useState<string>('all');
+  const [fromDate, setFromDate] = useState<string>('');
+  const [fromTime, setFromTime] = useState<string>('');
+  const [toDate, setToDate] = useState<string>('');
+  const [toTime, setToTime] = useState<string>('');
+  const [activePreset, setActivePreset] = useState<PeriodPresetId>('ALL');
 
   // Copy feedback state
   const [copiedId, setCopiedId] = useState<string | null>(null);
@@ -227,6 +254,10 @@ export default function CallRecordingsPage() {
         appliedSearch,
         callTypeFilter,
         userFilter,
+        fromDate,
+        fromTime,
+        toDate,
+        toTime,
       ],
       queryFn: async () => {
         const params = new URLSearchParams({
@@ -248,6 +279,18 @@ export default function CallRecordingsPage() {
         }
         if (userFilter && userFilter !== 'all') {
           params.append('user', userFilter);
+        }
+        if (fromDate) {
+          const fromParam = fromTime
+            ? `${fromDate} ${fromTime}${fromTime.length === 5 ? ':00' : ''}`
+            : `${fromDate} 00:00:00`;
+          params.append('from_date', fromParam);
+        }
+        if (toDate) {
+          const toParam = toTime
+            ? `${toDate} ${toTime}${toTime.length === 5 ? ':59' : ''}`
+            : `${toDate} 23:59:59`;
+          params.append('to_date', toParam);
         }
 
         const res = await fetch(
@@ -326,14 +369,109 @@ export default function CallRecordingsPage() {
     setCurrentPage(1);
   };
 
+  // Period presets & handlers
+  const applyPreset = (presetId: PeriodPresetId) => {
+    setActivePreset(presetId);
+    setCurrentPage(1);
+    const now = new Date();
+    const todayStr = format(now, 'yyyy-MM-dd');
+
+    switch (presetId) {
+      case 'ALL':
+        setFromDate('');
+        setFromTime('');
+        setToDate('');
+        setToTime('');
+        break;
+      case 'TODAY':
+        setFromDate(todayStr);
+        setFromTime('00:00');
+        setToDate(todayStr);
+        setToTime('23:59');
+        break;
+      case 'YESTERDAY': {
+        const yesterday = subDays(now, 1);
+        const yStr = format(yesterday, 'yyyy-MM-dd');
+        setFromDate(yStr);
+        setFromTime('00:00');
+        setToDate(yStr);
+        setToTime('23:59');
+        break;
+      }
+      case 'THIS_WEEK': {
+        const weekStart = startOfWeek(now, { weekStartsOn: 1 });
+        setFromDate(format(weekStart, 'yyyy-MM-dd'));
+        setFromTime('00:00');
+        setToDate(todayStr);
+        setToTime('23:59');
+        break;
+      }
+      case 'THIS_MONTH': {
+        const monthStart = startOfMonth(now);
+        setFromDate(format(monthStart, 'yyyy-MM-dd'));
+        setFromTime('00:00');
+        setToDate(todayStr);
+        setToTime('23:59');
+        break;
+      }
+      case 'LAST_30_DAYS': {
+        const thirtyDaysAgo = subDays(now, 30);
+        setFromDate(format(thirtyDaysAgo, 'yyyy-MM-dd'));
+        setFromTime('00:00');
+        setToDate(todayStr);
+        setToTime('23:59');
+        break;
+      }
+      default:
+        break;
+    }
+  };
+
+  const handleFromDateChange = (val: string) => {
+    setFromDate(val);
+    setActivePreset('CUSTOM');
+    setCurrentPage(1);
+  };
+
+  const handleToDateChange = (val: string) => {
+    setToDate(val);
+    setActivePreset('CUSTOM');
+    setCurrentPage(1);
+  };
+
+  const handleClearPeriod = () => {
+    setFromDate('');
+    setFromTime('');
+    setToDate('');
+    setToTime('');
+    setActivePreset('ALL');
+    setCurrentPage(1);
+  };
+
   // Reset all filters
   const handleResetAllFilters = () => {
     setSearchInput('');
     setAppliedSearch('');
     setCallTypeFilter('all');
     setUserFilter('all');
+    setFromDate('');
+    setFromTime('');
+    setToDate('');
+    setToTime('');
+    setActivePreset('ALL');
     setCurrentPage(1);
   };
+
+  const hasActiveFilters = Boolean(
+    appliedSearch.trim() ||
+      searchInput.trim() ||
+      callTypeFilter !== 'all' ||
+      userFilter !== 'all' ||
+      fromDate ||
+      toDate ||
+      fromTime ||
+      toTime,
+  );
 
   // Copy phone handler
   const handleCopyPhone = (phone: string, id: string) => {
@@ -426,130 +564,285 @@ export default function CallRecordingsPage() {
 
         {/* Toolbar & Filters */}
         <div className='flex-1 flex flex-col overflow-hidden p-4 sm:p-6 gap-3.5'>
-          <div className='bg-background rounded-xl border border-border/60 p-3 flex flex-wrap items-center justify-between gap-3 shadow-2xs shrink-0'>
-            {/* Search Input */}
-            <form
-              onSubmit={handleSearchSubmit}
-              className='flex items-center gap-2 flex-1 min-w-[280px] max-w-lg'
-            >
-              <div className='relative w-full'>
-                <Search className='absolute left-3 top-2.5 h-4 w-4 text-muted-foreground' />
-                <Input
-                  placeholder='Search by account name, telecrm name, phone, or caller...'
-                  value={searchInput}
-                  onChange={(e) => setSearchInput(e.target.value)}
-                  className='pl-9 pr-8 h-9 text-xs rounded-lg bg-background'
-                />
-                {searchInput && (
-                  <button
-                    type='button'
-                    onClick={handleClearSearch}
-                    className='absolute right-2.5 top-2.5 text-muted-foreground hover:text-foreground'
-                  >
-                    <X className='h-4 w-4' />
-                  </button>
-                )}
-              </div>
-              <Button
-                type='submit'
-                size='sm'
-                className='h-9 text-xs bg-blue-600 hover:bg-blue-700 text-white rounded-lg px-3.5 gap-1.5 cursor-pointer font-medium shadow-2xs'
+          <div className='bg-background rounded-xl border border-border/60 p-3 flex flex-col gap-3 shadow-2xs shrink-0'>
+            {/* Top Row: Search Input & Dropdowns & Reset */}
+            <div className='flex flex-wrap items-center justify-between gap-3'>
+              {/* Search Input */}
+              <form
+                onSubmit={handleSearchSubmit}
+                className='flex items-center gap-2 flex-1 min-w-[280px] max-w-lg'
               >
-                <Search className='h-3.5 w-3.5' /> Search
-              </Button>
-            </form>
+                <div className='relative w-full'>
+                  <Search className='absolute left-3 top-2.5 h-4 w-4 text-muted-foreground' />
+                  <Input
+                    placeholder='Search by account name, telecrm name, phone, or caller...'
+                    value={searchInput}
+                    onChange={(e) => setSearchInput(e.target.value)}
+                    className='pl-9 pr-8 h-9 text-xs rounded-lg bg-background'
+                  />
+                  {searchInput && (
+                    <button
+                      type='button'
+                      onClick={handleClearSearch}
+                      className='absolute right-2.5 top-2.5 text-muted-foreground hover:text-foreground'
+                    >
+                      <X className='h-4 w-4' />
+                    </button>
+                  )}
+                </div>
+                <Button
+                  type='submit'
+                  size='sm'
+                  className='h-9 text-xs bg-blue-600 hover:bg-blue-700 text-white rounded-lg px-3.5 gap-1.5 cursor-pointer font-medium shadow-2xs'
+                >
+                  <Search className='h-3.5 w-3.5' /> Search
+                </Button>
+              </form>
 
-            {/* Filters & Page Size */}
-            <div className='flex items-center gap-2.5 flex-wrap'>
-              {/* User Filter */}
-              <div className='flex items-center gap-1.5'>
-                <span className='text-xs text-muted-foreground whitespace-nowrap font-medium'>
-                  User:
-                </span>
-                <div className='flex items-center gap-1'>
+              {/* Filters & Page Size */}
+              <div className='flex items-center gap-2.5 flex-wrap'>
+                {/* User Filter */}
+                <div className='flex items-center gap-1.5'>
+                  <span className='text-xs text-muted-foreground whitespace-nowrap font-medium'>
+                    User:
+                  </span>
+                  <div className='flex items-center gap-1'>
+                    <Select
+                      value={userFilter}
+                      onValueChange={(val) => {
+                        setUserFilter(val);
+                        setCurrentPage(1);
+                      }}
+                    >
+                      <SelectTrigger className='h-9 text-xs w-[140px] rounded-lg bg-background'>
+                        <SelectValue placeholder='All Users' />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value='all'>All Users</SelectItem>
+                        {availableUsers.map((user) => (
+                          <SelectItem key={user.email} value={user.email}>
+                            {user.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    {userFilter !== 'all' && (
+                      <Button
+                        variant='ghost'
+                        size='icon'
+                        type='button'
+                        onClick={() => {
+                          setUserFilter('all');
+                          setCurrentPage(1);
+                        }}
+                        title='Clear user filter'
+                        className='h-8 w-8 text-muted-foreground hover:text-foreground cursor-pointer rounded-md'
+                      >
+                        <X className='h-3.5 w-3.5' />
+                      </Button>
+                    )}
+                  </div>
+                </div>
+
+                {/* Call Type Filter */}
+                <div className='flex items-center gap-1.5'>
+                  <span className='text-xs text-muted-foreground whitespace-nowrap font-medium'>
+                    Call Type:
+                  </span>
                   <Select
-                    value={userFilter}
+                    value={callTypeFilter}
                     onValueChange={(val) => {
-                      setUserFilter(val);
+                      setCallTypeFilter(val);
                       setCurrentPage(1);
                     }}
                   >
                     <SelectTrigger className='h-9 text-xs w-[140px] rounded-lg bg-background'>
-                      <SelectValue placeholder='All Users' />
+                      <SelectValue placeholder='All Types' />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value='all'>All Users</SelectItem>
-                      {availableUsers.map((user) => (
-                        <SelectItem key={user.email} value={user.email}>
-                          {user.name}
-                        </SelectItem>
-                      ))}
+                      <SelectItem value='all'>All Types</SelectItem>
+                      <SelectItem value='outgoing'>Outgoing Calls</SelectItem>
+                      <SelectItem value='incoming'>Incoming Calls</SelectItem>
+                      <SelectItem value='missed'>Missed Calls</SelectItem>
                     </SelectContent>
                   </Select>
-                  {userFilter !== 'all' && (
-                    <Button
-                      variant='ghost'
-                      size='icon'
-                      type='button'
-                      onClick={() => {
-                        setUserFilter('all');
+                </div>
+
+                {/* Rows Per Page */}
+                <div className='flex items-center gap-1.5'>
+                  <span className='text-xs text-muted-foreground whitespace-nowrap font-medium'>
+                    Show:
+                  </span>
+                  <Select
+                    value={String(pageSize)}
+                    onValueChange={(val) => {
+                      setPageSize(Number(val));
+                      setCurrentPage(1);
+                    }}
+                  >
+                    <SelectTrigger className='h-9 text-xs w-[90px] rounded-lg bg-background'>
+                      <SelectValue placeholder='20' />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value='10'>10 / page</SelectItem>
+                      <SelectItem value='20'>20 / page</SelectItem>
+                      <SelectItem value='50'>50 / page</SelectItem>
+                      <SelectItem value='100'>100 / page</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                {/* Reset Button */}
+                {hasActiveFilters && (
+                  <Button
+                    variant='ghost'
+                    size='sm'
+                    onClick={handleResetAllFilters}
+                    className='h-9 px-2.5 text-xs text-rose-600 hover:text-rose-700 hover:bg-rose-50 dark:hover:bg-rose-950/30 rounded-lg transition-colors cursor-pointer shrink-0'
+                    title='Reset all filters'
+                  >
+                    <RotateCcw className='w-3.5 h-3.5 mr-1' /> Reset
+                  </Button>
+                )}
+              </div>
+            </div>
+
+            {/* Bottom Row: Period-wise Date & Time Filter (From Date/Time to To Date/Time) + Quick Presets */}
+            <div className='pt-2.5 border-t border-border/60 flex flex-col xl:flex-row xl:items-center justify-between gap-3'>
+              {/* Date & Time pickers (From - To) */}
+              <div className='flex items-center gap-2.5 flex-wrap'>
+                <div className='flex items-center gap-1.5 text-foreground mr-1'>
+                  <CalendarIcon className='w-3.5 h-3.5 text-blue-600 shrink-0' />
+                  <span className='text-xs font-semibold'>Period:</span>
+                </div>
+
+                {/* From Date & Time */}
+                <div className='flex items-center gap-1.5'>
+                  <span className='text-[11px] font-medium text-muted-foreground'>
+                    From
+                  </span>
+                  <div className='w-32 sm:w-34'>
+                    <DatePicker
+                      value={fromDate}
+                      onChange={handleFromDateChange}
+                      placeholder='From date'
+                      className='h-8 text-xs'
+                    />
+                  </div>
+                  <div className='flex items-center gap-1 bg-muted/40 border border-border/70 rounded-lg px-2 h-8 hover:bg-muted/60 transition-colors'>
+                    <Clock className='w-3 h-3 text-muted-foreground shrink-0' />
+                    <input
+                      type='time'
+                      value={fromTime}
+                      onChange={(e) => {
+                        setFromTime(e.target.value);
+                        if (!fromDate) {
+                          setFromDate(format(new Date(), 'yyyy-MM-dd'));
+                        }
+                        setActivePreset('CUSTOM');
                         setCurrentPage(1);
                       }}
-                      title='Clear user filter'
-                      className='h-8 w-8 text-muted-foreground hover:text-foreground cursor-pointer rounded-md'
-                    >
-                      <X className='h-3.5 w-3.5' />
-                    </Button>
-                  )}
+                      className='bg-transparent text-xs text-foreground outline-none w-18 cursor-pointer font-medium'
+                      title='From Time (HH:mm)'
+                    />
+                    {fromTime && (
+                      <button
+                        type='button'
+                        onClick={() => {
+                          setFromTime('');
+                          setActivePreset('CUSTOM');
+                          setCurrentPage(1);
+                        }}
+                        className='text-muted-foreground hover:text-foreground p-0.5'
+                        title='Clear time'
+                      >
+                        <X className='w-3 h-3' />
+                      </button>
+                    )}
+                  </div>
                 </div>
+
+                {/* To Date & Time */}
+                <div className='flex items-center gap-1.5'>
+                  <span className='text-[11px] font-medium text-muted-foreground'>
+                    To
+                  </span>
+                  <div className='w-32 sm:w-34'>
+                    <DatePicker
+                      value={toDate}
+                      onChange={handleToDateChange}
+                      placeholder='To date'
+                      className='h-8 text-xs'
+                    />
+                  </div>
+                  <div className='flex items-center gap-1 bg-muted/40 border border-border/70 rounded-lg px-2 h-8 hover:bg-muted/60 transition-colors'>
+                    <Clock className='w-3 h-3 text-muted-foreground shrink-0' />
+                    <input
+                      type='time'
+                      value={toTime}
+                      onChange={(e) => {
+                        setToTime(e.target.value);
+                        if (!toDate) {
+                          setToDate(format(new Date(), 'yyyy-MM-dd'));
+                        }
+                        setActivePreset('CUSTOM');
+                        setCurrentPage(1);
+                      }}
+                      className='bg-transparent text-xs text-foreground outline-none w-18 cursor-pointer font-medium'
+                      title='To Time (HH:mm)'
+                    />
+                    {toTime && (
+                      <button
+                        type='button'
+                        onClick={() => {
+                          setToTime('');
+                          setActivePreset('CUSTOM');
+                          setCurrentPage(1);
+                        }}
+                        className='text-muted-foreground hover:text-foreground p-0.5'
+                        title='Clear time'
+                      >
+                        <X className='w-3 h-3' />
+                      </button>
+                    )}
+                  </div>
+                </div>
+
+                {(fromDate || toDate || fromTime || toTime) && (
+                  <button
+                    type='button'
+                    onClick={handleClearPeriod}
+                    className='p-1 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted text-xs transition-colors'
+                    title='Clear date & time filter'
+                  >
+                    <X className='w-3.5 h-3.5' />
+                  </button>
+                )}
               </div>
 
-              {/* Call Type Filter */}
-              <div className='flex items-center gap-1.5'>
-                <span className='text-xs text-muted-foreground whitespace-nowrap font-medium'>
-                  Call Type:
-                </span>
-                <Select
-                  value={callTypeFilter}
-                  onValueChange={(val) => {
-                    setCallTypeFilter(val);
-                    setCurrentPage(1);
-                  }}
-                >
-                  <SelectTrigger className='h-9 text-xs w-[140px] rounded-lg bg-background'>
-                    <SelectValue placeholder='All Types' />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value='all'>All Types</SelectItem>
-                    <SelectItem value='outgoing'>Outgoing Calls</SelectItem>
-                    <SelectItem value='incoming'>Incoming Calls</SelectItem>
-                    <SelectItem value='missed'>Missed Calls</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-
-              {/* Rows Per Page */}
-              <div className='flex items-center gap-1.5'>
-                <span className='text-xs text-muted-foreground whitespace-nowrap font-medium'>
-                  Show:
-                </span>
-                <Select
-                  value={String(pageSize)}
-                  onValueChange={(val) => {
-                    setPageSize(Number(val));
-                    setCurrentPage(1);
-                  }}
-                >
-                  <SelectTrigger className='h-9 text-xs w-[90px] rounded-lg bg-background'>
-                    <SelectValue placeholder='20' />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value='10'>10 / page</SelectItem>
-                    <SelectItem value='20'>20 / page</SelectItem>
-                    <SelectItem value='50'>50 / page</SelectItem>
-                    <SelectItem value='100'>100 / page</SelectItem>
-                  </SelectContent>
-                </Select>
+              {/* Quick Period Presets */}
+              <div className='flex items-center gap-1.5 overflow-x-auto pb-1 xl:pb-0'>
+                {PERIOD_PRESETS.map((preset) => {
+                  const isSelected =
+                    activePreset === preset.id &&
+                    (preset.id === 'ALL'
+                      ? !fromDate && !toDate
+                      : Boolean(fromDate || toDate));
+                  return (
+                    <button
+                      key={preset.id}
+                      type='button'
+                      onClick={() => applyPreset(preset.id)}
+                      className={`px-2.5 py-1 rounded-lg text-xs font-medium transition-all whitespace-nowrap cursor-pointer ${
+                        isSelected
+                          ? 'bg-blue-600 text-white shadow-xs'
+                          : 'bg-muted/60 text-muted-foreground hover:bg-muted hover:text-foreground'
+                      }`}
+                    >
+                      {preset.label}
+                    </button>
+                  );
+                })}
               </div>
             </div>
           </div>
@@ -646,18 +939,18 @@ export default function CallRecordingsPage() {
                             No call recordings found
                           </p>
                           <p className='text-xs text-muted-foreground max-w-sm'>
-                            {appliedSearch || callTypeFilter !== 'all' || userFilter !== 'all'
-                              ? 'Try adjusting your search query or filters to find what you are looking for.'
+                            {hasActiveFilters
+                              ? 'Try adjusting your search query, period filter, or caller selection to find what you are looking for.'
                               : 'No call records have been logged in the collection yet.'}
                           </p>
-                          {(appliedSearch || callTypeFilter !== 'all' || userFilter !== 'all') && (
+                          {hasActiveFilters && (
                             <Button
                               variant='outline'
                               size='sm'
                               onClick={handleResetAllFilters}
                               className='mt-2 text-xs cursor-pointer'
                             >
-                              Reset Filters
+                              Reset All Filters
                             </Button>
                           )}
                         </div>

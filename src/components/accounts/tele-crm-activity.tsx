@@ -630,7 +630,7 @@ export default function TeleCRMActivityHistory({
           open={!!selectedItem}
           onOpenChange={(open) => !open && setSelectedItem(null)}
         >
-          <DialogContent className='max-w-2xl max-h-[85vh] overflow-y-auto'>
+          <DialogContent className='min-w-3xl max-h-[85vh] overflow-y-auto'>
             <DialogHeader>
               <DialogTitle className='flex items-center gap-2 text-base font-semibold'>
                 <span>TeleCRM Activity Details</span>
@@ -755,17 +755,6 @@ export default function TeleCRMActivityHistory({
                       <span className='font-medium text-amber-600 dark:text-amber-400'>
                         {selectedItem.leads?.callback_date_time ||
                           selectedItem.call_back_date_time ||
-                          '—'}
-                      </span>
-                    </div>
-                    <div>
-                      <span className='text-muted-foreground block'>
-                        Lead Assignee:
-                      </span>
-                      <span className='font-medium'>
-                        {selectedItem.leads?.lead_assignee ||
-                          selectedItem.my_name ||
-                          selectedItem.actor_employee_email ||
                           '—'}
                       </span>
                     </div>
