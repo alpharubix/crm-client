@@ -122,23 +122,77 @@ const PERIOD_PRESETS: { id: PeriodPresetId; label: string }[] = [
   { id: 'LAST_30_DAYS', label: 'Last 30 Days' },
 ];
 
+export const parseTicketDate = (dateStr?: string | null): Date | null => {
+  if (!dateStr) return null;
+  const trimmed = dateStr.trim();
+  if (!trimmed) return null;
+
+  // 1. Check if string has 12-hour format with AM/PM (e.g. "2026-09-26 06:25:00 AM")
+  const ampmMatch = trimmed.match(
+    /^(\d{4})[-/](\d{1,2})[-/](\d{1,2})[,\s]+(\d{1,2}):(\d{1,2})(?::(\d{1,2}))?\s*(AM|PM)$/i,
+  );
+  if (ampmMatch) {
+    const year = parseInt(ampmMatch[1], 10);
+    const month = parseInt(ampmMatch[2], 10);
+    const day = parseInt(ampmMatch[3], 10);
+    let hour = parseInt(ampmMatch[4], 10);
+    const minute = parseInt(ampmMatch[5], 10);
+    const second = ampmMatch[6] ? parseInt(ampmMatch[6], 10) : 0;
+    const isPM = ampmMatch[7].toUpperCase() === 'PM';
+
+    if (isPM && hour < 12) hour += 12;
+    if (!isPM && hour === 12) hour = 0;
+
+    // Database stores UTC timestamps which the server serializes with strftime.
+    // Parse as UTC so conversion to IST is exact.
+    return new Date(Date.UTC(year, month - 1, day, hour, minute, second));
+  }
+
+  // 2. Check if string is "YYYY-MM-DD HH:mm:ss" without timezone (UTC from DB)
+  if (/^\d{4}-\d{2}-\d{2}[ T]\d{2}:\d{2}:\d{2}(?:\.\d+)?$/.test(trimmed)) {
+    const d = new Date(trimmed.replace(' ', 'T') + 'Z');
+    if (!isNaN(d.getTime())) return d;
+  }
+
+  // 3. ISO format or standard date string
+  const d = new Date(trimmed);
+  if (!isNaN(d.getTime())) return d;
+
+  const d2 = new Date(trimmed.replace(' ', 'T'));
+  if (!isNaN(d2.getTime())) return d2;
+
+  return null;
+};
+
 export const format12Hour = (dateStr?: string | null): string => {
   if (!dateStr) return 'N/A';
   try {
-    const trimmed = dateStr.trim();
-    // If it already has AM/PM, return it
-    if (/\b(AM|PM)\b/i.test(trimmed)) {
-      return trimmed;
+    const d = parseTicketDate(dateStr);
+    if (!d || isNaN(d.getTime())) {
+      return dateStr;
     }
-    const d = new Date(trimmed.replace(' ', 'T'));
-    if (!isNaN(d.getTime())) {
-      return format(d, 'yyyy-MM-dd, hh:mm:ss a');
-    }
-    const d2 = new Date(trimmed);
-    if (!isNaN(d2.getTime())) {
-      return format(d2, 'yyyy-MM-dd, hh:mm:ss a');
-    }
-    return trimmed;
+
+    const parts = new Intl.DateTimeFormat('en-IN', {
+      timeZone: 'Asia/Kolkata',
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit',
+      hour12: true,
+    }).formatToParts(d);
+
+    const year = parts.find((p) => p.type === 'year')?.value || '';
+    const month = parts.find((p) => p.type === 'month')?.value || '';
+    const day = parts.find((p) => p.type === 'day')?.value || '';
+    const hour = parts.find((p) => p.type === 'hour')?.value || '';
+    const minute = parts.find((p) => p.type === 'minute')?.value || '';
+    const second = parts.find((p) => p.type === 'second')?.value || '00';
+    const dayPeriod =
+      parts.find((p) => p.type === 'dayPeriod')?.value?.toUpperCase() || '';
+
+    return `${year}-${month}-${day}, ${hour}:${minute}:${second} ${dayPeriod}`;
   } catch {
     return dateStr;
   }
@@ -493,16 +547,13 @@ export default function SupportTicketsPage() {
         if (!t.created_at) {
           matchesPeriod = false;
         } else {
-          // Parse created_at (supports ISO, 24-hr, and 12-hr with AM/PM)
-          const trimmedCreatedAt = t.created_at.trim();
-          let ticketTs = new Date(trimmedCreatedAt).getTime();
-          if (isNaN(ticketTs)) {
-            ticketTs = new Date(trimmedCreatedAt.replace(' ', 'T')).getTime();
-          }
+          // Parse created_at with IST support
+          const ticketDate = parseTicketDate(t.created_at);
+          let ticketTs = ticketDate ? ticketDate.getTime() : NaN;
 
           if (isNaN(ticketTs)) {
             // Fallback string matching if date parsing fails
-            const ticketDateStr = trimmedCreatedAt.slice(0, 10);
+            const ticketDateStr = t.created_at.trim().slice(0, 10);
             if (fromDate && ticketDateStr < fromDate) matchesPeriod = false;
             if (toDate && ticketDateStr > toDate) matchesPeriod = false;
           } else {
@@ -510,8 +561,9 @@ export default function SupportTicketsPage() {
               const effectiveDate =
                 fromDate || format(new Date(), 'yyyy-MM-dd');
               const effectiveTime = fromTime ? `${fromTime}:00` : '00:00:00';
+              // Treat filter selections as Indian Standard Time (IST, +05:30)
               const fromTs = new Date(
-                `${effectiveDate}T${effectiveTime}`,
+                `${effectiveDate}T${effectiveTime}+05:30`,
               ).getTime();
               if (!isNaN(fromTs) && ticketTs < fromTs) {
                 matchesPeriod = false;
@@ -522,8 +574,9 @@ export default function SupportTicketsPage() {
               const effectiveDate =
                 toDate || format(new Date(), 'yyyy-MM-dd');
               const effectiveTime = toTime ? `${toTime}:59` : '23:59:59';
+              // Treat filter selections as Indian Standard Time (IST, +05:30)
               const toTs = new Date(
-                `${effectiveDate}T${effectiveTime}`,
+                `${effectiveDate}T${effectiveTime}+05:30`,
               ).getTime();
               if (!isNaN(toTs) && ticketTs > toTs) {
                 matchesPeriod = false;
