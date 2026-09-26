@@ -58,6 +58,10 @@ import {
   Calendar as CalendarIcon,
   RotateCcw,
   X,
+  Link as LinkIcon,
+  Plus,
+  Trash2,
+  ExternalLink,
 } from 'lucide-react';
 
 interface SupportTicket {
@@ -67,10 +71,16 @@ interface SupportTicket {
   priority: string;
   description: string;
   status: string;
+  attachment_links?: string[];
+  attachment_link?: string;
   created_at: string;
-  user_id: number;
+  updated_at?: string;
+  user_id: number | string;
   user_name?: string;
   user_email?: string;
+  updated_by?: string;
+  updated_by_name?: string;
+  updated_by_email?: string;
 }
 
 const SERVICES = [
@@ -112,6 +122,28 @@ const PERIOD_PRESETS: { id: PeriodPresetId; label: string }[] = [
   { id: 'LAST_30_DAYS', label: 'Last 30 Days' },
 ];
 
+export const format12Hour = (dateStr?: string | null): string => {
+  if (!dateStr) return 'N/A';
+  try {
+    const trimmed = dateStr.trim();
+    // If it already has AM/PM, return it
+    if (/\b(AM|PM)\b/i.test(trimmed)) {
+      return trimmed;
+    }
+    const d = new Date(trimmed.replace(' ', 'T'));
+    if (!isNaN(d.getTime())) {
+      return format(d, 'yyyy-MM-dd, hh:mm:ss a');
+    }
+    const d2 = new Date(trimmed);
+    if (!isNaN(d2.getTime())) {
+      return format(d2, 'yyyy-MM-dd, hh:mm:ss a');
+    }
+    return trimmed;
+  } catch {
+    return dateStr;
+  }
+};
+
 export default function SupportTicketsPage() {
   const { user } = useAuth();
   const userRole = String(user?.role || '')
@@ -124,7 +156,27 @@ export default function SupportTicketsPage() {
   const [service, setService] = useState('General Technical Issue');
   const [priority, setPriority] = useState('Medium');
   const [description, setDescription] = useState('');
+  const [attachmentLinks, setAttachmentLinks] = useState<string[]>(['']);
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const handleLinkChange = (index: number, val: string) => {
+    setAttachmentLinks((prev) => {
+      const next = [...prev];
+      next[index] = val;
+      return next;
+    });
+  };
+
+  const handleAddLinkField = () => {
+    setAttachmentLinks((prev) => [...prev, '']);
+  };
+
+  const handleRemoveLinkField = (index: number) => {
+    setAttachmentLinks((prev) => {
+      if (prev.length <= 1) return [''];
+      return prev.filter((_, i) => i !== index);
+    });
+  };
 
   // Data & Table State
   const [tickets, setTickets] = useState<SupportTicket[]>([]);
@@ -188,6 +240,10 @@ export default function SupportTicketsPage() {
       return;
     }
 
+    const validLinks = attachmentLinks
+      .map((l) => l.trim())
+      .filter((l) => l.length > 0);
+
     setIsSubmitting(true);
     try {
       const res = await fetch(
@@ -203,6 +259,7 @@ export default function SupportTicketsPage() {
             service,
             priority,
             description,
+            attachment_links: validLinks,
           }),
         },
       );
@@ -222,6 +279,7 @@ export default function SupportTicketsPage() {
       setDescription('');
       setService('General Technical Issue');
       setPriority('Medium');
+      setAttachmentLinks(['']);
 
       fetchTickets();
     } catch (error: any) {
@@ -256,15 +314,52 @@ export default function SupportTicketsPage() {
         );
       }
 
-      toast.success(`Ticket ${ticketId} status updated to ${newStatus}`);
+      const updatedData = data?.data;
+      const updaterName =
+        updatedData?.updated_by_name ||
+        user?.user_name ||
+        (user as any)?.name ||
+        (user as any)?.full_name ||
+        'Current User';
+      const updatedAt =
+        updatedData?.updated_at ||
+        format(new Date(), 'yyyy-MM-dd HH:mm:ss');
+      const updatedById =
+        updatedData?.updated_by ||
+        String(user?.user_id || (user as any)?.id || '');
+
+      if (newStatus === 'CLOSED') {
+        toast.success(
+          `Ticket ${ticketId} status closed. You can reopen or update it again anytime.`,
+        );
+      } else {
+        toast.success(`Ticket ${ticketId} status updated to ${newStatus}`);
+      }
+
       setTickets((prev) =>
         prev.map((t) =>
-          t.ticket_id === ticketId ? { ...t, status: newStatus } : t,
+          t.ticket_id === ticketId
+            ? {
+                ...t,
+                status: newStatus,
+                updated_by: updatedById,
+                updated_by_name: updaterName,
+                updated_at: updatedAt,
+              }
+            : t,
         ),
       );
       if (selectedTicket && selectedTicket.ticket_id === ticketId) {
         setSelectedTicket((prev) =>
-          prev ? { ...prev, status: newStatus } : null,
+          prev
+            ? {
+                ...prev,
+                status: newStatus,
+                updated_by: updatedById,
+                updated_by_name: updaterName,
+                updated_at: updatedAt,
+              }
+            : null,
         );
       }
     } catch (error: any) {
@@ -374,7 +469,9 @@ export default function SupportTicketsPage() {
         t.service.toLowerCase().includes(q) ||
         (t.description && t.description.toLowerCase().includes(q)) ||
         (t.user_name && t.user_name.toLowerCase().includes(q)) ||
-        (t.user_email && t.user_email.toLowerCase().includes(q));
+        (t.user_email && t.user_email.toLowerCase().includes(q)) ||
+        (t.updated_by_name && t.updated_by_name.toLowerCase().includes(q)) ||
+        (t.attachment_links && t.attachment_links.some((l) => l.toLowerCase().includes(q)));
 
       // 2. Status Filter
       const currentStatus = t.status.toUpperCase().replace(/\s+/g, '_');
@@ -396,13 +493,16 @@ export default function SupportTicketsPage() {
         if (!t.created_at) {
           matchesPeriod = false;
         } else {
-          // Normalize created_at (format e.g. "YYYY-MM-DD HH:MM:SS") to ISO timestamp
-          const normalized = t.created_at.replace(' ', 'T');
-          const ticketTs = new Date(normalized).getTime();
+          // Parse created_at (supports ISO, 24-hr, and 12-hr with AM/PM)
+          const trimmedCreatedAt = t.created_at.trim();
+          let ticketTs = new Date(trimmedCreatedAt).getTime();
+          if (isNaN(ticketTs)) {
+            ticketTs = new Date(trimmedCreatedAt.replace(' ', 'T')).getTime();
+          }
 
           if (isNaN(ticketTs)) {
             // Fallback string matching if date parsing fails
-            const ticketDateStr = t.created_at.slice(0, 10);
+            const ticketDateStr = trimmedCreatedAt.slice(0, 10);
             if (fromDate && ticketDateStr < fromDate) matchesPeriod = false;
             if (toDate && ticketDateStr > toDate) matchesPeriod = false;
           } else {
@@ -752,6 +852,63 @@ export default function SupportTicketsPage() {
                 />
               </div>
 
+              {/* Attachment Links */}
+              <div className='space-y-2'>
+                <div className='flex items-center justify-between'>
+                  <Label
+                    htmlFor='attachment-link-0'
+                    className='text-xs font-semibold text-slate-700 flex items-center gap-1'
+                  >
+                    <LinkIcon className='w-3.5 h-3.5 text-slate-400' /> Attachment Link
+                  </Label>
+                  <Button
+                    type='button'
+                    variant='ghost'
+                    size='sm'
+                    onClick={handleAddLinkField}
+                    disabled={isSubmitting}
+                    className='h-6 px-2 text-[11px] font-medium text-blue-600 hover:text-blue-700 hover:bg-blue-50 rounded cursor-pointer transition-colors'
+                  >
+                    <Plus className='w-3 h-3 mr-1' /> Add More Link
+                  </Button>
+                </div>
+
+                <div className='space-y-2'>
+                  {attachmentLinks.map((link, index) => (
+                    <div key={index} className='flex items-center gap-1.5'>
+                      <div className='relative flex-1'>
+                        <LinkIcon className='w-3.5 h-3.5 text-slate-400 absolute left-2.5 top-1/2 -translate-y-1/2 pointer-events-none' />
+                        <Input
+                          id={`attachment-link-${index}`}
+                          type='url'
+                          placeholder='https://drive.google.com/... or link'
+                          value={link}
+                          onChange={(e) => handleLinkChange(index, e.target.value)}
+                          disabled={isSubmitting}
+                          className='pl-8 text-xs rounded-lg border-slate-200 focus:border-blue-500 focus:ring-blue-500'
+                        />
+                      </div>
+                      {attachmentLinks.length > 1 && (
+                        <Button
+                          type='button'
+                          variant='ghost'
+                          size='sm'
+                          onClick={() => handleRemoveLinkField(index)}
+                          disabled={isSubmitting}
+                          className='h-8 w-8 p-0 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg shrink-0 cursor-pointer'
+                          title='Remove link'
+                        >
+                          <Trash2 className='w-3.5 h-3.5' />
+                        </Button>
+                      )}
+                    </div>
+                  ))}
+                </div>
+                <p className='text-[10px] text-slate-400'>
+                  Add links to screenshots, recordings, docs, or bug evidence.
+                </p>
+              </div>
+
               <Button
                 type='submit'
                 disabled={isSubmitting}
@@ -1060,7 +1217,7 @@ export default function SupportTicketsPage() {
                           Ticket ID
                         </TableHead>
                         <TableHead className='font-bold text-xs text-slate-600 uppercase tracking-wider py-3.5'>
-                          Title
+                          Title & Links
                         </TableHead>
                         <TableHead className='font-bold text-xs text-slate-600 uppercase tracking-wider py-3.5'>
                           Module
@@ -1071,6 +1228,9 @@ export default function SupportTicketsPage() {
                         <TableHead className='font-bold text-xs text-slate-600 uppercase tracking-wider py-3.5'>
                           Status
                         </TableHead>
+                        <TableHead className='font-bold text-xs text-slate-600 uppercase tracking-wider py-3.5'>
+                          Updated By
+                        </TableHead>
                         <TableHead className='font-bold text-xs text-slate-600 uppercase tracking-wider py-3.5 pr-6 text-right'>
                           Action
                         </TableHead>
@@ -1078,8 +1238,13 @@ export default function SupportTicketsPage() {
                     </TableHeader>
                     <TableBody>
                       {filteredTickets.map((t) => {
-                        const canManage = isAdmin;
+                        const isTicketCreator = Boolean(
+                          (user?.user_id && String(user.user_id) === String(t.user_id)) ||
+                          ((user as any)?.id && String((user as any).id) === String(t.user_id))
+                        );
+                        const canManage = isAdmin || isTicketCreator;
                         const isUpdatingThis = updatingTicketId === t.ticket_id;
+                        const isClosed = t.status.toUpperCase() === 'CLOSED';
 
                         return (
                           <TableRow
@@ -1098,7 +1263,7 @@ export default function SupportTicketsPage() {
                                 {t.title}
                               </span>
                               <span className='text-xs text-slate-400 block mt-0.5 flex items-center gap-1.5 flex-wrap'>
-                                <span className='font-mono text-[11px]'>{t.created_at || 'N/A'}</span>
+                                <span className='font-mono text-[11px]'>{format12Hour(t.created_at)}</span>
                                 {t.user_name && (
                                   <>
                                     <span>•</span>
@@ -1106,6 +1271,24 @@ export default function SupportTicketsPage() {
                                   </>
                                 )}
                               </span>
+                              {t.attachment_links && t.attachment_links.length > 0 && (
+                                <div className='flex items-center gap-1.5 mt-1.5 flex-wrap'>
+                                  {t.attachment_links.map((link, idx) => (
+                                    <a
+                                      key={idx}
+                                      href={link}
+                                      target='_blank'
+                                      rel='noopener noreferrer'
+                                      onClick={(e) => e.stopPropagation()}
+                                      className='inline-flex items-center gap-1 text-[11px] text-blue-600 hover:text-blue-800 bg-blue-50/90 hover:bg-blue-100 border border-blue-200/60 rounded-md px-1.5 py-0.5 transition-colors font-medium max-w-[180px] truncate'
+                                      title={link}
+                                    >
+                                      <LinkIcon className='w-2.5 h-2.5 shrink-0 text-blue-500' />
+                                      <span className='truncate'>{link.replace(/^https?:\/\//, '')}</span>
+                                    </a>
+                                  ))}
+                                </div>
+                              )}
                             </TableCell>
                             <TableCell className='text-slate-600 text-xs py-3.5 font-medium'>
                               {t.service}
@@ -1120,9 +1303,16 @@ export default function SupportTicketsPage() {
                                   onValueChange={(newSt) =>
                                     handleStatusChange(t.ticket_id, newSt)
                                   }
-                                  disabled={isUpdatingThis}
+                                  disabled={isUpdatingThis || isClosed}
                                 >
-                                  <SelectTrigger className='h-8 text-xs font-semibold w-32 border-slate-200 rounded-lg shadow-2xs'>
+                                  <SelectTrigger
+                                    className={`h-8 text-xs font-semibold w-32 border-slate-200 rounded-lg shadow-2xs ${
+                                      isClosed
+                                        ? 'opacity-60 cursor-not-allowed bg-slate-100/90 text-zinc-500 border-slate-300'
+                                        : ''
+                                    }`}
+                                    title={isClosed ? 'Ticket is closed and cannot be changed' : 'Change status'}
+                                  >
                                     {isUpdatingThis ? (
                                       <Loader2 className='w-3.5 h-3.5 animate-spin mx-auto' />
                                     ) : (
@@ -1145,6 +1335,25 @@ export default function SupportTicketsPage() {
                                 </Select>
                               ) : (
                                 getStatusBadge(t.status)
+                              )}
+                            </TableCell>
+                            <TableCell className='py-3.5 text-xs'>
+                              {t.updated_by_name ? (
+                                <div className='space-y-0.5'>
+                                  <span className='font-semibold text-slate-800 flex items-center gap-1'>
+                                    <UserCheck className='w-3 h-3 text-indigo-500 shrink-0' />
+                                    <span className='truncate max-w-[120px]' title={t.updated_by_name}>
+                                      {t.updated_by_name}
+                                    </span>
+                                  </span>
+                                  {t.updated_at && (
+                                    <span className='text-[10px] text-slate-400 block font-mono'>
+                                      {format12Hour(t.updated_at)}
+                                    </span>
+                                  )}
+                                </div>
+                              ) : (
+                                <span className='text-slate-400 italic text-[11px]'>—</span>
                               )}
                             </TableCell>
                             <TableCell className='py-3.5 pr-6 text-right'>
@@ -1176,7 +1385,7 @@ export default function SupportTicketsPage() {
         onOpenChange={(open) => !open && setSelectedTicket(null)}
       >
         {selectedTicket && (
-          <DialogContent className='max-w-xl rounded-2xl p-6 bg-white border border-slate-200'>
+          <DialogContent className='max-w-xl rounded-2xl p-6 bg-white border border-slate-200 max-h-[90vh] overflow-y-auto'>
             <DialogHeader className='space-y-1'>
               <div className='flex items-center justify-between gap-2 pr-6'>
                 <span className='font-mono text-xs font-bold text-blue-700 bg-blue-50 px-2.5 py-1 rounded-md border border-blue-200/60'>
@@ -1187,15 +1396,30 @@ export default function SupportTicketsPage() {
               <DialogTitle className='text-xl font-bold text-slate-900 pt-2'>
                 {selectedTicket.title}
               </DialogTitle>
-              <DialogDescription className='text-xs text-slate-500'>
-                Created on {selectedTicket.created_at || 'N/A'} • Raised by:{' '}
-                <span className='font-semibold text-slate-700'>
-                  {selectedTicket.user_name ||
-                    `User #${selectedTicket.user_id}`}
-                </span>{' '}
-                {selectedTicket.user_email
-                  ? `(${selectedTicket.user_email})`
-                  : ''}
+              <DialogDescription className='text-xs text-slate-500 space-y-1.5 pt-1'>
+                <div className='flex items-center gap-1 flex-wrap'>
+                  <span>Created on <span className='font-mono font-medium text-slate-700'>{format12Hour(selectedTicket.created_at)}</span></span>
+                  <span>•</span>
+                  <span>Raised by:{' '}
+                    <span className='font-semibold text-slate-700'>
+                      {selectedTicket.user_name ||
+                        `User #${selectedTicket.user_id}`}
+                    </span>{' '}
+                    {selectedTicket.user_email
+                      ? `(${selectedTicket.user_email})`
+                      : ''}
+                  </span>
+                </div>
+                {selectedTicket.updated_by_name && (
+                  <div className='flex items-center gap-1.5 text-indigo-700 bg-indigo-50/80 border border-indigo-100 rounded-lg px-2.5 py-1 w-fit'>
+                    <UserCheck className='w-3.5 h-3.5 text-indigo-600 shrink-0' />
+                    <span>
+                      Last updated by <span className='font-semibold'>{selectedTicket.updated_by_name}</span>
+                      {selectedTicket.updated_by_email ? ` (${selectedTicket.updated_by_email})` : ''}
+                      {selectedTicket.updated_at ? ` on ${format12Hour(selectedTicket.updated_at)}` : ''}
+                    </span>
+                  </div>
+                )}
               </DialogDescription>
             </DialogHeader>
 
@@ -1217,6 +1441,35 @@ export default function SupportTicketsPage() {
                 </div>
               </div>
 
+              {/* Attachment Links display in Detail Dialog */}
+              {selectedTicket.attachment_links && selectedTicket.attachment_links.length > 0 && (
+                <div className='space-y-2'>
+                  <span className='text-xs font-semibold text-slate-700 uppercase tracking-wider flex items-center gap-1.5'>
+                    <LinkIcon className='w-3.5 h-3.5 text-blue-600' />
+                    Attachment Links ({selectedTicket.attachment_links.length})
+                  </span>
+                  <div className='space-y-1.5 max-h-48 overflow-y-auto pr-1'>
+                    {selectedTicket.attachment_links.map((link, idx) => (
+                      <a
+                        key={idx}
+                        href={link}
+                        target='_blank'
+                        rel='noopener noreferrer'
+                        className='flex items-center justify-between p-2.5 bg-blue-50/40 hover:bg-blue-50/90 border border-blue-100/80 rounded-xl text-xs text-blue-700 hover:text-blue-900 group transition-all'
+                      >
+                        <span className='flex items-center gap-2 truncate pr-2'>
+                          <span className='w-5 h-5 rounded-md bg-blue-100 text-blue-700 flex items-center justify-center font-bold text-[10px] shrink-0'>
+                            {idx + 1}
+                          </span>
+                          <span className='truncate font-mono text-[11px]'>{link}</span>
+                        </span>
+                        <ExternalLink className='w-3.5 h-3.5 text-blue-400 group-hover:text-blue-700 shrink-0' />
+                      </a>
+                    ))}
+                  </div>
+                </div>
+              )}
+
               <div className='space-y-1.5'>
                 <span className='text-xs font-semibold text-slate-700 uppercase tracking-wider block'>
                   Issue Description
@@ -1226,44 +1479,61 @@ export default function SupportTicketsPage() {
                 </div>
               </div>
 
-              {isAdmin && (
-                <div className='p-4 rounded-xl bg-purple-50/60 border border-purple-100 flex items-center justify-between'>
-                  <div className='space-y-0.5'>
-                    <span className='text-xs font-bold text-purple-900 flex items-center gap-1'>
-                      <ShieldCheck className='w-3.5 h-3.5 text-purple-600' />{' '}
-                      Update Status (Admin)
-                    </span>
-                    <p className='text-[11px] text-purple-700'>
-                      Change resolution status for this issue ticket.
-                    </p>
-                  </div>
+              {(isAdmin || Boolean(
+                (user?.user_id && String(user.user_id) === String(selectedTicket.user_id)) ||
+                ((user as any)?.id && String((user as any).id) === String(selectedTicket.user_id))
+              )) && (() => {
+                const isSelectedTicketClosed = selectedTicket.status.toUpperCase() === 'CLOSED';
+                return (
+                  <div className='p-4 rounded-xl bg-purple-50/60 border border-purple-100 flex flex-col sm:flex-row sm:items-center justify-between gap-3'>
+                    <div className='space-y-0.5'>
+                      <span className='text-xs font-bold text-purple-900 flex items-center gap-1'>
+                        <ShieldCheck className='w-3.5 h-3.5 text-purple-600' />{' '}
+                        {isAdmin ? 'Update Status (Admin)' : 'Update Status'}
+                      </span>
+                      <p className='text-[11px] text-purple-700'>
+                        {isSelectedTicketClosed
+                          ? 'This ticket is marked as CLOSED. The status dropdown is deactivated and cannot be changed.'
+                          : 'Change resolution status for this issue ticket.'}
+                      </p>
+                    </div>
 
-                  <Select
-                    value={selectedTicket.status.toUpperCase()}
-                    onValueChange={(newSt) =>
-                      handleStatusChange(selectedTicket.ticket_id, newSt)
-                    }
-                    disabled={updatingTicketId === selectedTicket.ticket_id}
-                  >
-                    <SelectTrigger className='h-9 text-xs font-bold w-36 bg-white border-purple-200 text-purple-900 rounded-lg'>
-                      <SelectValue>
-                        {selectedTicket.status.toUpperCase()}
-                      </SelectValue>
-                    </SelectTrigger>
-                    <SelectContent>
-                      {STATUS_OPTIONS.map((st) => (
-                        <SelectItem
-                          key={st}
-                          value={st}
-                          className='text-xs font-medium'
+                    <div className='flex items-center gap-2'>
+                      <Select
+                        value={selectedTicket.status.toUpperCase()}
+                        onValueChange={(newSt) =>
+                          handleStatusChange(selectedTicket.ticket_id, newSt)
+                        }
+                        disabled={updatingTicketId === selectedTicket.ticket_id || isSelectedTicketClosed}
+                      >
+                        <SelectTrigger
+                          className={`h-9 text-xs font-bold w-36 bg-white border-purple-200 text-purple-900 rounded-lg ${
+                            isSelectedTicketClosed
+                              ? 'opacity-60 cursor-not-allowed bg-slate-100 text-zinc-500 border-slate-300'
+                              : ''
+                          }`}
+                          title={isSelectedTicketClosed ? 'Ticket is closed and cannot be updated' : 'Change status'}
                         >
-                          {st}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-              )}
+                          <SelectValue>
+                            {selectedTicket.status.toUpperCase()}
+                          </SelectValue>
+                        </SelectTrigger>
+                        <SelectContent>
+                          {STATUS_OPTIONS.map((st) => (
+                            <SelectItem
+                              key={st}
+                              value={st}
+                              className='text-xs font-medium'
+                            >
+                              {st}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+                );
+              })()}
             </div>
           </DialogContent>
         )}
