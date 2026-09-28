@@ -9,6 +9,7 @@ import { ENV } from '@/conf'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
+import { Textarea } from '@/components/ui/textarea'
 import { Spinner } from '@/components/ui/spinner'
 
 import SectionHeader from '@/components/shared/section-header'
@@ -21,11 +22,23 @@ import {
   createDealSchema,
   type CreateDealFormValues,
 } from '@/validators/createDeal.schema'
+import { useAuth } from '@/context/auth-context'
+
+const ALLOWED_APPROVAL_EMAILS = [
+  'prathap@r1xchange.com',
+  'namrata.srivastava@r1xchange.com',
+  'sutapa.roy@r1xchange.com',
+]
 
 export default function CreateDeal() {
   const navigate = useNavigate()
   const location = useLocation()
   const prefilledData = location.state || {}
+
+  const { user } = useAuth()
+  const isApprovalAuthorized = ALLOWED_APPROVAL_EMAILS.includes(
+    (user?.email || '').toLowerCase().trim(),
+  )
 
   const form = useForm<CreateDealFormValues>({
     resolver: zodResolver(createDealSchema),
@@ -40,6 +53,7 @@ export default function CreateDeal() {
       loanType: '',
       dealStatus: '',
       dealStage: '',
+      dealApproval: 'Pending Approval',
       lenderName: '',
       partnerName: '',
       lenderLoginType: '',
@@ -115,6 +129,8 @@ export default function CreateDeal() {
         loan_type: values.loanType || undefined,
         deal_status: values.dealStatus || undefined,
         deal_stage: values.dealStage || undefined,
+        deal_approval: values.dealApproval || 'Pending Approval',
+        deal_description: values.dealDescription || undefined,
         lender_name: values.lenderName || undefined,
         partner_name: values.partnerName || undefined,
         lender_login_type: values.lenderLoginType || undefined,
@@ -312,6 +328,7 @@ export default function CreateDeal() {
                   'Secured Loan',
                   'Secured BT',
                   'Vehicle Loan',
+                  'CGTMSE'
                 ]}
                 value={formValues.loanType as string}
                 onChange={(value) =>
@@ -410,51 +427,13 @@ export default function CreateDeal() {
               />
             </FieldRow>
 
-            <FieldRow label='Lender Name *' error={errors.lenderName?.message}>
-              <div className='relative'>
-                <Input
-                  value={lenderSearch}
-                  onChange={(e) => {
-                    setLenderSearch(e.target.value)
-                    setLenderOpen(true)
-                  }}
-                  onFocus={() => setLenderOpen(true)}
-                  onBlur={() => setTimeout(() => setLenderOpen(false), 200)}
-                  placeholder='Search Lender...'
-                />
-                {lenderOpen && filteredLenders.length > 0 && (
-                  <div className='absolute z-10 w-full mt-1 bg-background border rounded-md shadow-lg max-h-60 overflow-auto'>
-                    {filteredLenders.map((name: string) => (
-                      <div
-                        key={name}
-                        className='p-2 hover:bg-muted cursor-pointer text-sm'
-                        onMouseDown={() => {
-                          setValue('lenderName', name, { shouldValidate: true })
-                          setLenderSearch(name)
-                          setLenderOpen(false)
-                        }}
-                      >
-                        {name}
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-            </FieldRow>
-
-            <FieldRow label='Partner Name *' error={errors.partnerName?.message}>
+            <FieldRow label='Deal Approval'>
               <SelectField
-                isEdit={true}
-                options={[
-                  'Rupifi Private Ltd',
-                  'FlexiLoans Technologies Private Ltd',
-                  'Recur Club Technologies Private Ltd',
-                  'Rupeeboss Financial Services Pvt Ltd',
-                  'Others',
-                ]}
-                value={formValues.partnerName as string}
+                isEdit={isApprovalAuthorized}
+                options={['Pending Approval', 'Approved', 'Disapproved']}
+                value={formValues.dealApproval || 'Pending Approval'}
                 onChange={(value) =>
-                  setValue('partnerName', value, {
+                  setValue('dealApproval', value, {
                     shouldValidate: true,
                     shouldDirty: true,
                   })
@@ -463,19 +442,13 @@ export default function CreateDeal() {
             </FieldRow>
 
             <FieldRow
-              label='Lender Login Type *'
-              error={errors.lenderLoginType?.message}
+              label='Deal Description'
+              error={errors.dealDescription?.message}
             >
-              <SelectField
-                isEdit={true}
-                options={['Direct', 'Partner']}
-                value={formValues.lenderLoginType as string}
-                onChange={(value) =>
-                  setValue('lenderLoginType', value, {
-                    shouldValidate: true,
-                    shouldDirty: true,
-                  })
-                }
+              <Textarea
+                {...register('dealDescription')}
+                placeholder='Enter deal description...'
+                className='min-h-[72px] resize-y text-sm'
               />
             </FieldRow>
 

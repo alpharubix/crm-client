@@ -1294,7 +1294,7 @@ export default function UpdateAccounts() {
                             <TableHead>Owner</TableHead>
                             <TableHead>Deal Type</TableHead>
                             <TableHead>Deal Status</TableHead>
-                            <TableHead>Lender Name</TableHead>
+                            <TableHead>Deal Approval</TableHead>
                             <TableHead>Disbursement Amount</TableHead>
                             <TableHead>Modified Date/Time</TableHead>
                           </TableRow>
@@ -1323,7 +1323,7 @@ export default function UpdateAccounts() {
                                   {deal.deal_type || '—'}
                                 </TableCell>
                                 <TableCell>{deal.deal_status || '—'}</TableCell>
-                                <TableCell>{deal.lender_name || '—'}</TableCell>
+                                <TableCell>{deal.deal_approval || '_'}</TableCell>
                                 <TableCell>
                                   {formatAmount(deal.disbursed_amount) || '—'}
                                 </TableCell>

@@ -73,6 +73,14 @@ export type Deal = {
   tenure: string
   potential: string
   partner_code: string
+  partner_name?: string
+  deal_approval?: string
+  deal_description?: string
+  type_of_loan?: string
+  deal_expected_closing?: string
+  deal_status_closing?: string
+  modified_time?: string
+  deal_owner?: string
 }
 
 export type UpdateAccountFormValues = {

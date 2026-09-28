@@ -838,6 +838,7 @@ export default function UpdateKanbanTicket({
                   'Secured Loan',
                   'Secured BT',
                   'Vehicle Loan',
+                  'CGTMSE'
                 ]}
                 value={formValues.loanType as string}
                 onChange={(value) => setValue('loanType', value, DIRTY_OPTS)}
