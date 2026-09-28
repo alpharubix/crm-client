@@ -1,19 +1,20 @@
-import React, { useEffect, useState } from 'react'
-import { useForm } from 'react-hook-form'
-import { zodResolver } from '@hookform/resolvers/zod'
-import { useBeforeUnload, useParams, useNavigate } from 'react-router-dom'
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { toast } from 'sonner'
+import React, { useEffect, useState } from 'react';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { useBeforeUnload, useParams, useNavigate } from 'react-router-dom';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { toast } from 'sonner';
 
-import { Button } from '@/components/ui/button'
-import { Card, CardContent } from '@/components/ui/card'
-import { Input } from '@/components/ui/input'
-import SectionHeader from '@/components/shared/section-header'
-import FieldRow from '@/components/shared/field-row'
-import SelectField from '@/components/shared/select-field'
-import DateField from '@/components/shared/date-field'
-import NoteDialog from '@/components/shared/note-dialog'
-import { Spinner } from '@/components/ui/spinner'
+import { Button } from '@/components/ui/button';
+import { Card, CardContent } from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
+import SectionHeader from '@/components/shared/section-header';
+import FieldRow from '@/components/shared/field-row';
+import SelectField from '@/components/shared/select-field';
+import DateField from '@/components/shared/date-field';
+import NoteDialog from '@/components/shared/note-dialog';
+import { Spinner } from '@/components/ui/spinner';
 
 import {
   Dialog,
@@ -21,24 +22,24 @@ import {
   DialogHeader,
   DialogTitle,
   DialogTrigger,
-} from '@/components/ui/dialog'
-import { ENV } from '@/conf'
-import type { Deal } from '@/types'
-import users from '@/utils/users.json'
+} from '@/components/ui/dialog';
+import { ENV } from '@/conf';
+import type { Deal } from '@/types';
+import users from '@/utils/users.json';
 
 import {
   updateDealSchema,
   type UpdateDealFormValues,
-} from '@/validators/updateDeal.schema'
-import { formatExactDate } from '@/utils/date-formatter'
-import { formatAmount } from '@/utils/number-formatter'
-import { format } from 'date-fns'
-import DocumentationSection from './deals-documentation'
-import { Plus } from 'lucide-react'
-import LENDER_NAMES from '@/utils/lenders.json'
-import { useAuth } from '@/context/auth-context'
-import { NestedComments } from '../nested-notes'
-import DealTasksTab from './deal-tasks-tab'
+} from '@/validators/updateDeal.schema';
+import { formatExactDate } from '@/utils/date-formatter';
+import { formatAmount } from '@/utils/number-formatter';
+import { format } from 'date-fns';
+import DocumentationSection from './deals-documentation';
+import { Plus } from 'lucide-react';
+import LENDER_NAMES from '@/utils/lenders.json';
+import { useAuth } from '@/context/auth-context';
+import { NestedComments } from '../nested-notes';
+import DealTasksTab from './deal-tasks-tab';
 
 function mapDealToForm(apiData: any): UpdateDealFormValues {
   return {
@@ -53,6 +54,8 @@ function mapDealToForm(apiData: any): UpdateDealFormValues {
     ticketLogin: apiData.ticket_login || '',
     dealStage: apiData.deal_stage || '',
     dealStatus: apiData.deal_status || '',
+    dealApproval: apiData.deal_approval || '',
+    dealDescription: apiData.deal_description || '',
     dealExpectedClosing: apiData.deal_expected_closing || '',
     dealStatusClosing: apiData.deal_status_closing || '',
     lenderLoginType: apiData.lender_login_type || '',
@@ -123,7 +126,7 @@ function mapDealToForm(apiData: any): UpdateDealFormValues {
     createdAt: apiData.created_at || 'System Driven Field',
     modifiedBy: apiData.modified_by || 'System Driven Field',
     modifiedAt: apiData.updated_at || 'System Driven Field',
-  }
+  };
 }
 
 function mapFormToApi(
@@ -167,6 +170,11 @@ function mapFormToApi(
     ticket_login: { value: formData.ticketLogin, key: 'ticketLogin' },
     deal_stage: { value: formData.dealStage, key: 'dealStage' },
     deal_status: { value: formData.dealStatus, key: 'dealStatus' },
+    deal_approval: { value: formData.dealApproval, key: 'dealApproval' },
+    deal_description: {
+      value: formData.dealDescription,
+      key: 'dealDescription',
+    },
     disbursed_amount: {
       value: formData.disbursedAmount,
       key: 'disbursedAmount',
@@ -228,34 +236,34 @@ function mapFormToApi(
     potential: { value: formData.potential, key: 'potential' },
     product: { value: formData.product, key: 'product' },
     created_at: { value: formData.createdAt, key: 'createdAt' },
-  }
+  };
 
-  const payload: any = {}
+  const payload: any = {};
 
   Object.entries(allFields).forEach(([apiKey, { value, key }]) => {
     // @ts-ignore
     if (dirtyFields[key]) {
-      payload[apiKey] = value
+      payload[apiKey] = value;
     }
-  })
+  });
 
-  return payload
+  return payload;
 }
 
 export default function UpdateDeals({
   dealIdProp,
   onBack,
 }: {
-  dealIdProp?: string | number
-  onBack?: () => void
+  dealIdProp?: string | number;
+  onBack?: () => void;
 } = {}) {
-  const params = useParams()
-  const id = dealIdProp !== undefined ? String(dealIdProp) : params.id
-  const queryClient = useQueryClient()
-  const navigate = useNavigate()
-  const [isEdit, setIsEdit] = useState(false)
-  const [openAllNotes, setOpenAllNotes] = useState(false)
-  const { user } = useAuth()
+  const params = useParams();
+  const id = dealIdProp !== undefined ? String(dealIdProp) : params.id;
+  const queryClient = useQueryClient();
+  const navigate = useNavigate();
+  const [isEdit, setIsEdit] = useState(false);
+  const [openAllNotes, setOpenAllNotes] = useState(false);
+  const { user } = useAuth();
   const allowedEmails = [
     'prathap@r1xchange.com',
     'pranay.kumar@r1xchange.com',
@@ -263,9 +271,17 @@ export default function UpdateDeals({
     'namrata.srivastava@r1xchange.com',
     'subhasini.ts@r1xchange.com',
     'raj.nandini@r1xchange.com',
-  ]
+  ];
 
-  const isEmailAuthorized = allowedEmails.includes(user?.email!)
+  const isEmailAuthorized = allowedEmails.includes(user?.email!);
+  const allowedApprovalEmails = [
+    'prathap@r1xchange.com',
+    'namrata.srivastava@r1xchange.com',
+    'sutapa.roy@r1xchange.com',
+  ];
+  const isApprovalAuthorized = allowedApprovalEmails.includes(
+    (user?.email || '').toLowerCase().trim(),
+  );
   const {
     register,
     handleSubmit,
@@ -279,28 +295,28 @@ export default function UpdateDeals({
       createdBy: 'System Driven Field (User)',
       modifiedBy: 'System Driven Field (User)',
     },
-  })
-  const [lenderSearch, setLenderSearch] = useState('')
-  const [lenderOpen, setLenderOpen] = useState(false)
+  });
+  const [lenderSearch, setLenderSearch] = useState('');
+  const [lenderOpen, setLenderOpen] = useState(false);
 
   const filteredLenders =
     lenderSearch.length > 1
       ? LENDER_NAMES.filter((l: string) =>
           l.toLowerCase().includes(lenderSearch.toLowerCase()),
         ).slice(0, 50) // cap at 50 results
-      : []
+      : [];
 
   useBeforeUnload(
     React.useCallback(
       (e) => {
         if (isDirty) {
-          e.preventDefault()
-          e.returnValue = ''
+          e.preventDefault();
+          e.returnValue = '';
         }
       },
       [isDirty],
     ),
-  )
+  );
 
   const {
     data: dealResponse,
@@ -313,64 +329,64 @@ export default function UpdateDeals({
       const res = await fetch(
         `${ENV.VITE_BACKEND_BASE_URL}/deals?deal_id=${id}`,
         { credentials: 'include' },
-      )
-      if (!res.ok) throw new Error('Failed to fetch deal')
-      return res.json()
+      );
+      if (!res.ok) throw new Error('Failed to fetch deal');
+      return res.json();
     },
     enabled: !!id,
-  })
+  });
 
-  const dealData: Deal = dealResponse?.data?.[0] || dealResponse?.data
-  const notes = (dealData as any)?.notes || []
+  const dealData: Deal = dealResponse?.data?.[0] || dealResponse?.data;
+  const notes = (dealData as any)?.notes || [];
 
-  const revenues = (dealData as any)?.revenue || []
+  const revenues = (dealData as any)?.revenue || [];
 
   const sortedNotes = [...notes].sort((a: any, b: any) => {
     return (
       new Date(b.Created_Time).getTime() - new Date(a.Created_Time).getTime()
-    )
-  })
+    );
+  });
 
   useEffect(() => {
     if (dealData) {
-      reset(mapDealToForm(dealData))
-      setLenderSearch(dealData.lender_name || '')
+      reset(mapDealToForm(dealData));
+      setLenderSearch(dealData.lender_name || '');
     }
-  }, [dealData, reset])
+  }, [dealData, reset]);
 
   const updateMutation = useMutation({
     mutationFn: async (values: UpdateDealFormValues) => {
-      const payload = mapFormToApi(values, dirtyFields)
+      const payload = mapFormToApi(values, dirtyFields);
       const res = await fetch(`${ENV.VITE_BACKEND_BASE_URL}/deals/${id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
         body: JSON.stringify(payload),
-      })
+      });
       if (!res.ok) {
-        const errData = await res.json().catch(() => ({}))
+        const errData = await res.json().catch(() => ({}));
         throw new Error(
           errData.detail || errData.message || 'Failed to update deal',
-        )
+        );
       }
-      return res.json()
+      return res.json();
     },
     onSuccess: (data, variables) => {
-      toast.success('Deal updated successfully')
-      setIsEdit(false)
-      reset(variables)
-      queryClient.invalidateQueries({ queryKey: ['deal', id] })
+      toast.success('Deal updated successfully');
+      setIsEdit(false);
+      reset(variables);
+      queryClient.invalidateQueries({ queryKey: ['deal', id] });
     },
     onError: (err) => {
-      toast.error(err.message || 'Failed to update deal')
+      toast.error(err.message || 'Failed to update deal');
     },
-  })
+  });
 
-  const formValues = watch()
+  const formValues = watch();
 
   const onSave = (values: UpdateDealFormValues) => {
-    updateMutation.mutate(values)
-  }
+    updateMutation.mutate(values);
+  };
 
   const handleAddNote = async (note: { description: string }) => {
     try {
@@ -383,25 +399,25 @@ export default function UpdateDeals({
           note: note.description,
           module: 'Deals',
         }),
-      })
+      });
 
       if (res.ok) {
-        toast.success('Note added successfully')
-        queryClient.invalidateQueries({ queryKey: ['deal', id] })
+        toast.success('Note added successfully');
+        queryClient.invalidateQueries({ queryKey: ['deal', id] });
       } else {
-        toast.error('Failed to add note')
+        toast.error('Failed to add note');
       }
     } catch (err) {
-      toast.error('Network error')
+      toast.error('Network error');
     }
-  }
+  };
 
   if (isLoading) {
     return (
       <div className='flex items-center justify-center min-h-screen'>
         <Spinner className='h-8 w-8 text-primary' />
       </div>
-    )
+    );
   }
 
   if (error || !dealData) {
@@ -409,14 +425,14 @@ export default function UpdateDeals({
       <div className='flex items-center justify-center min-h-screen'>
         <p className='text-muted-foreground'>Deal not found</p>
       </div>
-    )
+    );
   }
 
-  const MAX_NOTES_VISIBLE = 3
-  const showViewMore = sortedNotes.length > MAX_NOTES_VISIBLE
+  const MAX_NOTES_VISIBLE = 3;
+  const showViewMore = sortedNotes.length > MAX_NOTES_VISIBLE;
   const visibleNotes = showViewMore
     ? sortedNotes.slice(0, MAX_NOTES_VISIBLE)
-    : sortedNotes
+    : sortedNotes;
 
   return (
     <div className='space-y-6 mx-2 bg-background min-h-screen mb-10'>
@@ -471,9 +487,9 @@ export default function UpdateDeals({
                 className='cursor-pointer'
                 variant='outline'
                 onClick={() => {
-                  reset()
-                  setLenderSearch(dealData?.lender_name || '')
-                  setIsEdit(false)
+                  reset();
+                  setLenderSearch(dealData?.lender_name || '');
+                  setIsEdit(false);
                 }}
               >
                 Cancel
@@ -537,7 +553,7 @@ export default function UpdateDeals({
                         shouldValidate: true,
                         shouldDirty: true,
                       },
-                    )
+                    );
                   }}
                   disablePast={true}
                 />
@@ -589,6 +605,7 @@ export default function UpdateDeals({
                   'Secured Loan',
                   'Secured BT',
                   'Vehicle Loan',
+                  'CGTMSE',
                 ]}
                 value={formValues.loanType as string}
                 onChange={(value) =>
@@ -637,6 +654,34 @@ export default function UpdateDeals({
                   : '—'}
               </span>
             </FieldRow>
+            <FieldRow
+              label='Expected Closing Date *'
+              error={errors.dealExpectedClosing?.message}
+            >
+              <DateField
+                isEdit={isEdit}
+                showTime={false}
+                value={
+                  formValues.dealExpectedClosing
+                    ? new Date(formValues.dealExpectedClosing)
+                    : undefined
+                }
+                onChange={(date) => {
+                  if (!date) {
+                    setValue('dealExpectedClosing', '');
+                    return;
+                  }
+
+                  const year = date.getFullYear();
+                  const month = String(date.getMonth() + 1).padStart(2, '0');
+                  const day = String(date.getDate()).padStart(2, '0');
+
+                  setValue('dealExpectedClosing', `${year}-${month}-${day}`, {
+                    shouldDirty: true,
+                  });
+                }}
+              />
+            </FieldRow>
           </div>
           <div>
             <FieldRow label='Account Name'>
@@ -662,13 +707,13 @@ export default function UpdateDeals({
                   setValue('dealStatus', value, {
                     shouldValidate: true,
                     shouldDirty: true,
-                  })
+                  });
                   // AUTO CAPTURE CURRENT DATE
                   setValue(
                     'dealStatusClosing',
                     new Date().toISOString().split('T')[0],
                     { shouldDirty: true },
-                  )
+                  );
                 }}
               />
             </FieldRow>
@@ -702,74 +747,13 @@ export default function UpdateDeals({
                 }
               />
             </FieldRow>
-            <FieldRow label='Lender Name' error={errors.lenderName?.message}>
-              <div className='relative'>
-                {isEdit ? (
-                  <Input
-                    value={lenderSearch}
-                    onChange={(e) => {
-                      setLenderSearch(e.target.value)
-                      setLenderOpen(true)
-                    }}
-                    onFocus={() => setLenderOpen(true)}
-                    onBlur={() => setTimeout(() => setLenderOpen(false), 200)}
-                    placeholder='Search Lender...'
-                  />
-                ) : (
-                  <span>{formValues.lenderName || '—'}</span>
-                )}
-                {lenderOpen && filteredLenders.length > 0 && (
-                  <div className='absolute z-10 w-full mt-1 bg-background border rounded-md shadow-lg max-h-60 overflow-auto'>
-                    {filteredLenders.map((name: string) => (
-                      <div
-                        key={name}
-                        className='p-2 hover:bg-muted cursor-pointer text-sm'
-                        onMouseDown={() => {
-                          setValue('lenderName', name, {
-                            shouldValidate: true,
-                            shouldDirty: true,
-                          })
-                          setLenderSearch(name)
-                          setLenderOpen(false)
-                        }}
-                      >
-                        {name}
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-            </FieldRow>
-            <FieldRow label='Partner Name' error={errors.partnerName?.message}>
+            <FieldRow label='Deal Approval'>
               <SelectField
-                isEdit={isEdit}
-                options={[
-                  'Rupifi Private Ltd',
-                  'FlexiLoans Technologies Private Ltd',
-                  'Recur Club Technologies Private Ltd',
-                  'Rupeeboss Financial Services Pvt Ltd',
-                  'Others',
-                ]}
-                value={(formValues.partnerName as string) || '—'}
+                isEdit={isEdit && isApprovalAuthorized}
+                options={['Pending Approval', 'Approved', 'Disapproved']}
+                value={(formValues.dealApproval as string) || ''}
                 onChange={(value) =>
-                  setValue('partnerName', value, {
-                    shouldValidate: true,
-                    shouldDirty: true,
-                  })
-                }
-              />
-            </FieldRow>
-            <FieldRow
-              label='Lender Login Type'
-              error={errors.lenderLoginType?.message}
-            >
-              <SelectField
-                isEdit={isEdit}
-                options={['Direct', 'Partner']}
-                value={(formValues.lenderLoginType as string) || '—'}
-                onChange={(value) =>
-                  setValue('lenderLoginType', value, {
-                    // Update lenderLoginType
+                  setValue('dealApproval', value, {
                     shouldValidate: true,
                     shouldDirty: true,
                   })
@@ -784,33 +768,22 @@ export default function UpdateDeals({
                   : 'No change recorded'}
               </span>
             </FieldRow>
+
             <FieldRow
-              label='Expected Closing Date *'
-              error={errors.dealExpectedClosing?.message}
+              label='Deal Description'
+              error={errors.dealDescription?.message}
             >
-              <DateField
-                isEdit={isEdit}
-                showTime={false}
-                value={
-                  formValues.dealExpectedClosing
-                    ? new Date(formValues.dealExpectedClosing)
-                    : undefined
-                }
-                onChange={(date) => {
-                  if (!date) {
-                    setValue('dealExpectedClosing', '')
-                    return
-                  }
-
-                  const year = date.getFullYear()
-                  const month = String(date.getMonth() + 1).padStart(2, '0')
-                  const day = String(date.getDate()).padStart(2, '0')
-
-                  setValue('dealExpectedClosing', `${year}-${month}-${day}`, {
-                    shouldDirty: true,
-                  })
-                }}
-              />
+              {isEdit ? (
+                <Textarea
+                  {...register('dealDescription')}
+                  placeholder='Enter deal description...'
+                  className='min-h-[72px] resize-y text-sm'
+                />
+              ) : (
+                <span className='text-sm whitespace-pre-wrap text-foreground'>
+                  {formValues.dealDescription || '—'}
+                </span>
+              )}
             </FieldRow>
           </div>
         </CardContent>
@@ -965,5 +938,5 @@ export default function UpdateDeals({
         <DocumentationSection dealId={id!} />
       </Card>
     </div>
-  )
+  );
 }

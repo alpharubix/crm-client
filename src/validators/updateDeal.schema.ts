@@ -34,6 +34,8 @@ export const updateDealSchema = z.object({
   targetedDisbursementDate: z.string().optional(),
   tenure: z.union([z.string(), z.number()]).optional(),
 
+  dealApproval: z.string().optional(),
+  dealDescription: z.string().optional(),
   lenderCode: z.string().optional(),
   lenderName: z.string().optional(),
   partnerName: z.string().optional(),

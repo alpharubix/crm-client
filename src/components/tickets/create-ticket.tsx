@@ -38,6 +38,7 @@ const LOAN_TYPES = [
   'Secured Loan',
   'Secured BT',
   'Vehicle Loan',
+  'CGTMSE'
 ]
 
 const TICKET_STATUSES = [
