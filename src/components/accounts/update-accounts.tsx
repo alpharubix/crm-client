@@ -577,7 +577,7 @@ export default function UpdateAccounts() {
     try {
       setIsBsaLoading(true);
       const res = await fetch(
-        `${ENV.VITE_BACKEND_BASE_URL}/accounts/r1xcrm-report-date-range/${id}`,
+        `${ENV.VITE_BACKEND_BASE_URL}/accounts/check-r1xchange-account/${id}`,
         { credentials: 'include' },
       );
       if (!res.ok) {
@@ -585,7 +585,7 @@ export default function UpdateAccounts() {
         return;
       }
       const data = await res.json();
-      if (data.data?.from_date && data.data?.to_date) {
+      if (data.data) {
         navigate(`/accounts/${id}/bsa`);
       } else {
         toast('Please upload the data');

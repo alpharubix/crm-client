@@ -23,13 +23,26 @@ import { Calendar } from '@/components/ui/calendar'
 import type { CashFlowData } from './cashFlowType'
 import rows from './cashflowtablerow'
 
-export default function CashFlow({ acc_id }: { acc_id: string | number }) {
-  const [fromDate, setFromDate] = useState('')
-  const [toDate, setToDate] = useState('')
-  const [appliedFromDate, setAppliedFromDate] = useState('')
-  const [appliedToDate, setAppliedToDate] = useState('')
+export default function CashFlow({
+  acc_id,
+  accountNumber: propAccountNumber,
+}: {
+  acc_id: string | number;
+  accountNumber?: string;
+}) {
+  const selectedAccountNumber =
+    propAccountNumber ||
+    sessionStorage.getItem('selected_bsa_account_number') ||
+    '';
+  const [fromDate, setFromDate] = useState('');
+  const [toDate, setToDate] = useState('');
+  const [appliedFromDate, setAppliedFromDate] = useState('');
+  const [appliedToDate, setAppliedToDate] = useState('');
 
-  const { data: dateRangeData } = useDateRange(acc_id)
+  const { data: dateRangeData } = useDateRange({
+    acc_id,
+    accountNumber: selectedAccountNumber,
+  });
 
   useEffect(() => {
     if (dateRangeData && !appliedFromDate && !appliedToDate) {
@@ -102,19 +115,35 @@ export default function CashFlow({ acc_id }: { acc_id: string | number }) {
   }
 
   const { data, isLoading, isError, error, refetch } = useQuery({
-    queryKey: ['cashflow', appliedFromDate, appliedToDate, acc_id],
+    queryKey: [
+      'cashflow',
+      appliedFromDate,
+      appliedToDate,
+      acc_id,
+      selectedAccountNumber,
+    ],
     queryFn: async () => {
-      // For cashflow, format dates as YYYY-MM if needed, or pass directly
       const response = await fetch(
-        `${ENV.VITE_BACKEND_BASE_URL}/accounts/r1xcrm-cashflow/${acc_id}?from_month=${appliedFromDate.slice(0, 7)}&to_month=${appliedToDate.slice(0, 7)}`,
-        { credentials: 'include' }
-      )
-      if (!response.ok) throw new Error('Failed to load cashflow')
-      const data = await response.json()
-      return data.data as CashFlowData
+        `${ENV.VITE_BACKEND_BASE_URL}/accounts/r1xcrm-cashflow/${acc_id}`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            from_date: appliedFromDate,
+            to_date: appliedToDate,
+            account_number: selectedAccountNumber,
+          }),
+          credentials: 'include',
+        }
+      );
+      if (!response.ok) throw new Error('Failed to load cashflow');
+      const data = await response.json();
+      return (data?.summary ? data : (data?.data ?? data)) as CashFlowData;
     },
     enabled: !!appliedFromDate && !!appliedToDate,
-  })
+  });
 
   const generateMonthsRange = (startStr: string, endStr: string) => {
     if (!startStr || !endStr) return []
