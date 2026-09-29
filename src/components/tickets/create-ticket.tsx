@@ -512,6 +512,7 @@ export default function CreateTicket() {
                   'FlexiLoans Technologies Private Ltd',
                   'Recur Club Technologies Private Ltd',
                   'Rupeeboss Financial Services Pvt Ltd',
+                  'MONK ADVISORS PRIVATE LIMITED',
                   'Others',
                 ]}
                 value={formValues.partnerName ?? ''}
