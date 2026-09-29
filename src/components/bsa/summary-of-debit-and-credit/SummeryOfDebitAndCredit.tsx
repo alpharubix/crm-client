@@ -38,16 +38,24 @@ interface SummaryData {
 
 export default function SummeryOfDebitAndCredit({
   acc_id,
+  accountNumber: propAccountNumber,
 }: {
-  acc_id: string | number
+  acc_id: string | number;
+  accountNumber?: string;
 }) {
-  // const navigate = useNavigate();
-  const [fromDate, setFromDate] = useState('')
-  const [toDate, setToDate] = useState('')
-  const [appliedFromDate, setAppliedFromDate] = useState('')
-  const [appliedToDate, setAppliedToDate] = useState('')
+  const selectedAccountNumber =
+    propAccountNumber ||
+    sessionStorage.getItem('selected_bsa_account_number') ||
+    '';
+  const [fromDate, setFromDate] = useState('');
+  const [toDate, setToDate] = useState('');
+  const [appliedFromDate, setAppliedFromDate] = useState('');
+  const [appliedToDate, setAppliedToDate] = useState('');
 
-  const { data: dateRangeData } = useDateRange(acc_id)
+  const { data: dateRangeData } = useDateRange({
+    acc_id,
+    accountNumber: selectedAccountNumber,
+  });
 
   useEffect(() => {
     if (dateRangeData && !appliedFromDate && !appliedToDate) {
@@ -125,18 +133,30 @@ export default function SummeryOfDebitAndCredit({
       appliedFromDate,
       appliedToDate,
       acc_id,
+      selectedAccountNumber,
     ],
     queryFn: async () => {
       const response = await fetch(
-        `${ENV.VITE_BACKEND_BASE_URL}/accounts/r1xcrm-summary-of-debit-and-credit_monthwise/${acc_id}?from_date=${appliedFromDate}&to_date=${appliedToDate}`,
-        { credentials: 'include' }
-      )
-      if (!response.ok) throw new Error('Failed to load summary')
-      const data = await response.json()
-      return data.data as SummaryData
+        `${ENV.VITE_BACKEND_BASE_URL}/accounts/r1xcrm-summary-of-debit-and-credit_monthwise/${acc_id}`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            from_date: appliedFromDate,
+            to_date: appliedToDate,
+            account_number: selectedAccountNumber,
+          }),
+          credentials: 'include',
+        }
+      );
+      if (!response.ok) throw new Error('Failed to load summary');
+      const data = await response.json();
+      return (data?.monthly_breakdown ? data : (data?.data ?? data)) as SummaryData;
     },
     enabled: !!appliedFromDate && !!appliedToDate,
-  })
+  });
 
   const generateMonthsRange = (startStr: string, endStr: string) => {
     if (!startStr || !endStr) return []
