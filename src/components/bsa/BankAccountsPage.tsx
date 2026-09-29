@@ -14,7 +14,6 @@ import {
   Download,
 } from 'lucide-react';
 
-import { downloadBsaReport } from '@/api/export';
 import {
   getBankAccounts,
   type BankAccounts,
@@ -78,61 +77,6 @@ export default function BankAccountsPage({
    * Stores BSA date range for every account.
    */
   const [dateRanges, setDateRanges] = useState<Record<string, DateRange>>({});
-
-  /*
-   * Track report export download status
-   */
-  const [downloadingReport, setDownloadingReport] = useState<string | null>(
-    null,
-  );
-
-  const handleExport = async (
-    accountNumber: string,
-    rawAccountId?: string | number | null,
-    isIndividual?: boolean,
-  ) => {
-    const account_number = String(accountNumber || '');
-    const account_id = String(rawAccountId || accountNumber || '');
-    if (!account_number && !account_id) {
-      toast.error('Account details are required for export', {
-        id: 'export-toast',
-      });
-      return;
-    }
-
-    const reportDescription = isIndividual
-      ? 'Overview, EOD Analysis, Loan Transactions'
-      : 'Summary, Cashflow, Overview';
-
-    try {
-      setDownloadingReport(account_number || account_id);
-      toast.loading(
-        `Downloading 3 BSA report files (${reportDescription})...`,
-        {
-          id: 'export-toast',
-        },
-      );
-
-      await downloadBsaReport({
-        account_number,
-        account_id,
-        cust_id: custId ? String(custId) : undefined,
-      });
-
-      toast.success(
-        `All 3 BSA report files (${reportDescription}) downloaded successfully!`,
-        {
-          id: 'export-toast',
-        },
-      );
-    } catch (error: any) {
-      toast.error(error?.message || 'Failed to download BSA report', {
-        id: 'export-toast',
-      });
-    } finally {
-      setDownloadingReport(null);
-    }
-  };
 
   const {
     data: accounts = [],
@@ -332,43 +276,6 @@ export default function BankAccountsPage({
                                 </p>
                               </div>
                               <div className='flex items-center gap-1.5'>
-                                <button
-                                  type='button'
-                                  onClick={() =>
-                                    handleExport(
-                                      accountNumber,
-                                      account.account_id ?? account.accountId,
-                                      modulesAvailable,
-                                    )
-                                  }
-                                  disabled={
-                                    downloadingReport ===
-                                    String(
-                                      accountNumber ||
-                                        account.account_id ||
-                                        account.accountId,
-                                    )
-                                  }
-                                  className='inline-flex items-center gap-1.5 rounded-md px-2.5 py-1 text-xs font-semibold bg-[#002366] text-white transition-all duration-200 hover:bg-[#001a4d] hover:shadow-xs cursor-pointer disabled:opacity-50'
-                                  title={`Download All 3 Files (${
-                                    modulesAvailable
-                                      ? 'Overview, EOD Analysis, Loan Transactions'
-                                      : 'Summary, Cashflow, Overview'
-                                  })`}
-                                >
-                                  {downloadingReport ===
-                                  String(
-                                    accountNumber ||
-                                      account.account_id ||
-                                      account.accountId,
-                                  ) ? (
-                                    <Loader2 className='h-3 w-3 animate-spin' />
-                                  ) : (
-                                    <Download className='h-3 w-3 text-emerald-400' />
-                                  )}
-                                  Export
-                                </button>
-
                                 <button
                                   type='button'
                                   onClick={() =>

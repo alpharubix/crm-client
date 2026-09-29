@@ -27,7 +27,11 @@ export default function BsaAnalysisPage() {
       {!bsaView ? (
         <>
           <div className='flex items-center gap-4 mb-4'>
-            <Button variant='ghost' size='icon' onClick={() => navigate(-1)}>
+            <Button
+              variant='ghost'
+              size='icon'
+              onClick={() => navigate(`/accounts/${id}`)}
+            >
               <ArrowLeft className='h-5 w-5' />
             </Button>
             <div>
@@ -68,13 +72,22 @@ export default function BsaAnalysisPage() {
               <IndividualOverview accountNumber={accountNumber} acc_id={id} />
             )}
             {bsaView === 'individual_eod' && (
-              <IndividualEodAnalysis accountNumber={accountNumber} acc_id={id} />
+              <IndividualEodAnalysis
+                accountNumber={accountNumber}
+                acc_id={id}
+              />
             )}
             {bsaView === 'individual_loan' && (
-              <IndividualLoanTransactions accountNumber={accountNumber} acc_id={id} />
+              <IndividualLoanTransactions
+                accountNumber={accountNumber}
+                acc_id={id}
+              />
             )}
             {bsaView === 'summary' && (
-              <SummeryOfDebitAndCredit acc_id={id} accountNumber={accountNumber} />
+              <SummeryOfDebitAndCredit
+                acc_id={id}
+                accountNumber={accountNumber}
+              />
             )}
             {bsaView === 'cashflow' && (
               <CashFlow acc_id={id} accountNumber={accountNumber} />
