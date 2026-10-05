@@ -1323,7 +1323,9 @@ export default function UpdateAccounts() {
                                   {deal.deal_type || '—'}
                                 </TableCell>
                                 <TableCell>{deal.deal_status || '—'}</TableCell>
-                                <TableCell>{deal.deal_approval || '_'}</TableCell>
+                                <TableCell>
+                                  {deal.deal_approval || '_'}
+                                </TableCell>
                                 <TableCell>
                                   {formatAmount(deal.disbursed_amount) || '—'}
                                 </TableCell>
@@ -1363,6 +1365,7 @@ export default function UpdateAccounts() {
                         <TableHead>From Date</TableHead>
                         <TableHead>To Date</TableHead>
                         <TableHead>Status</TableHead>
+                        <TableHead>Link</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -1388,12 +1391,14 @@ export default function UpdateAccounts() {
                             <TableCell>{doc.module || '—'}</TableCell>
                             <TableCell>{doc.description || '—'}</TableCell>
                             <TableCell>
-                              {formatExactDate(doc.from_date, 'dd MMM yyyy') ||
-                                '—'}
+                              {doc.from_date
+                                ? formatExactDate(doc.from_date, 'dd MMM yyyy')
+                                : '—'}
                             </TableCell>
                             <TableCell>
-                              {formatExactDate(doc.to_date, 'dd MMM yyyy') ||
-                                '—'}
+                              {doc.to_date
+                                ? formatExactDate(doc.to_date, 'dd MMM yyyy')
+                                : '—'}
                             </TableCell>
                             <TableCell>
                               <span className='px-2 py-0.5 text-xs rounded border border-border bg-muted'>
