@@ -95,6 +95,10 @@ export default function App() {
               <Route path='/accounts' element={<AccountPage />} />
               <Route path='/account-tasks' element={<AccountTasksPage />} />
               <Route path='/call-recordings' element={<CallRecordingsPage />} />
+              <Route
+                path='/whatsapp-records'
+                element={<CallRecordingsPage defaultTab='whatsapp' />}
+              />
               {/* <Route path='/acc-status-journey' element={<AccStatusJourney />} /> */}
               <Route path='/accounts/:id' element={<UpdateAccounts />} />
               <Route path='/accounts/:id/bsa' element={<BsaAnalysisPage />} />

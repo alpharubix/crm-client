@@ -58,6 +58,10 @@ const data = {
           title: 'Call Recordings',
           url: '/call-recordings',
         },
+        {
+          title: 'WhatsApp Record',
+          url: '/whatsapp-records',
+        },
         // {
         //   title: 'Acccounts Status Journey',
         //   url: '/acc-status-journey',

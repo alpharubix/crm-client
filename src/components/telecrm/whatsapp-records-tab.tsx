@@ -1,31 +1,27 @@
 import { useState, useMemo } from 'react';
-import { useNavigate, useLocation, useSearchParams } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { useQuery, keepPreviousData } from '@tanstack/react-query';
 import {
-  PhoneOutgoing,
-  PhoneIncoming,
-  PhoneMissed,
+  MessageSquare,
+  Send,
+  ArrowUpRight,
+  ArrowDownLeft,
   Search,
   RotateCw,
-  Phone,
   Copy,
   Check,
   ExternalLink,
   Building2,
-  Lock,
-  Headphones,
-  Volume2,
   Calendar as CalendarIcon,
   Clock,
   RotateCcw,
   User,
   X,
-  Play,
-  MessageSquare,
+  Eye,
+  FileText,
+  Phone,
 } from 'lucide-react';
 import { toast } from 'sonner';
-import WhatsAppRecordsTab from '@/components/telecrm/whatsapp-records-tab';
-import { cn } from '@/lib/utils';
 
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -82,30 +78,37 @@ export const PERIOD_PRESETS: { id: PeriodPresetId; label: string }[] = [
   { id: 'LAST_30_DAYS', label: 'Last 30 Days' },
 ];
 
-export interface CallRecordingItem {
+export interface WhatsAppRecordItem {
   id: string;
   account_id: number | string | null;
   account_name: string | null;
   telecrm_name: string;
+  lead_name: string;
   lead_id: string;
   telecrm_url: string | null;
   lead_phone: string;
-  call_type: string;
-  normalized_call_type: 'outgoing' | 'incoming' | 'missed';
-  actor_employee_email: string;
+  type: string;
+  normalized_type: 'outgoing' | 'incoming';
+  messageText: string;
+  msgType: string;
+  wa_msg_type: string;
+  wa_msg_txt: string;
+  created_on: string;
   creation_timestamp: string;
   created_at?: string;
   relative_time?: string;
-  duration?: string;
-  call_recording_url?: string;
-  call_note?: string;
+  assignee_phone_number: string;
+  assignee_email: string;
+  lead_assignee: string;
+  actor_employee_email?: string;
+  my_name?: string;
   status?: string;
-  call_back_date_time?: string;
+  url?: string;
 }
 
-export interface CallRecordingsResponse {
+export interface WhatsAppRecordsResponse {
   status: string;
-  data: CallRecordingItem[];
+  data: WhatsAppRecordItem[];
   pagination: {
     total: number;
     page: number;
@@ -114,17 +117,7 @@ export interface CallRecordingsResponse {
   };
 }
 
-// Format duration helper
-function formatDuration(secStr?: string | number): string {
-  const totalSec = parseInt(String(secStr || '0'), 10);
-  if (isNaN(totalSec) || totalSec <= 0) return '0s';
-  const mins = Math.floor(totalSec / 60);
-  const secs = totalSec % 60;
-  if (mins === 0) return `${secs}s`;
-  return `${mins}m ${secs}s`;
-}
-
-// Format phone for clean display
+// Format phone for clean display (+91 XXXXX XXXXX)
 function formatPhone(phoneStr?: string): string {
   if (!phoneStr) return '—';
   const clean = String(phoneStr).trim();
@@ -153,8 +146,8 @@ const callerMap = new Map<string, string>(
   telecrmUsers.map((u) => [u.email.toLowerCase(), u.name]),
 );
 
-// Extract first name before dot(.) from actor employee email or telecrm_users mapping
-export function formatActorName(nameOrEmail?: string): string {
+// Format actor / assignee display name
+function formatActorName(nameOrEmail?: string): string {
   if (!nameOrEmail) return '—';
   const str = String(nameOrEmail).trim();
   if (!str || str === '—') return '—';
@@ -170,12 +163,12 @@ export function formatActorName(nameOrEmail?: string): string {
   const firstName = username.split('.')[0].trim();
   if (!firstName) return str;
 
-  // Capitalize first letter (e.g. "sandip" -> "Sandip")
+  // Capitalize first letter
   return firstName.charAt(0).toUpperCase() + firstName.slice(1);
 }
 
 // Format timestamp into 12-hour format time & date
-export function formatCreationTimestamp(ts?: string | null): string {
+function formatCreationTimestamp(ts?: string | null): string {
   if (!ts || ts === '—') return '—';
   const clean = String(ts).trim();
   if (!clean) return '—';
@@ -191,6 +184,32 @@ export function formatCreationTimestamp(ts?: string | null): string {
     const rawHour = dmyMatch[4];
     const mins = dmyMatch[5];
     const secs = dmyMatch[6];
+
+    if (rawHour !== undefined && mins !== undefined) {
+      const h24 = parseInt(rawHour, 10);
+      const period = h24 >= 12 ? 'PM' : 'AM';
+      const h12 = h24 % 12 === 0 ? 12 : h24 % 12;
+      const h12Str = String(h12).padStart(2, '0');
+      const timeStr =
+        secs !== undefined
+          ? `${h12Str}:${mins.padStart(2, '0')}:${secs.padStart(2, '0')} ${period}`
+          : `${h12Str}:${mins.padStart(2, '0')} ${period}`;
+      return `${day}/${month}/${year}, ${timeStr}`;
+    }
+    return `${day}/${month}/${year}`;
+  }
+
+  // Match YYYY-MM-DD HH:mm:ss
+  const ymdMatch = clean.match(
+    /^(\d{4})[/-](\d{1,2})[/-](\d{1,2})(?:\s+(\d{1,2}):(\d{2})(?::(\d{2}))?)?/,
+  );
+  if (ymdMatch) {
+    const year = ymdMatch[1];
+    const month = ymdMatch[2].padStart(2, '0');
+    const day = ymdMatch[3].padStart(2, '0');
+    const rawHour = ymdMatch[4];
+    const mins = ymdMatch[5];
+    const secs = ymdMatch[6];
 
     if (rawHour !== undefined && mins !== undefined) {
       const h24 = parseInt(rawHour, 10);
@@ -224,57 +243,16 @@ export function formatCreationTimestamp(ts?: string | null): string {
   return clean;
 }
 
-export default function CallRecordingsPage({
-  defaultTab,
-}: {
-  defaultTab?: 'calls' | 'whatsapp';
-} = {}) {
+export default function WhatsAppRecordsTab() {
   const navigate = useNavigate();
-  const location = useLocation();
-  const [searchParams, setSearchParams] = useSearchParams();
-
-  const currentTab = useMemo(() => {
-    if (location.pathname === '/whatsapp-records') return 'whatsapp';
-    const tabParam = searchParams.get('tab');
-    if (
-      tabParam === 'whatsapp' ||
-      tabParam === 'whatsapp-record' ||
-      tabParam === 'whatsapp-records'
-    ) {
-      return 'whatsapp';
-    }
-    if (defaultTab === 'whatsapp') return 'whatsapp';
-    return 'calls';
-  }, [location.pathname, searchParams, defaultTab]);
-
-  const handleTabChange = (targetTab: 'calls' | 'whatsapp') => {
-    if (location.pathname === '/whatsapp-records') {
-      if (targetTab === 'calls') {
-        navigate('/call-recordings');
-      }
-    } else {
-      if (targetTab === 'whatsapp') {
-        setSearchParams((prev) => {
-          const next = new URLSearchParams(prev);
-          next.set('tab', 'whatsapp');
-          return next;
-        });
-      } else {
-        setSearchParams((prev) => {
-          const next = new URLSearchParams(prev);
-          next.delete('tab');
-          return next;
-        });
-      }
-    }
-  };
 
   // Query & pagination state
   const [currentPage, setCurrentPage] = useState<number>(1);
   const [pageSize, setPageSize] = useState<number>(20);
   const [searchInput, setSearchInput] = useState<string>('');
   const [appliedSearch, setAppliedSearch] = useState<string>('');
-  const [callTypeFilter, setCallTypeFilter] = useState<string>('all');
+  const [typeFilter, setTypeFilter] = useState<string>('all');
+  const [msgTypeFilter, setMsgTypeFilter] = useState<string>('all');
   const [userFilter, setUserFilter] = useState<string>('all');
   const [fromDate, setFromDate] = useState<string>('');
   const [fromTime, setFromTime] = useState<string>('');
@@ -285,19 +263,20 @@ export default function CallRecordingsPage({
   // Copy feedback state
   const [copiedId, setCopiedId] = useState<string | null>(null);
 
-  // Active audio recording preview modal
-  const [activeAudioItem, setActiveAudioItem] =
-    useState<CallRecordingItem | null>(null);
+  // Active message detail modal
+  const [activeDetailItem, setActiveDetailItem] =
+    useState<WhatsAppRecordItem | null>(null);
 
-  // Fetch call recordings with pagination & filters
+  // Fetch WhatsApp records with pagination & filters
   const { data, isLoading, isFetching, isError, error, refetch } =
-    useQuery<CallRecordingsResponse>({
+    useQuery<WhatsAppRecordsResponse>({
       queryKey: [
-        'call-recordings',
+        'whatsapp-records',
         currentPage,
         pageSize,
         appliedSearch,
-        callTypeFilter,
+        typeFilter,
+        msgTypeFilter,
         userFilter,
         fromDate,
         fromTime,
@@ -311,16 +290,12 @@ export default function CallRecordingsPage({
         });
         if (appliedSearch.trim()) {
           params.append('search', appliedSearch.trim());
-        } else if (userFilter && userFilter !== 'all') {
-          // Use username prefix before '@' (e.g. 'digamber.pandey') to avoid backend regex
-          // matching phone numbers on digit '1' from domain '@r1xchange.com'
-          const userSearchParam = userFilter.includes('@')
-            ? userFilter.split('@')[0]
-            : userFilter;
-          params.append('search', userSearchParam);
         }
-        if (callTypeFilter && callTypeFilter !== 'all') {
-          params.append('call_type', callTypeFilter);
+        if (typeFilter && typeFilter !== 'all') {
+          params.append('type', typeFilter);
+        }
+        if (msgTypeFilter && msgTypeFilter !== 'all') {
+          params.append('msg_type', msgTypeFilter);
         }
         if (userFilter && userFilter !== 'all') {
           params.append('user', userFilter);
@@ -339,20 +314,19 @@ export default function CallRecordingsPage({
         }
 
         const res = await fetch(
-          `${ENV.VITE_BACKEND_BASE_URL}/tele-crm/recordings?${params.toString()}`,
+          `${ENV.VITE_BACKEND_BASE_URL}/tele-crm/whatsapp-records?${params.toString()}`,
           { credentials: 'include' },
         );
 
         if (!res.ok) {
-          throw new Error(`Failed to load call recordings (${res.status})`);
+          throw new Error(`Failed to load WhatsApp records (${res.status})`);
         }
         return res.json();
       },
-      enabled: currentTab === 'calls',
       placeholderData: keepPreviousData,
     });
 
-  const recordings = data?.data || [];
+  const records = data?.data || [];
   const pagination = data?.pagination || {
     total: 0,
     page: 1,
@@ -360,46 +334,48 @@ export default function CallRecordingsPage({
     total_pages: 1,
   };
 
-  // User options for filter loaded from telecrm_users.json
+  // User options for filter loaded from telecrm_users.json + returned data
   const availableUsers = useMemo(() => {
     const list = telecrmUsers.map((u) => ({
       name: u.name,
       email: u.email,
     }));
     const existingEmails = new Set(list.map((u) => u.email.toLowerCase()));
-    recordings.forEach((r) => {
-      if (r.actor_employee_email && r.actor_employee_email.trim()) {
-        const email = r.actor_employee_email.trim().toLowerCase();
-        if (!existingEmails.has(email)) {
-          existingEmails.add(email);
-          list.push({
-            name: formatActorName(email),
-            email,
-          });
-        }
+
+    records.forEach((r) => {
+      const email = (r.assignee_email || r.actor_employee_email || '').trim().toLowerCase();
+      if (email && !existingEmails.has(email)) {
+        existingEmails.add(email);
+        list.push({
+          name: formatActorName(email),
+          email,
+        });
       }
     });
     return list.sort((a, b) => a.name.localeCompare(b.name));
-  }, [recordings]);
+  }, [records]);
 
-  // Strictly filter displayed recordings to ensure only the selected user's calls are shown
-  const displayedRecordings = useMemo(() => {
+  // Client-side safety filter for user if active
+  const displayedRecords = useMemo(() => {
     if (userFilter && userFilter !== 'all') {
       const filterLower = userFilter.toLowerCase().trim();
       const filterPrefix = filterLower.includes('@')
         ? filterLower.split('@')[0]
         : filterLower;
-      return recordings.filter((r) => {
-        const email = (r.actor_employee_email || '').toLowerCase().trim();
+      return records.filter((r) => {
+        const email = (r.assignee_email || r.actor_employee_email || '').toLowerCase().trim();
+        const assignee = (r.lead_assignee || '').toLowerCase().trim();
+        const phone = (r.assignee_phone_number || '').trim();
         return (
           email === filterLower ||
           email.startsWith(filterPrefix) ||
-          email.includes(filterPrefix)
+          assignee.includes(filterPrefix) ||
+          (phone && filterLower.includes(phone.slice(-10)))
         );
       });
     }
-    return recordings;
-  }, [recordings, userFilter]);
+    return records;
+  }, [records, userFilter]);
 
   // Search handler
   const handleSearchSubmit = (e?: React.FormEvent) => {
@@ -415,7 +391,7 @@ export default function CallRecordingsPage({
     setCurrentPage(1);
   };
 
-  // Period presets & handlers
+  // Period presets
   const applyPreset = (presetId: PeriodPresetId) => {
     setActivePreset(presetId);
     setCurrentPage(1);
@@ -498,7 +474,8 @@ export default function CallRecordingsPage({
   const handleResetAllFilters = () => {
     setSearchInput('');
     setAppliedSearch('');
-    setCallTypeFilter('all');
+    setTypeFilter('all');
+    setMsgTypeFilter('all');
     setUserFilter('all');
     setFromDate('');
     setFromTime('');
@@ -511,7 +488,8 @@ export default function CallRecordingsPage({
   const hasActiveFilters = Boolean(
     appliedSearch.trim() ||
       searchInput.trim() ||
-      callTypeFilter !== 'all' ||
+      typeFilter !== 'all' ||
+      msgTypeFilter !== 'all' ||
       userFilter !== 'all' ||
       fromDate ||
       toDate ||
@@ -519,86 +497,46 @@ export default function CallRecordingsPage({
       toTime,
   );
 
-  // Copy phone handler
-  const handleCopyPhone = (phone: string, id: string) => {
-    navigator.clipboard.writeText(phone.slice(-10));
+  // Copy handler
+  const handleCopyText = (text: string, id: string, label = 'Text') => {
+    navigator.clipboard.writeText(text);
     setCopiedId(id);
-    toast.success(`Copied phone number ${phone}`);
+    toast.success(`Copied ${label}`);
     setTimeout(() => {
       setCopiedId((curr) => (curr === id ? null : curr));
     }, 2000);
   };
 
-  // Count metrics for the current view
+  // Count metrics for current view
   const matchedAccountsCount = useMemo(() => {
-    return displayedRecordings.filter((r) =>
+    return displayedRecords.filter((r) =>
       Boolean(r.account_id && r.account_name),
     ).length;
-  }, [displayedRecordings]);
+  }, [displayedRecords]);
 
   return (
     <TooltipProvider>
       <div className='flex flex-col h-full w-full bg-muted/20 overflow-hidden'>
-        {/* Top Navigation Tabs */}
-        <div className='bg-background border-b border-border/60 px-6 pt-2 pb-0 flex items-center justify-between shrink-0 shadow-2xs'>
-          <div className='flex items-center gap-1 sm:gap-2'>
-            <button
-              type='button'
-              onClick={() => handleTabChange('calls')}
-              className={cn(
-                'inline-flex items-center gap-2 px-3.5 py-2.5 text-xs sm:text-sm font-semibold border-b-2 transition-all cursor-pointer',
-                currentTab === 'calls'
-                  ? 'border-blue-600 text-blue-600 dark:text-blue-400 font-bold'
-                  : 'border-transparent text-muted-foreground hover:text-foreground hover:border-border/80',
-              )}
-            >
-              <Headphones className='h-4 w-4' />
-              <span>Call Recordings</span>
-            </button>
-
-            <button
-              type='button'
-              onClick={() => handleTabChange('whatsapp')}
-              className={cn(
-                'inline-flex items-center gap-2 px-3.5 py-2.5 text-xs sm:text-sm font-semibold border-b-2 transition-all cursor-pointer',
-                currentTab === 'whatsapp'
-                  ? 'border-emerald-600 text-emerald-600 dark:text-emerald-400 font-bold'
-                  : 'border-transparent text-muted-foreground hover:text-foreground hover:border-border/80',
-              )}
-            >
-              <MessageSquare className='h-4 w-4' />
-              <span>WhatsApp Record</span>
-              <Badge
-                variant='outline'
-                className='text-[10px] px-1.5 py-0 font-normal bg-emerald-500/10 text-emerald-600 border-emerald-500/20'
-              >
-                telecrm-whatsapp
-              </Badge>
-            </button>
-          </div>
-        </div>
-
-        {currentTab === 'whatsapp' ? (
-          <div className='flex-1 flex flex-col overflow-hidden'>
-            <WhatsAppRecordsTab />
-          </div>
-        ) : (
-          <div className='flex-1 flex flex-col overflow-hidden'>
-            {/* Top Header */}
+        {/* Top Header */}
         <div className='bg-background border-b border-border/60 px-6 py-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4 shrink-0 shadow-2xs'>
           <div className='flex items-center gap-3'>
-            <div className='h-10 w-10 rounded-xl bg-blue-500/10 text-blue-600 dark:text-blue-400 flex items-center justify-center shrink-0 shadow-2xs border border-blue-500/20'>
-              <Headphones className='h-5 w-5' />
+            <div className='h-10 w-10 rounded-xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 flex items-center justify-center shrink-0 shadow-2xs border border-emerald-500/20'>
+              <MessageSquare className='h-5 w-5' />
             </div>
             <div>
               <div className='flex items-center gap-2'>
                 <h1 className='text-xl font-bold text-foreground tracking-tight'>
-                  Call Recordings
+                  WhatsApp Record
                 </h1>
+                <Badge
+                  variant='outline'
+                  className='bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20 text-[11px] font-semibold px-2 py-0.2'
+                >
+                  telecrm-whatsapp
+                </Badge>
               </div>
               <p className='text-xs text-muted-foreground mt-0.5'>
-                Centralized call logs and recordings archive mapped with system
-                accounts and TeleCRM
+                Centralized WhatsApp messages and conversation logs archive mapped with system accounts and TeleCRM
               </p>
             </div>
           </div>
@@ -609,7 +547,7 @@ export default function CallRecordingsPage({
             <div className='flex items-center gap-3 bg-muted/40 border border-border/50 rounded-xl px-3.5 py-1.5 shadow-2xs'>
               <div className='flex flex-col text-right'>
                 <span className='text-[10px] font-semibold text-muted-foreground uppercase tracking-wider'>
-                  Total Calls
+                  Total Messages
                 </span>
                 <span className='text-base font-bold text-foreground leading-none mt-0.5'>
                   {isLoading ? (
@@ -631,7 +569,7 @@ export default function CallRecordingsPage({
                   {isLoading ? (
                     <Skeleton className='h-4 w-10 rounded' />
                   ) : (
-                    `${matchedAccountsCount} / ${displayedRecordings.length}`
+                    `${matchedAccountsCount} / ${displayedRecords.length}`
                   )}
                 </span>
               </div>
@@ -643,11 +581,11 @@ export default function CallRecordingsPage({
               size='icon'
               onClick={() => refetch()}
               disabled={isLoading || isFetching}
-              title='Refresh call recordings'
+              title='Refresh WhatsApp records'
               className='h-9 w-9 rounded-lg border-border/60 text-muted-foreground hover:text-foreground cursor-pointer shadow-2xs'
             >
               <RotateCw
-                className={`h-4 w-4 ${isFetching ? 'animate-spin text-blue-600' : ''}`}
+                className={`h-4 w-4 ${isFetching ? 'animate-spin text-emerald-600' : ''}`}
               />
             </Button>
           </div>
@@ -666,7 +604,7 @@ export default function CallRecordingsPage({
                 <div className='relative w-full'>
                   <Search className='absolute left-3 top-2.5 h-4 w-4 text-muted-foreground' />
                   <Input
-                    placeholder='Search by account name, telecrm name, phone, or caller...'
+                    placeholder='Search account name, lead name, phone, message text, or assignee...'
                     value={searchInput}
                     onChange={(e) => setSearchInput(e.target.value)}
                     className='pl-9 pr-8 h-9 text-xs rounded-lg bg-background'
@@ -675,7 +613,7 @@ export default function CallRecordingsPage({
                     <button
                       type='button'
                       onClick={handleClearSearch}
-                      className='absolute right-2.5 top-2.5 text-muted-foreground hover:text-foreground'
+                      className='absolute right-2.5 top-2.5 text-muted-foreground hover:text-foreground cursor-pointer'
                     >
                       <X className='h-4 w-4' />
                     </button>
@@ -684,7 +622,7 @@ export default function CallRecordingsPage({
                 <Button
                   type='submit'
                   size='sm'
-                  className='h-9 text-xs bg-blue-600 hover:bg-blue-700 text-white rounded-lg px-3.5 gap-1.5 cursor-pointer font-medium shadow-2xs'
+                  className='h-9 text-xs bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg px-3.5 gap-1.5 cursor-pointer font-medium shadow-2xs'
                 >
                   <Search className='h-3.5 w-3.5' /> Search
                 </Button>
@@ -692,10 +630,10 @@ export default function CallRecordingsPage({
 
               {/* Filters & Page Size */}
               <div className='flex items-center gap-2.5 flex-wrap'>
-                {/* User Filter */}
+                {/* User / Assignee Filter */}
                 <div className='flex items-center gap-1.5'>
                   <span className='text-xs text-muted-foreground whitespace-nowrap font-medium'>
-                    User:
+                    Assignee:
                   </span>
                   <div className='flex items-center gap-1'>
                     <Select
@@ -735,26 +673,48 @@ export default function CallRecordingsPage({
                   </div>
                 </div>
 
-                {/* Call Type Filter */}
+                {/* Type Filter */}
                 <div className='flex items-center gap-1.5'>
                   <span className='text-xs text-muted-foreground whitespace-nowrap font-medium'>
-                    Call Type:
+                    Type:
                   </span>
                   <Select
-                    value={callTypeFilter}
+                    value={typeFilter}
                     onValueChange={(val) => {
-                      setCallTypeFilter(val);
+                      setTypeFilter(val);
                       setCurrentPage(1);
                     }}
                   >
-                    <SelectTrigger className='h-9 text-xs w-[140px] rounded-lg bg-background'>
+                    <SelectTrigger className='h-9 text-xs w-[145px] rounded-lg bg-background'>
                       <SelectValue placeholder='All Types' />
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value='all'>All Types</SelectItem>
-                      <SelectItem value='outgoing'>Outgoing Calls</SelectItem>
-                      <SelectItem value='incoming'>Incoming Calls</SelectItem>
-                      <SelectItem value='missed'>Missed Calls</SelectItem>
+                      <SelectItem value='outgoing'>Outgoing (OUTGOING_WHATSAPP_MSG)</SelectItem>
+                      <SelectItem value='incoming'>Incoming (INCOMING_WHATSAPP_MSG)</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                {/* Msg Type Filter */}
+                <div className='flex items-center gap-1.5'>
+                  <span className='text-xs text-muted-foreground whitespace-nowrap font-medium'>
+                    Msg Type:
+                  </span>
+                  <Select
+                    value={msgTypeFilter}
+                    onValueChange={(val) => {
+                      setMsgTypeFilter(val);
+                      setCurrentPage(1);
+                    }}
+                  >
+                    <SelectTrigger className='h-9 text-xs w-[120px] rounded-lg bg-background'>
+                      <SelectValue placeholder='All' />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value='all'>All Formats</SelectItem>
+                      <SelectItem value='TEXT'>TEXT</SelectItem>
+                      <SelectItem value='IMAGE'>IMAGE</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
@@ -798,12 +758,12 @@ export default function CallRecordingsPage({
               </div>
             </div>
 
-            {/* Bottom Row: Period-wise Date & Time Filter (From Date/Time to To Date/Time) + Quick Presets */}
+            {/* Bottom Row: Period-wise Date & Time Filter */}
             <div className='pt-2.5 border-t border-border/60 flex flex-col xl:flex-row xl:items-center justify-between gap-3'>
               {/* Date & Time pickers (From - To) */}
               <div className='flex items-center gap-2.5 flex-wrap'>
                 <div className='flex items-center gap-1.5 text-foreground mr-1'>
-                  <CalendarIcon className='w-3.5 h-3.5 text-blue-600 shrink-0' />
+                  <CalendarIcon className='w-3.5 h-3.5 text-emerald-600 shrink-0' />
                   <span className='text-xs font-semibold'>Period:</span>
                 </div>
 
@@ -844,7 +804,7 @@ export default function CallRecordingsPage({
                           setActivePreset('CUSTOM');
                           setCurrentPage(1);
                         }}
-                        className='text-muted-foreground hover:text-foreground p-0.5'
+                        className='text-muted-foreground hover:text-foreground p-0.5 cursor-pointer'
                         title='Clear time'
                       >
                         <X className='w-3 h-3' />
@@ -890,7 +850,7 @@ export default function CallRecordingsPage({
                           setActivePreset('CUSTOM');
                           setCurrentPage(1);
                         }}
-                        className='text-muted-foreground hover:text-foreground p-0.5'
+                        className='text-muted-foreground hover:text-foreground p-0.5 cursor-pointer'
                         title='Clear time'
                       >
                         <X className='w-3 h-3' />
@@ -903,7 +863,7 @@ export default function CallRecordingsPage({
                   <button
                     type='button'
                     onClick={handleClearPeriod}
-                    className='p-1 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted text-xs transition-colors'
+                    className='p-1 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted text-xs transition-colors cursor-pointer'
                     title='Clear date & time filter'
                   >
                     <X className='w-3.5 h-3.5' />
@@ -926,7 +886,7 @@ export default function CallRecordingsPage({
                       onClick={() => applyPreset(preset.id)}
                       className={`px-2.5 py-1 rounded-lg text-xs font-medium transition-all whitespace-nowrap cursor-pointer ${
                         isSelected
-                          ? 'bg-blue-600 text-white shadow-xs'
+                          ? 'bg-emerald-600 text-white shadow-xs'
                           : 'bg-muted/60 text-muted-foreground hover:bg-muted hover:text-foreground'
                       }`}
                     >
@@ -945,21 +905,21 @@ export default function CallRecordingsPage({
                 <TableHeader className='bg-muted/40 sticky top-0 z-10 border-b border-border/60 shadow-xs'>
                   <TableRow className='hover:bg-transparent'>
                     <TableHead className='w-[48px] text-center'>#</TableHead>
-                    <TableHead className='min-w-[190px]'>
+                    <TableHead className='min-w-[180px]'>
                       Account Name (Our System)
                     </TableHead>
-                    <TableHead className='min-w-[190px]'>
+                    <TableHead className='min-w-[180px]'>
                       TeleCRM Name (TeleCRM)
                     </TableHead>
-                    <TableHead className='min-w-[150px]'>Lead Phone</TableHead>
-                    <TableHead className='min-w-[130px]'>Call Type</TableHead>
-                    <TableHead className='min-w-[130px] text-right'>
-                      Duration & Audio
+                    <TableHead className='min-w-[140px]'>Lead Phone</TableHead>
+                    <TableHead className='min-w-[150px]'>Type</TableHead>
+                    <TableHead className='min-w-[240px]'>Message</TableHead>
+                    <TableHead className='min-w-[90px] text-center'>Msg Type</TableHead>
+                    <TableHead className='min-w-[160px]'>Assignee / Phone</TableHead>
+                    <TableHead className='min-w-[170px]'>
+                      Created On
                     </TableHead>
-                    <TableHead className='min-w-[160px]'>Caller</TableHead>
-                    <TableHead className='min-w-[190px]'>
-                      Creation Timestamp
-                    </TableHead>
+                    <TableHead className='w-[60px] text-center'>View</TableHead>
                   </TableRow>
                 </TableHeader>
 
@@ -981,26 +941,32 @@ export default function CallRecordingsPage({
                           <Skeleton className='h-4 w-28 rounded' />
                         </TableCell>
                         <TableCell>
-                          <Skeleton className='h-5 w-20 rounded-full' />
+                          <Skeleton className='h-5 w-24 rounded-full' />
                         </TableCell>
                         <TableCell>
-                          <Skeleton className='h-4 w-44 rounded' />
+                          <Skeleton className='h-4 w-48 rounded' />
+                        </TableCell>
+                        <TableCell className='text-center'>
+                          <Skeleton className='h-4 w-12 mx-auto rounded' />
                         </TableCell>
                         <TableCell>
                           <Skeleton className='h-4 w-28 rounded' />
                         </TableCell>
-                        <TableCell className='text-right'>
-                          <Skeleton className='h-4 w-16 ml-auto rounded' />
+                        <TableCell>
+                          <Skeleton className='h-4 w-24 rounded' />
+                        </TableCell>
+                        <TableCell className='text-center'>
+                          <Skeleton className='h-5 w-5 mx-auto rounded' />
                         </TableCell>
                       </TableRow>
                     ))
                   ) : isError ? (
                     // Error State
                     <TableRow>
-                      <TableCell colSpan={8} className='h-56 text-center'>
+                      <TableCell colSpan={10} className='h-56 text-center'>
                         <div className='flex flex-col items-center justify-center gap-2'>
                           <p className='text-sm font-medium text-destructive'>
-                            Failed to load call recordings.
+                            Failed to load WhatsApp records.
                           </p>
                           <p className='text-xs text-muted-foreground'>
                             {error instanceof Error
@@ -1011,28 +977,28 @@ export default function CallRecordingsPage({
                             variant='outline'
                             size='sm'
                             onClick={() => refetch()}
-                            className='mt-2 text-xs gap-1.5'
+                            className='mt-2 text-xs gap-1.5 cursor-pointer'
                           >
                             <RotateCw className='h-3.5 w-3.5' /> Try Again
                           </Button>
                         </div>
                       </TableCell>
                     </TableRow>
-                  ) : displayedRecordings.length === 0 ? (
+                  ) : displayedRecords.length === 0 ? (
                     // Empty State
                     <TableRow>
-                      <TableCell colSpan={8} className='h-56 text-center'>
+                      <TableCell colSpan={10} className='h-56 text-center'>
                         <div className='flex flex-col items-center justify-center gap-2'>
-                          <div className='h-12 w-12 rounded-full bg-muted/60 flex items-center justify-center text-muted-foreground mb-1'>
-                            <Headphones className='h-6 w-6' />
+                          <div className='h-12 w-12 rounded-full bg-emerald-500/10 flex items-center justify-center text-emerald-600 mb-1'>
+                            <MessageSquare className='h-6 w-6' />
                           </div>
                           <p className='text-sm font-medium text-foreground'>
-                            No call recordings found
+                            No WhatsApp records found
                           </p>
                           <p className='text-xs text-muted-foreground max-w-sm'>
                             {hasActiveFilters
-                              ? 'Try adjusting your search query, period filter, or caller selection to find what you are looking for.'
-                              : 'No call records have been logged in the collection yet.'}
+                              ? 'Try adjusting your search query, type filter, period, or assignee selection to find what you are looking for.'
+                              : 'No WhatsApp messages have been recorded in the telecrm-whatsapp collection yet.'}
                           </p>
                           {hasActiveFilters && (
                             <Button
@@ -1049,27 +1015,27 @@ export default function CallRecordingsPage({
                     </TableRow>
                   ) : (
                     // Data Rows
-                    displayedRecordings.map((item, index) => {
+                    displayedRecords.map((item, index) => {
                       const rowNumber =
                         (pagination.page - 1) * pagination.limit + index + 1;
                       const hasAccount = Boolean(
                         item.account_name && item.account_id,
                       );
-                      const isCopied = copiedId === item.id;
+                      const isPhoneCopied = copiedId === `phone-${item.id}`;
+                      const isAssigneePhoneCopied = copiedId === `assignee-${item.id}`;
 
-                      // Call Type badge styling
-                      const callTypeLower = (
-                        item.normalized_call_type ||
-                        item.call_type ||
-                        ''
-                      ).toLowerCase();
+                      const typeLower = (item.normalized_type || item.type || '').toLowerCase();
                       const isOutgoing =
-                        callTypeLower.includes('out') ||
-                        callTypeLower.includes('dial');
+                        typeLower.includes('out') ||
+                        typeLower.includes('sent');
                       const isIncoming =
-                        callTypeLower.includes('inc') ||
-                        callTypeLower.includes('rec');
-                      const isMissed = callTypeLower.includes('miss');
+                        typeLower.includes('in') ||
+                        typeLower.includes('rec');
+
+                      const displayMessage =
+                        item.messageText || item.wa_msg_txt || '—';
+                      const displayMsgType =
+                        item.msgType || item.wa_msg_type || 'TEXT';
 
                       return (
                         <TableRow
@@ -1089,10 +1055,10 @@ export default function CallRecordingsPage({
                                 onClick={() =>
                                   navigate(`/accounts/${item.account_id}`)
                                 }
-                                className='inline-flex items-center gap-1.5 text-left font-medium text-sm text-foreground hover:text-blue-600 dark:hover:text-blue-400 group-hover:underline cursor-pointer transition-colors max-w-[240px] truncate'
+                                className='inline-flex items-center gap-1.5 text-left font-medium text-sm text-foreground hover:text-emerald-600 dark:hover:text-emerald-400 group-hover:underline cursor-pointer transition-colors max-w-[220px] truncate'
                                 title={`View CRM Account: ${item.account_name}`}
                               >
-                                <Building2 className='h-3.5 w-3.5 shrink-0 text-blue-600/75 dark:text-blue-400/75' />
+                                <Building2 className='h-3.5 w-3.5 shrink-0 text-emerald-600/75 dark:text-emerald-400/75' />
                                 <span className='truncate'>
                                   {item.account_name}
                                 </span>
@@ -1109,28 +1075,34 @@ export default function CallRecordingsPage({
 
                           {/* TeleCRM Name (TeleCRM) */}
                           <TableCell>
-                            {item.telecrm_url ? (
-                              <a
-                                href={item.telecrm_url}
-                                target='_blank'
-                                rel='noopener noreferrer'
-                                className='inline-flex items-center gap-1.5 text-sm font-medium text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 hover:underline max-w-[240px] truncate'
-                                title={`Open TeleCRM Lead: ${item.telecrm_name || 'TeleCRM Lead'}`}
-                              >
-                                <span className='truncate'>
-                                  {item.telecrm_name && item.telecrm_name.trim()
-                                    ? item.telecrm_name
-                                    : 'TeleCRM Lead'}
+                            <div className='flex flex-col max-w-[220px]'>
+                              {item.telecrm_url ? (
+                                <a
+                                  href={item.telecrm_url}
+                                  target='_blank'
+                                  rel='noopener noreferrer'
+                                  className='inline-flex items-center gap-1.5 text-sm font-medium text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 hover:underline truncate'
+                                  title={`Open TeleCRM Lead: ${item.telecrm_name || item.lead_name || 'TeleCRM Lead'}`}
+                                >
+                                  <span className='truncate'>
+                                    {item.telecrm_name || item.lead_name || 'TeleCRM Lead'}
+                                  </span>
+                                  <ExternalLink className='h-3 w-3 shrink-0 opacity-70 group-hover:opacity-100' />
+                                </a>
+                              ) : (
+                                <span className='text-sm text-foreground truncate'>
+                                  {item.telecrm_name || item.lead_name || '—'}
                                 </span>
-                                <ExternalLink className='h-3 w-3 shrink-0 opacity-70 group-hover:opacity-100' />
-                              </a>
-                            ) : (
-                              <span className='text-sm text-foreground truncate max-w-[240px]'>
-                                {item.telecrm_name && item.telecrm_name.trim()
-                                  ? item.telecrm_name
-                                  : '—'}
-                              </span>
-                            )}
+                              )}
+                              {item.lead_id && (
+                                <span
+                                  className='text-[10px] font-mono text-muted-foreground/75 truncate mt-0.5'
+                                  title={`Lead ID: ${item.lead_id}`}
+                                >
+                                  ID: {item.lead_id}
+                                </span>
+                              )}
+                            </div>
                           </TableCell>
 
                           {/* Lead Phone */}
@@ -1138,7 +1110,7 @@ export default function CallRecordingsPage({
                             <div className='flex items-center gap-1.5'>
                               <a
                                 href={`tel:${item.lead_phone}`}
-                                className='text-xs font-mono font-medium text-foreground hover:text-blue-600 transition-colors'
+                                className='text-xs font-mono font-medium text-foreground hover:text-emerald-600 transition-colors'
                               >
                                 {formatPhone(item.lead_phone)}
                               </a>
@@ -1148,14 +1120,15 @@ export default function CallRecordingsPage({
                                     <button
                                       type='button'
                                       onClick={() =>
-                                        handleCopyPhone(
-                                          item.lead_phone,
-                                          item.id,
+                                        handleCopyText(
+                                          item.lead_phone.slice(-10),
+                                          `phone-${item.id}`,
+                                          'phone number',
                                         )
                                       }
                                       className='h-6 w-6 rounded flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-muted/80 transition-colors cursor-pointer'
                                     >
-                                      {isCopied ? (
+                                      {isPhoneCopied ? (
                                         <Check className='h-3 w-3 text-emerald-600' />
                                       ) : (
                                         <Copy className='h-3 w-3' />
@@ -1166,71 +1139,145 @@ export default function CallRecordingsPage({
                                     side='top'
                                     className='text-xs'
                                   >
-                                    {isCopied ? 'Copied!' : 'Copy phone'}
+                                    {isPhoneCopied ? 'Copied!' : 'Copy phone'}
                                   </TooltipContent>
                                 </Tooltip>
                               )}
                             </div>
                           </TableCell>
 
-                          {/* Call Type */}
+                          {/* Type */}
                           <TableCell>
-                            {isMissed ? (
+                            {isOutgoing ? (
                               <Badge
                                 variant='outline'
-                                className='bg-rose-50 text-rose-700 border-rose-200 dark:bg-rose-950/40 dark:text-rose-400 dark:border-rose-800 text-[11px] font-medium gap-1 px-2 py-0.5'
+                                className='bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-950/40 dark:text-emerald-400 dark:border-emerald-800 text-[11px] font-medium gap-1 px-2 py-0.5 whitespace-nowrap'
+                                title={item.type}
                               >
-                                <PhoneMissed className='h-3 w-3' />
-                                Missed
+                                <ArrowUpRight className='h-3 w-3 shrink-0' />
+                                <span className='truncate max-w-[130px]'>
+                                  {item.type || 'OUTGOING_WHATSAPP_MSG'}
+                                </span>
                               </Badge>
                             ) : isIncoming ? (
                               <Badge
                                 variant='outline'
-                                className='bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-950/40 dark:text-emerald-400 dark:border-emerald-800 text-[11px] font-medium gap-1 px-2 py-0.5'
+                                className='bg-sky-50 text-sky-700 border-sky-200 dark:bg-sky-950/40 dark:text-sky-400 dark:border-sky-800 text-[11px] font-medium gap-1 px-2 py-0.5 whitespace-nowrap'
+                                title={item.type}
                               >
-                                <PhoneIncoming className='h-3 w-3' />
-                                Incoming
+                                <ArrowDownLeft className='h-3 w-3 shrink-0' />
+                                <span className='truncate max-w-[130px]'>
+                                  {item.type || 'INCOMING_WHATSAPP_MSG'}
+                                </span>
                               </Badge>
                             ) : (
                               <Badge
                                 variant='outline'
-                                className='bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-950/40 dark:text-blue-400 dark:border-blue-800 text-[11px] font-medium gap-1 px-2 py-0.5'
+                                className='bg-muted text-muted-foreground border-border text-[11px] font-medium px-2 py-0.5 whitespace-nowrap'
                               >
-                                <PhoneOutgoing className='h-3 w-3' />
-                                Outgoing
+                                {item.type || 'WHATSAPP_MSG'}
                               </Badge>
                             )}
                           </TableCell>
 
-                          {/* Duration & Audio */}
-                          <TableCell className='text-center'>
-                            <div className='inline-flex items-center justify-end gap-2'>
-                              <span className='text-xs font-mono text-muted-foreground'>
-                                {formatDuration(item.duration)}
-                              </span>
-                            </div>
-                          </TableCell>
-
-                          {/* Caller Name */}
+                          {/* Message Text */}
                           <TableCell>
-                            <div className='flex items-center gap-2 max-w-[200px]'>
-                              <div className='h-6 w-6 rounded-full bg-muted flex items-center justify-center text-[10px] font-semibold text-muted-foreground border border-border/60 shrink-0'>
-                                {getInitials(item.actor_employee_email)}
-                              </div>
-                              <span
-                                className='text-xs font-medium text-foreground truncate'
-                                title={item.actor_employee_email || '—'}
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <button
+                                  type='button'
+                                  onClick={() => setActiveDetailItem(item)}
+                                  className='text-left group/msg block max-w-[280px] cursor-pointer'
+                                >
+                                  <span className='text-xs text-foreground/90 font-normal line-clamp-2 hover:text-emerald-600 dark:hover:text-emerald-400 transition-colors'>
+                                    {displayMessage}
+                                  </span>
+                                </button>
+                              </TooltipTrigger>
+                              <TooltipContent
+                                side='bottom'
+                                className='max-w-md p-3 text-xs leading-relaxed'
                               >
-                                {formatActorName(item.actor_employee_email)}
-                              </span>
+                                <div className='font-semibold mb-1 text-[11px] text-muted-foreground uppercase tracking-wider'>
+                                  Full Message Preview
+                                </div>
+                                <div className='whitespace-pre-wrap break-words'>
+                                  {displayMessage}
+                                </div>
+                              </TooltipContent>
+                            </Tooltip>
+                          </TableCell>
+
+                          {/* Msg Type */}
+                          <TableCell className='text-center'>
+                            <Badge
+                              variant='secondary'
+                              className='text-[10px] font-mono uppercase px-1.5 py-0.5 bg-muted/70 text-foreground/80'
+                            >
+                              {displayMsgType}
+                            </Badge>
+                          </TableCell>
+
+                          {/* Assignee / Phone */}
+                          <TableCell>
+                            <div className='flex flex-col max-w-[190px]'>
+                              {item.assignee_phone_number ? (
+                                <div className='flex items-center gap-1'>
+                                  <span className='text-xs font-mono font-medium text-foreground'>
+                                    {formatPhone(item.assignee_phone_number)}
+                                  </span>
+                                  <button
+                                    type='button'
+                                    onClick={() =>
+                                      handleCopyText(
+                                        item.assignee_phone_number.slice(-10),
+                                        `assignee-${item.id}`,
+                                        'assignee phone',
+                                      )
+                                    }
+                                    className='h-5 w-5 rounded flex items-center justify-center text-muted-foreground hover:text-foreground cursor-pointer'
+                                    title='Copy assignee phone'
+                                  >
+                                    {isAssigneePhoneCopied ? (
+                                      <Check className='h-2.5 w-2.5 text-emerald-600' />
+                                    ) : (
+                                      <Copy className='h-2.5 w-2.5' />
+                                    )}
+                                  </button>
+                                </div>
+                              ) : null}
+
+                              {(item.assignee_email || item.lead_assignee) && (
+                                <div className='flex items-center gap-1.5 mt-0.5'>
+                                  <div className='h-4 w-4 rounded-full bg-muted flex items-center justify-center text-[9px] font-semibold text-muted-foreground border border-border/60 shrink-0'>
+                                    {getInitials(
+                                      item.assignee_email || item.lead_assignee,
+                                    )}
+                                  </div>
+                                  <span
+                                    className='text-[11px] text-muted-foreground truncate'
+                                    title={
+                                      item.assignee_email || item.lead_assignee
+                                    }
+                                  >
+                                    {formatActorName(
+                                      item.assignee_email || item.lead_assignee,
+                                    )}
+                                  </span>
+                                </div>
+                              )}
                             </div>
                           </TableCell>
 
-                          {/* Creation Timestamp */}
+                          {/* Created On */}
                           <TableCell>
                             <div className='flex flex-col'>
                               <span className='text-xs font-medium text-foreground whitespace-nowrap'>
-                                {formatCreationTimestamp(item.creation_timestamp)}
+                                {formatCreationTimestamp(
+                                  item.created_on ||
+                                    item.creation_timestamp ||
+                                    item.created_at,
+                                )}
                               </span>
                               {item.relative_time && (
                                 <span className='text-[10px] text-muted-foreground'>
@@ -1240,6 +1287,19 @@ export default function CallRecordingsPage({
                                 </span>
                               )}
                             </div>
+                          </TableCell>
+
+                          {/* View Detail Action */}
+                          <TableCell className='text-center'>
+                            <Button
+                              variant='ghost'
+                              size='icon'
+                              onClick={() => setActiveDetailItem(item)}
+                              title='View message details'
+                              className='h-8 w-8 text-muted-foreground hover:text-foreground hover:bg-muted/80 rounded-lg cursor-pointer'
+                            >
+                              <Eye className='h-4 w-4' />
+                            </Button>
                           </TableCell>
                         </TableRow>
                       );
@@ -1254,7 +1314,7 @@ export default function CallRecordingsPage({
               <span className='text-xs text-muted-foreground'>
                 Showing{' '}
                 <span className='font-medium text-foreground'>
-                  {displayedRecordings.length > 0
+                  {displayedRecords.length > 0
                     ? (pagination.page - 1) * pagination.limit + 1
                     : 0}
                 </span>{' '}
@@ -1269,7 +1329,7 @@ export default function CallRecordingsPage({
                 <span className='font-medium text-foreground'>
                   {pagination.total.toLocaleString()}
                 </span>{' '}
-                call recordings
+                WhatsApp records
               </span>
 
               <Pagination
@@ -1280,86 +1340,273 @@ export default function CallRecordingsPage({
             </div>
           </div>
         </div>
-        </div>
-        )}
 
-        {/* Audio Recording Modal */}
-        {activeAudioItem && (
+        {/* Message Details Modal */}
+        {activeDetailItem && (
           <Dialog
-            open={Boolean(activeAudioItem)}
-            onOpenChange={(open) => !open && setActiveAudioItem(null)}
+            open={Boolean(activeDetailItem)}
+            onOpenChange={(open) => !open && setActiveDetailItem(null)}
           >
-            <DialogContent className='sm:max-w-md'>
+            <DialogContent className='sm:max-w-xl max-h-[90vh] overflow-y-auto'>
               <DialogHeader>
                 <DialogTitle className='flex items-center gap-2 text-base font-semibold'>
-                  <Volume2 className='h-5 w-5 text-blue-600' />
-                  Call Recording Playback
+                  <MessageSquare className='h-5 w-5 text-emerald-600' />
+                  WhatsApp Record Details
                 </DialogTitle>
               </DialogHeader>
 
               <div className='flex flex-col gap-4 py-2'>
-                {/* Call Metadata summary */}
-                <div className='bg-muted/40 rounded-xl p-3 border border-border/60 flex flex-col gap-2 text-xs'>
-                  <div className='flex justify-between'>
-                    <span className='text-muted-foreground'>Account:</span>
-                    <span className='font-medium text-foreground'>
-                      {activeAudioItem.account_name || '— (Unlinked)'}
+                {/* Meta details grid */}
+                <div className='grid grid-cols-1 sm:grid-cols-2 gap-3 bg-muted/40 rounded-xl p-3.5 border border-border/60 text-xs'>
+                  <div className='flex flex-col gap-0.5'>
+                    <span className='text-muted-foreground font-medium'>
+                      Account (Our System):
+                    </span>
+                    <span className='font-semibold text-foreground'>
+                      {activeDetailItem.account_name ? (
+                        <button
+                          type='button'
+                          onClick={() => {
+                            navigate(`/accounts/${activeDetailItem.account_id}`);
+                            setActiveDetailItem(null);
+                          }}
+                          className='inline-flex items-center gap-1 text-emerald-600 dark:text-emerald-400 hover:underline cursor-pointer text-left'
+                        >
+                          <Building2 className='h-3 w-3 shrink-0' />
+                          {activeDetailItem.account_name}
+                        </button>
+                      ) : (
+                        '— (Unlinked)'
+                      )}
                     </span>
                   </div>
-                  <div className='flex justify-between'>
-                    <span className='text-muted-foreground'>TeleCRM Lead:</span>
-                    <span className='font-medium text-foreground'>
-                      {activeAudioItem.telecrm_name || '—'}
+
+                  <div className='flex flex-col gap-0.5'>
+                    <span className='text-muted-foreground font-medium'>
+                      TeleCRM Lead:
+                    </span>
+                    <span className='font-semibold text-foreground'>
+                      {activeDetailItem.telecrm_url ? (
+                        <a
+                          href={activeDetailItem.telecrm_url}
+                          target='_blank'
+                          rel='noopener noreferrer'
+                          className='inline-flex items-center gap-1 text-blue-600 dark:text-blue-400 hover:underline'
+                        >
+                          {activeDetailItem.telecrm_name ||
+                            activeDetailItem.lead_name ||
+                            'TeleCRM Lead'}
+                          <ExternalLink className='h-3 w-3 shrink-0' />
+                        </a>
+                      ) : (
+                        activeDetailItem.telecrm_name ||
+                        activeDetailItem.lead_name ||
+                        '—'
+                      )}
                     </span>
                   </div>
-                  <div className='flex justify-between'>
-                    <span className='text-muted-foreground'>Phone:</span>
+
+                  <div className='flex flex-col gap-0.5'>
+                    <span className='text-muted-foreground font-medium'>
+                      Lead Phone:
+                    </span>
+                    <div className='flex items-center gap-1 font-mono font-medium text-foreground'>
+                      <span>{formatPhone(activeDetailItem.lead_phone)}</span>
+                      {activeDetailItem.lead_phone && (
+                        <button
+                          type='button'
+                          onClick={() =>
+                            handleCopyText(
+                              activeDetailItem.lead_phone.slice(-10),
+                              `modal-lead-${activeDetailItem.id}`,
+                              'lead phone',
+                            )
+                          }
+                          className='p-0.5 text-muted-foreground hover:text-foreground cursor-pointer'
+                        >
+                          <Copy className='h-3 w-3' />
+                        </button>
+                      )}
+                    </div>
+                  </div>
+
+                  <div className='flex flex-col gap-0.5'>
+                    <span className='text-muted-foreground font-medium'>
+                      Lead ID:
+                    </span>
+                    <div className='flex items-center gap-1 font-mono text-muted-foreground'>
+                      <span className='truncate'>{activeDetailItem.lead_id || '—'}</span>
+                      {activeDetailItem.lead_id && (
+                        <button
+                          type='button'
+                          onClick={() =>
+                            handleCopyText(
+                              activeDetailItem.lead_id,
+                              `modal-lead-id-${activeDetailItem.id}`,
+                              'lead ID',
+                            )
+                          }
+                          className='p-0.5 text-muted-foreground hover:text-foreground cursor-pointer'
+                        >
+                          <Copy className='h-3 w-3' />
+                        </button>
+                      )}
+                    </div>
+                  </div>
+
+                  <div className='flex flex-col gap-0.5'>
+                    <span className='text-muted-foreground font-medium'>
+                      Type:
+                    </span>
                     <span className='font-mono font-medium text-foreground'>
-                      {activeAudioItem.lead_phone}
+                      {activeDetailItem.type || '—'}
                     </span>
                   </div>
-                  <div className='flex justify-between'>
-                    <span className='text-muted-foreground'>Caller:</span>
-                    <span
-                      className='font-medium text-foreground truncate max-w-[200px]'
-                      title={activeAudioItem.actor_employee_email || '—'}
-                    >
-                      {formatActorName(activeAudioItem.actor_employee_email)}
+
+                  <div className='flex flex-col gap-0.5'>
+                    <span className='text-muted-foreground font-medium'>
+                      Msg Type (msgType / wa_msg_type):
+                    </span>
+                    <span className='font-mono font-medium text-foreground'>
+                      {activeDetailItem.msgType || activeDetailItem.wa_msg_type || 'TEXT'}
                     </span>
                   </div>
-                  <div className='flex justify-between'>
-                    <span className='text-muted-foreground'>Timestamp:</span>
+
+                  <div className='flex flex-col gap-0.5'>
+                    <span className='text-muted-foreground font-medium'>
+                      Assignee Phone:
+                    </span>
+                    <div className='flex items-center gap-1 font-mono font-medium text-foreground'>
+                      <span>{formatPhone(activeDetailItem.assignee_phone_number)}</span>
+                      {activeDetailItem.assignee_phone_number && (
+                        <button
+                          type='button'
+                          onClick={() =>
+                            handleCopyText(
+                              activeDetailItem.assignee_phone_number.slice(-10),
+                              `modal-assignee-${activeDetailItem.id}`,
+                              'assignee phone',
+                            )
+                          }
+                          className='p-0.5 text-muted-foreground hover:text-foreground cursor-pointer'
+                        >
+                          <Copy className='h-3 w-3' />
+                        </button>
+                      )}
+                    </div>
+                  </div>
+
+                  <div className='flex flex-col gap-0.5'>
+                    <span className='text-muted-foreground font-medium'>
+                      Assignee / User:
+                    </span>
+                    <span className='font-medium text-foreground truncate'>
+                      {formatActorName(
+                        activeDetailItem.assignee_email ||
+                          activeDetailItem.lead_assignee,
+                      )}
+                    </span>
+                  </div>
+
+                  <div className='flex flex-col gap-0.5'>
+                    <span className='text-muted-foreground font-medium'>
+                      Created On (created_on):
+                    </span>
                     <span className='font-medium text-foreground'>
-                      {formatCreationTimestamp(activeAudioItem.creation_timestamp)}
+                      {activeDetailItem.created_on
+                        ? formatCreationTimestamp(activeDetailItem.created_on)
+                        : '—'}
+                    </span>
+                  </div>
+
+                  <div className='flex flex-col gap-0.5'>
+                    <span className='text-muted-foreground font-medium'>
+                      Creation Timestamp:
+                    </span>
+                    <span className='font-medium text-foreground'>
+                      {formatCreationTimestamp(
+                        activeDetailItem.creation_timestamp ||
+                          activeDetailItem.created_at,
+                      )}
                     </span>
                   </div>
                 </div>
 
-                {/* HTML5 Audio Player */}
-                {activeAudioItem.call_recording_url ? (
-                  <div className='flex flex-col items-center gap-2 pt-2'>
-                    <audio
-                      controls
-                      autoPlay
-                      src={activeAudioItem.call_recording_url}
-                      className='w-full'
-                    >
-                      Your browser does not support audio playback.
-                    </audio>
+                {/* Primary Message Content */}
+                <div className='flex flex-col gap-1.5'>
+                  <div className='flex items-center justify-between'>
+                    <span className='text-xs font-semibold text-foreground flex items-center gap-1.5'>
+                      <FileText className='h-3.5 w-3.5 text-emerald-600' />
+                      Message Content (messageText):
+                    </span>
+                    {(activeDetailItem.messageText || activeDetailItem.wa_msg_txt) && (
+                      <Button
+                        variant='ghost'
+                        size='sm'
+                        onClick={() =>
+                          handleCopyText(
+                            activeDetailItem.messageText ||
+                              activeDetailItem.wa_msg_txt,
+                            `modal-body-${activeDetailItem.id}`,
+                            'message text',
+                          )
+                        }
+                        className='h-7 text-xs gap-1 px-2 text-muted-foreground hover:text-foreground cursor-pointer'
+                      >
+                        <Copy className='h-3 w-3' /> Copy Message
+                      </Button>
+                    )}
+                  </div>
+                  <div className='bg-muted/30 border border-border/70 rounded-xl p-3.5 text-xs text-foreground font-normal whitespace-pre-wrap leading-relaxed select-text max-h-60 overflow-y-auto'>
+                    {activeDetailItem.messageText ||
+                      activeDetailItem.wa_msg_txt ||
+                      'No message text provided.'}
+                  </div>
+                </div>
+
+                {/* Secondary wa_msg_txt if distinct from messageText */}
+                {activeDetailItem.wa_msg_txt &&
+                  activeDetailItem.wa_msg_txt !== activeDetailItem.messageText && (
+                    <div className='flex flex-col gap-1.5'>
+                      <div className='flex items-center justify-between'>
+                        <span className='text-xs font-semibold text-foreground flex items-center gap-1.5'>
+                          <MessageSquare className='h-3.5 w-3.5 text-blue-600' />
+                          WhatsApp Msg Text (wa_msg_txt):
+                        </span>
+                        <Button
+                          variant='ghost'
+                          size='sm'
+                          onClick={() =>
+                            handleCopyText(
+                              activeDetailItem.wa_msg_txt,
+                              `modal-wa-${activeDetailItem.id}`,
+                              'wa_msg_txt',
+                            )
+                          }
+                          className='h-7 text-xs gap-1 px-2 text-muted-foreground hover:text-foreground cursor-pointer'
+                        >
+                          <Copy className='h-3 w-3' /> Copy
+                        </Button>
+                      </div>
+                      <div className='bg-muted/30 border border-border/70 rounded-xl p-3.5 text-xs text-foreground font-normal whitespace-pre-wrap leading-relaxed select-text max-h-40 overflow-y-auto'>
+                        {activeDetailItem.wa_msg_txt}
+                      </div>
+                    </div>
+                  )}
+
+                {/* Media Link if present */}
+                {activeDetailItem.url && (
+                  <div className='flex items-center justify-between bg-muted/40 p-3 rounded-xl border border-border/60 text-xs'>
+                    <span className='text-muted-foreground'>Media / Action URL:</span>
                     <a
-                      href={activeAudioItem.call_recording_url}
+                      href={activeDetailItem.url}
                       target='_blank'
                       rel='noopener noreferrer'
-                      className='text-xs text-blue-600 hover:underline inline-flex items-center gap-1 mt-1'
+                      className='inline-flex items-center gap-1 text-emerald-600 hover:underline font-medium'
                     >
-                      Open audio file in new tab{' '}
-                      <ExternalLink className='h-3 w-3' />
+                      Open Attachment / Link <ExternalLink className='h-3 w-3' />
                     </a>
                   </div>
-                ) : (
-                  <p className='text-xs text-muted-foreground text-center py-4'>
-                    No direct audio URL available for this call.
-                  </p>
                 )}
               </div>
             </DialogContent>
