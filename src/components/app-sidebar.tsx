@@ -23,6 +23,7 @@ import {
   Megaphone,
   LifeBuoy,
   GalleryVerticalEnd,
+  MessageCircle,
 } from 'lucide-react';
 import { useAuth } from '@/context/auth-context';
 import SailLogo from '@/assets/sail-logo-3-cropped.svg';
@@ -62,10 +63,17 @@ const data = {
           title: 'WhatsApp Record',
           url: '/whatsapp-records',
         },
-        // {
-        //   title: 'Acccounts Status Journey',
-        //   url: '/acc-status-journey',
-        // },
+      ],
+    },
+    {
+      title: 'WhatsApp CRM',
+      url: '#',
+      icon: MessageCircle,
+      items: [
+        {
+          title: 'Live Inbox',
+          url: '/whatsapp',
+        },
       ],
     },
     {
