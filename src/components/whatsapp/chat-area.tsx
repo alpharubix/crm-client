@@ -77,7 +77,12 @@ export const ChatArea: React.FC<ChatAreaProps> = ({
     if (!isoString) return '';
     try {
       const d = new Date(isoString);
-      return d.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit', hour12: true }).toLowerCase();
+      return d.toLocaleTimeString('en-IN', {
+        timeZone: 'Asia/Kolkata',
+        hour: 'numeric',
+        minute: '2-digit',
+        hour12: true,
+      }).toLowerCase();
     } catch {
       return '';
     }
@@ -204,6 +209,39 @@ export const ChatArea: React.FC<ChatAreaProps> = ({
                       : 'bg-white text-slate-800 rounded-tl-none border border-slate-100'
                   }`}
                 >
+                  {/* Quoted Message (WhatsApp reply-to context header) */}
+                  {(() => {
+                    const ctx = msg.reply_to || (msg as any).raw_payload?.context;
+                    if (!ctx) return null;
+
+                    // Find parent message in local state or fallback to quoted_text
+                    const parentMsg = messages.find(
+                      (m) => (m.wamid && m.wamid === ctx.message_id) || (m.wamid && m.wamid === ctx.id)
+                    );
+                    const parentText =
+                      ctx.quoted_text ||
+                      (parentMsg?.type === 'template'
+                        ? (parentMsg.content?.rendered?.body ||
+                           templates?.find((t) => t.name === parentMsg.content?.template_name)?.components?.find((c) => c.type === 'BODY')?.text ||
+                           `Template: ${parentMsg.content?.template_name || ''}`)
+                        : parentMsg?.content?.text) ||
+                      'Original message';
+                    const parentSender =
+                      ctx.quoted_from ||
+                      (parentMsg?.direction === 'outbound' ? 'R1Xchange' : conversation?.customer_name || conversation?.customer_wa_id || 'User');
+
+                    return (
+                      <div className="mb-2 p-2 rounded-lg bg-black/5 dark:bg-white/5 border-l-4 border-emerald-600 text-[11px] leading-snug select-none">
+                        <div className="font-bold text-emerald-700 flex items-center justify-between text-[10px]">
+                          <span>~{parentSender}</span>
+                        </div>
+                        <div className="text-slate-600 truncate mt-0.5 line-clamp-2">
+                          {parentText}
+                        </div>
+                      </div>
+                    );
+                  })()}
+
                   {/* Template Card Rendering */}
                   {isTemplate && (() => {
                     const contentObj = typeof msg.content === 'object' && msg.content !== null ? msg.content : {};
@@ -262,15 +300,10 @@ export const ChatArea: React.FC<ChatAreaProps> = ({
                     );
                   })()}
 
-                  {/* Interactive Button / List Reply Rendering */}
+                  {/* Interactive Button / List Reply Rendering (render as natural clean text) */}
                   {isInteractive && (
-                    <div className="space-y-1 mb-1">
-                      <div className="text-[10px] font-semibold text-purple-600">
-                        Selected Option:
-                      </div>
-                      <div className="font-semibold text-slate-900 bg-purple-50/50 p-2 rounded-lg border border-purple-100">
-                        {msg.content?.text || msg.content?.title || 'Interactive response'}
-                      </div>
+                    <div className="whitespace-pre-wrap leading-relaxed break-words font-normal text-slate-900 text-xs">
+                      {msg.content?.text || msg.content?.title || 'Button reply'}
                     </div>
                   )}
 

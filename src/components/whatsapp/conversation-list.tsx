@@ -60,11 +60,23 @@ export const ConversationList: React.FC<ConversationListProps> = ({
     try {
       const date = new Date(isoString);
       const now = new Date();
-      const isToday = date.toDateString() === now.toDateString();
+      const isToday =
+        date.toLocaleDateString('en-IN', { timeZone: 'Asia/Kolkata' }) ===
+        now.toLocaleDateString('en-IN', { timeZone: 'Asia/Kolkata' });
       if (isToday) {
-        return date.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit', hour12: true }).toLowerCase();
+        return date.toLocaleTimeString('en-IN', {
+          timeZone: 'Asia/Kolkata',
+          hour: 'numeric',
+          minute: '2-digit',
+          hour12: true,
+        }).toLowerCase();
       }
-      return `${date.getDate().toString().padStart(2, '0')}/${(date.getMonth() + 1).toString().padStart(2, '0')}/${date.getFullYear()}`;
+      return date.toLocaleDateString('en-IN', {
+        timeZone: 'Asia/Kolkata',
+        day: '2-digit',
+        month: '2-digit',
+        year: 'numeric',
+      });
     } catch {
       return '';
     }

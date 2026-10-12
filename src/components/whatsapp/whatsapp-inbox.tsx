@@ -281,7 +281,11 @@ export const WhatsAppInbox: React.FC = () => {
   if (currentView === 'broadcasts') {
     return (
       <BroadcastsView
-        onBack={() => setCurrentView('inbox')}
+        templates={templates}
+        onBack={() => {
+          setCurrentView('inbox');
+          loadConversations();
+        }}
       />
     );
   }

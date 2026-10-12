@@ -116,3 +116,32 @@ export async function syncTemplates(): Promise<WhatsAppTemplate[]> {
   const json = await res.json();
   return json.data || [];
 }
+
+export async function sendBroadcastCampaign(payload: {
+  campaign_name: string;
+  send_mode: 'template' | 'text';
+  template_name?: string;
+  language_code?: string;
+  recipients: Array<{
+    phone: string;
+    custom_text?: string;
+    components?: any[];
+  }>;
+}): Promise<{
+  total: number;
+  sent: number;
+  failed: number;
+  details: any[];
+}> {
+  const res = await fetch(`${BASE_URL}/broadcasts/send`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    credentials: 'include',
+    body: JSON.stringify(payload),
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.detail || 'Failed to trigger broadcast campaign');
+  }
+  return res.json();
+}

@@ -48,6 +48,14 @@ export interface WhatsAppMessage {
     mime_type?: string;
     [key: string]: any;
   };
+  reply_to?: {
+    message_id?: string;
+    from?: string;
+    quoted_text?: string;
+    quoted_from?: string;
+    forwarded?: boolean;
+    frequently_forwarded?: boolean;
+  } | null;
   status: 'pending' | 'sent_to_meta' | 'sent' | 'delivered' | 'read' | 'failed' | 'received' | string;
   status_updated_at?: string;
   status_history?: Array<{

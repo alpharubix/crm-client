@@ -28,6 +28,7 @@ export const SendTemplateDialog: React.FC<SendTemplateDialogProps> = ({
 }) => {
   const [search, setSearch] = useState('');
   const [selectedTemplate, setSelectedTemplate] = useState<WhatsAppTemplate | null>(null);
+  const [paramValues, setParamValues] = useState<Record<string, string>>({});
   const [sending, setSending] = useState(false);
   const [syncing, setSyncing] = useState(false);
 
@@ -37,13 +38,69 @@ export const SendTemplateDialog: React.FC<SendTemplateDialogProps> = ({
       t.category.toLowerCase().includes(search.toLowerCase())
   );
 
+  // 1. Extract BODY component and variables
+  const bodyComponent = selectedTemplate?.components.find((c) => c.type === 'BODY');
+  const bodyText = bodyComponent?.text || '';
+  const bodyVariables = Array.from(new Set(bodyText.match(/\{\{(\d+)\}\}/g) || []));
+
+  // 2. Extract HEADER component and variables / media
+  const headerComponent = selectedTemplate?.components.find((c) => c.type === 'HEADER');
+  const headerFormat = headerComponent?.format; // TEXT, IMAGE, VIDEO, DOCUMENT
+  const headerText = headerComponent?.text || '';
+  const headerVariables = Array.from(new Set(headerText.match(/\{\{(\d+)\}\}/g) || []));
+
+  const handleSelectTemplate = (tmpl: WhatsAppTemplate) => {
+    setSelectedTemplate(tmpl);
+    setParamValues({});
+  };
+
   const handleSend = async () => {
     if (!selectedTemplate) return;
     setSending(true);
+
     try {
-      await onSend(selectedTemplate.name, selectedTemplate.language || 'en', []);
+      // Build components payload for Meta Cloud API
+      const components: any[] = [];
+
+      // A. HEADER Component
+      if (headerComponent) {
+        if (headerVariables.length > 0) {
+          const headerParameters = headerVariables.map((v) => {
+            const key = `header_${v.replace(/[{}]/g, '')}`;
+            const val = paramValues[key]?.trim() || '-';
+            return {
+              type: 'text',
+              text: val,
+            };
+          });
+          components.push({
+            type: 'header',
+            parameters: headerParameters,
+          });
+        }
+      }
+
+      // B. BODY Component
+      if (bodyVariables.length > 0) {
+        const bodyParameters = bodyVariables.map((v) => {
+          const key = `body_${v.replace(/[{}]/g, '')}`;
+          const val = paramValues[key]?.trim() || '-';
+          return {
+            type: 'text',
+            text: val,
+          };
+        });
+
+        components.push({
+          type: 'body',
+          parameters: bodyParameters,
+        });
+      }
+
+      await onSend(selectedTemplate.name, selectedTemplate.language || 'en', components);
       onOpenChange(false);
       setSelectedTemplate(null);
+      setParamValues({});
     } catch (err) {
       console.error(err);
     } finally {
@@ -103,7 +160,7 @@ export const SendTemplateDialog: React.FC<SendTemplateDialogProps> = ({
                   return (
                     <div
                       key={tmpl.id || tmpl.name}
-                      onClick={() => setSelectedTemplate(tmpl)}
+                      onClick={() => handleSelectTemplate(tmpl)}
                       className={`p-3 rounded-xl border text-left cursor-pointer transition-all ${
                         isSelected
                           ? 'border-indigo-500 bg-indigo-50/50 shadow-sm'
@@ -146,6 +203,74 @@ export const SendTemplateDialog: React.FC<SendTemplateDialogProps> = ({
                     {selectedTemplate.components.find((c) => c.type === 'BODY')?.text ||
                       'No preview body text available'}
                   </div>
+
+                  {/* Dynamic Header Parameters Inputs */}
+                  {headerVariables.length > 0 && (
+                    <div className="pt-2 border-t border-slate-100 space-y-2">
+                      <div className="text-[11px] font-bold text-slate-700 flex items-center gap-1.5">
+                        <span className="text-[10px] bg-slate-100 text-slate-600 px-1 py-0.5 rounded font-mono">HEADER</span>
+                        <span>Header Variables:</span>
+                      </div>
+                      <div className="space-y-1.5">
+                        {headerVariables.map((variable) => {
+                          const num = variable.replace(/[{}]/g, '');
+                          const paramKey = `header_${num}`;
+                          return (
+                            <div key={paramKey} className="flex items-center gap-2">
+                              <span className="text-[11px] font-mono font-semibold text-indigo-600 bg-indigo-50 px-1.5 py-0.5 rounded border border-indigo-100">
+                                {variable}
+                              </span>
+                              <Input
+                                placeholder={`Header variable ${variable}...`}
+                                value={paramValues[paramKey] || ''}
+                                onChange={(e) =>
+                                  setParamValues((prev) => ({
+                                    ...prev,
+                                    [paramKey]: e.target.value,
+                                  }))
+                                }
+                                className="h-8 text-xs flex-1 rounded-lg border-slate-200"
+                              />
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Dynamic Body Parameters Inputs */}
+                  {bodyVariables.length > 0 && (
+                    <div className="pt-2 border-t border-slate-100 space-y-2">
+                      <div className="text-[11px] font-bold text-slate-700 flex items-center gap-1.5">
+                        <span className="text-[10px] bg-slate-100 text-slate-600 px-1 py-0.5 rounded font-mono">BODY</span>
+                        <span>Body Variables:</span>
+                      </div>
+                      <div className="space-y-1.5">
+                        {bodyVariables.map((variable) => {
+                          const num = variable.replace(/[{}]/g, '');
+                          const paramKey = `body_${num}`;
+                          return (
+                            <div key={paramKey} className="flex items-center gap-2">
+                              <span className="text-[11px] font-mono font-semibold text-indigo-600 bg-indigo-50 px-1.5 py-0.5 rounded border border-indigo-100">
+                                {variable}
+                              </span>
+                              <Input
+                                placeholder={`Body variable ${variable}...`}
+                                value={paramValues[paramKey] || ''}
+                                onChange={(e) =>
+                                  setParamValues((prev) => ({
+                                    ...prev,
+                                    [paramKey]: e.target.value,
+                                  }))
+                                }
+                                className="h-8 text-xs flex-1 rounded-lg border-slate-200"
+                              />
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
 
                   {/* Buttons */}
                   {selectedTemplate.components
