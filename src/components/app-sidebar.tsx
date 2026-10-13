@@ -23,6 +23,7 @@ import {
   Megaphone,
   LifeBuoy,
   GalleryVerticalEnd,
+  MessageCircle,
 } from 'lucide-react';
 import { useAuth } from '@/context/auth-context';
 import SailLogo from '@/assets/sail-logo-3-cropped.svg';
@@ -58,10 +59,21 @@ const data = {
           title: 'Call Recordings',
           url: '/call-recordings',
         },
-        // {
-        //   title: 'Acccounts Status Journey',
-        //   url: '/acc-status-journey',
-        // },
+        {
+          title: 'WhatsApp Record',
+          url: '/whatsapp-records',
+        },
+      ],
+    },
+    {
+      title: 'WhatsApp CRM',
+      url: '#',
+      icon: MessageCircle,
+      items: [
+        {
+          title: 'Live Inbox',
+          url: '/whatsapp',
+        },
       ],
     },
     {
@@ -247,7 +259,11 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                 return item.title === 'Workspace';
               }
 
-              if (item.title === 'Tools & Logs' && !isSuperAdmin) {
+              if (
+                (item.title === 'Tools & Logs' ||
+                  item.title === 'WhatsApp CRM') &&
+                !isSuperAdmin
+              ) {
                 return false;
               }
 

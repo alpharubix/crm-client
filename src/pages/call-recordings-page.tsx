@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation, useSearchParams } from 'react-router-dom';
 import { useQuery, keepPreviousData } from '@tanstack/react-query';
 import {
   PhoneOutgoing,
@@ -21,8 +21,11 @@ import {
   User,
   X,
   Play,
+  MessageSquare,
 } from 'lucide-react';
 import { toast } from 'sonner';
+import WhatsAppRecordsTab from '@/components/telecrm/whatsapp-records-tab';
+import { cn } from '@/lib/utils';
 
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -221,8 +224,50 @@ export function formatCreationTimestamp(ts?: string | null): string {
   return clean;
 }
 
-export default function CallRecordingsPage() {
+export default function CallRecordingsPage({
+  defaultTab,
+}: {
+  defaultTab?: 'calls' | 'whatsapp';
+} = {}) {
   const navigate = useNavigate();
+  const location = useLocation();
+  const [searchParams, setSearchParams] = useSearchParams();
+
+  const currentTab = useMemo(() => {
+    if (location.pathname === '/whatsapp-records') return 'whatsapp';
+    const tabParam = searchParams.get('tab');
+    if (
+      tabParam === 'whatsapp' ||
+      tabParam === 'whatsapp-record' ||
+      tabParam === 'whatsapp-records'
+    ) {
+      return 'whatsapp';
+    }
+    if (defaultTab === 'whatsapp') return 'whatsapp';
+    return 'calls';
+  }, [location.pathname, searchParams, defaultTab]);
+
+  const handleTabChange = (targetTab: 'calls' | 'whatsapp') => {
+    if (location.pathname === '/whatsapp-records') {
+      if (targetTab === 'calls') {
+        navigate('/call-recordings');
+      }
+    } else {
+      if (targetTab === 'whatsapp') {
+        setSearchParams((prev) => {
+          const next = new URLSearchParams(prev);
+          next.set('tab', 'whatsapp');
+          return next;
+        });
+      } else {
+        setSearchParams((prev) => {
+          const next = new URLSearchParams(prev);
+          next.delete('tab');
+          return next;
+        });
+      }
+    }
+  };
 
   // Query & pagination state
   const [currentPage, setCurrentPage] = useState<number>(1);
@@ -303,6 +348,7 @@ export default function CallRecordingsPage() {
         }
         return res.json();
       },
+      enabled: currentTab === 'calls',
       placeholderData: keepPreviousData,
     });
 
@@ -493,7 +539,52 @@ export default function CallRecordingsPage() {
   return (
     <TooltipProvider>
       <div className='flex flex-col h-full w-full bg-muted/20 overflow-hidden'>
-        {/* Top Header */}
+        {/* Top Navigation Tabs */}
+        <div className='bg-background border-b border-border/60 px-6 pt-2 pb-0 flex items-center justify-between shrink-0 shadow-2xs'>
+          <div className='flex items-center gap-1 sm:gap-2'>
+            <button
+              type='button'
+              onClick={() => handleTabChange('calls')}
+              className={cn(
+                'inline-flex items-center gap-2 px-3.5 py-2.5 text-xs sm:text-sm font-semibold border-b-2 transition-all cursor-pointer',
+                currentTab === 'calls'
+                  ? 'border-blue-600 text-blue-600 dark:text-blue-400 font-bold'
+                  : 'border-transparent text-muted-foreground hover:text-foreground hover:border-border/80',
+              )}
+            >
+              <Headphones className='h-4 w-4' />
+              <span>Call Recordings</span>
+            </button>
+
+            <button
+              type='button'
+              onClick={() => handleTabChange('whatsapp')}
+              className={cn(
+                'inline-flex items-center gap-2 px-3.5 py-2.5 text-xs sm:text-sm font-semibold border-b-2 transition-all cursor-pointer',
+                currentTab === 'whatsapp'
+                  ? 'border-emerald-600 text-emerald-600 dark:text-emerald-400 font-bold'
+                  : 'border-transparent text-muted-foreground hover:text-foreground hover:border-border/80',
+              )}
+            >
+              <MessageSquare className='h-4 w-4' />
+              <span>WhatsApp Record</span>
+              <Badge
+                variant='outline'
+                className='text-[10px] px-1.5 py-0 font-normal bg-emerald-500/10 text-emerald-600 border-emerald-500/20'
+              >
+                telecrm-whatsapp
+              </Badge>
+            </button>
+          </div>
+        </div>
+
+        {currentTab === 'whatsapp' ? (
+          <div className='flex-1 flex flex-col overflow-hidden'>
+            <WhatsAppRecordsTab />
+          </div>
+        ) : (
+          <div className='flex-1 flex flex-col overflow-hidden'>
+            {/* Top Header */}
         <div className='bg-background border-b border-border/60 px-6 py-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4 shrink-0 shadow-2xs'>
           <div className='flex items-center gap-3'>
             <div className='h-10 w-10 rounded-xl bg-blue-500/10 text-blue-600 dark:text-blue-400 flex items-center justify-center shrink-0 shadow-2xs border border-blue-500/20'>
@@ -1189,6 +1280,8 @@ export default function CallRecordingsPage() {
             </div>
           </div>
         </div>
+        </div>
+        )}
 
         {/* Audio Recording Modal */}
         {activeAudioItem && (

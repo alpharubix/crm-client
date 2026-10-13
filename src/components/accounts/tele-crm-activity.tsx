@@ -260,6 +260,14 @@ export default function TeleCRMActivityHistory({
     return type === activeFilter;
   });
 
+  const [visibleCount, setVisibleCount] = useState<number>(3);
+
+  useEffect(() => {
+    setVisibleCount(3);
+  }, [activeFilter, leadPhone]);
+
+  const displayedList = filteredList.slice(0, visibleCount);
+
   return (
     <TooltipProvider delayDuration={150}>
       <div className='rounded-lg border bg-card text-card-foreground shadow-xs overflow-hidden'>
@@ -406,7 +414,7 @@ export default function TeleCRMActivityHistory({
               {error && <p className='text-xs text-rose-500'>{error}</p>}
             </div>
           ) : (
-            filteredList.map((item, index) => {
+            displayedList.map((item, index) => {
               const callType =
                 item.call_action?.type ||
                 (item.call_type?.toLowerCase().includes('in')
@@ -613,11 +621,38 @@ export default function TeleCRMActivityHistory({
           )}
         </div>
 
+        {/* See More (expands from 3 to 6 calls) */}
+        {filteredList.length > 3 && (
+          <div className='p-2.5 bg-muted/20 border-t flex items-center justify-center'>
+            {visibleCount === 3 ? (
+              <Button
+                type='button'
+                variant='outline'
+                size='sm'
+                onClick={() => setVisibleCount(6)}
+                className='h-8 text-xs font-medium gap-1.5 cursor-pointer hover:bg-muted'
+              >
+                <span>See More ({Math.min(filteredList.length, 6) - 3} more)</span>
+              </Button>
+            ) : (
+              <Button
+                type='button'
+                variant='outline'
+                size='sm'
+                onClick={() => setVisibleCount(3)}
+                className='h-8 text-xs font-medium gap-1.5 cursor-pointer hover:bg-muted'
+              >
+                <span>See Less</span>
+              </Button>
+            )}
+          </div>
+        )}
+
         {/* Footer info banner */}
         <div className='px-4 py-2 bg-muted/10 border-t flex items-center justify-between text-xs text-muted-foreground'>
           <span>
-            TeleCRM Activity History • Showing {filteredList.length} of{' '}
-            {dataList.length} interactions
+            TeleCRM Activity History • Showing {displayedList.length} of{' '}
+            {filteredList.length} calls
           </span>
           <span className='flex items-center gap-1'>
             <Volume2 className='size-3' /> Click audio icon to open TeleCRM

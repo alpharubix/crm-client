@@ -52,6 +52,7 @@ import {
   ExternalLink,
   LayoutDashboard,
   CheckSquare,
+  Megaphone,
 } from 'lucide-react';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { formatAmount } from '@/utils/number-formatter';
@@ -75,6 +76,7 @@ import {
 import { useAuth } from '@/context/auth-context';
 import { NestedComments } from '../nested-notes';
 import TeleCRMActivityHistory from './tele-crm-activity';
+import TeleCRMWhatsAppActivity from './tele-crm-whatsapp-activity';
 
 const LANGUAGE_OPTIONS = [
   'English',
@@ -2794,6 +2796,17 @@ export default function UpdateAccounts() {
                     leadPhone={data?.phone || accountData?.phone}
                     leadStatus={accountData?.account_status}
                     activities={accountData?.telecrm_activities}
+                  />
+                </CardContent>
+
+                {/* ================= WhatsApp ================= */}
+                <SectionHeader title='WhatsApp' />
+                <CardContent className='p-0'>
+                  <TeleCRMWhatsAppActivity
+                    leadPhone={data?.phone || accountData?.phone}
+                    leadStatus={accountData?.account_status}
+                    accountName={accountData?.trade_name || accountData?.name || data?.name}
+                    contacts={contacts}
                   />
                 </CardContent>
 

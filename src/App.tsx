@@ -64,6 +64,7 @@ const UpdateRevenue = lazy(() => import('./components/revenue/update-revenue'));
 const BsaAnalysisPage = lazy(() => import('./pages/bsa-analysis-page'));
 const GstAnalysisPage = lazy(() => import('./pages/gst-page'));
 const SupportTicketsPage = lazy(() => import('./pages/support-tickets-page'));
+const WhatsAppPage = lazy(() => import('./pages/whatsapp-page'));
 // const AccStatusJourney = lazy(() => import('./pages/accounts-status-page'));
 
 
@@ -95,6 +96,13 @@ export default function App() {
               <Route path='/accounts' element={<AccountPage />} />
               <Route path='/account-tasks' element={<AccountTasksPage />} />
               <Route path='/call-recordings' element={<CallRecordingsPage />} />
+              <Route
+                path='/whatsapp-records'
+                element={<CallRecordingsPage defaultTab='whatsapp' />}
+              />
+              <Route element={<ProtectedLogRoute />}>
+                <Route path='/whatsapp' element={<WhatsAppPage />} />
+              </Route>
               {/* <Route path='/acc-status-journey' element={<AccStatusJourney />} /> */}
               <Route path='/accounts/:id' element={<UpdateAccounts />} />
               <Route path='/accounts/:id/bsa' element={<BsaAnalysisPage />} />
