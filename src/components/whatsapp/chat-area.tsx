@@ -132,21 +132,6 @@ export const ChatArea: React.FC<ChatAreaProps> = ({
               <span className='font-bold text-base text-indigo-950 tracking-tight'>
                 {displayName}
               </span>
-              <Badge
-                variant='secondary'
-                className='bg-emerald-100/80 text-emerald-800 text-[11px] font-semibold hover:bg-emerald-100 px-2 py-0.5 rounded-full'
-              >
-                {conversation.lead_status || 'Yet to be Dialed'}
-              </Badge>
-              {/* Star Rating */}
-              <div className='flex items-center text-slate-300'>
-                {[1, 2, 3, 4, 5].map((s) => (
-                  <Star
-                    key={s}
-                    className='h-3.5 w-3.5 fill-current text-slate-300 hover:text-amber-400 cursor-pointer transition-colors'
-                  />
-                ))}
-              </div>
             </div>
             <div className='text-[11px] text-slate-400 font-mono'>
               +{conversation.customer_wa_id}
@@ -166,19 +151,6 @@ export const ChatArea: React.FC<ChatAreaProps> = ({
               <span>Close Chat</span>
             </Button>
           )}
-
-          {/* Agent Avatar Badge (e.g. SK) */}
-          <div className='w-8 h-8 rounded-full bg-purple-100 text-purple-700 font-bold text-xs flex items-center justify-center border border-purple-200'>
-            SK
-          </div>
-
-          <Button
-            variant='ghost'
-            size='icon'
-            className='h-8 w-8 text-slate-400 hover:text-slate-600'
-          >
-            <ChevronLeft className='h-4 w-4' />
-          </Button>
         </div>
       </div>
 
@@ -508,16 +480,6 @@ export const ChatArea: React.FC<ChatAreaProps> = ({
             <MessageSquare className='h-4 w-4' />
           </Button>
 
-          {/* Quick Action: Attachment + icon */}
-          <Button
-            variant='ghost'
-            size='icon'
-            className='h-8 w-8 text-slate-500 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg flex-shrink-0'
-            title='Attach file / image'
-          >
-            <Plus className='h-4 w-4' />
-          </Button>
-
           {/* Text Area */}
           <Textarea
             placeholder='Type a message'
@@ -527,16 +489,6 @@ export const ChatArea: React.FC<ChatAreaProps> = ({
             rows={1}
             className='min-h-[36px] max-h-28 py-2 px-1 text-xs border-0 bg-transparent resize-none focus-visible:ring-0 shadow-none placeholder:text-slate-400'
           />
-
-          {/* 24-Hour window badge indicator */}
-          <div className='flex-shrink-0 pb-1.5 px-1'>
-            <span
-              className='text-[10px] font-bold text-emerald-600 bg-emerald-50 px-1.5 py-0.5 rounded border border-emerald-200'
-              title='Within WhatsApp 24-hour customer service window'
-            >
-              24hr
-            </span>
-          </div>
 
           {/* Send Button */}
           <Button

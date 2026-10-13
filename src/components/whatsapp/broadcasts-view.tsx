@@ -255,60 +255,6 @@ export const BroadcastsView: React.FC<BroadcastsViewProps> = ({
 
       {/* 2. Main Body Grid */}
       <div className="flex-1 flex overflow-hidden">
-        {/* Left Past Broadcasts List */}
-        <div className="w-80 md:w-96 border-r border-slate-200 bg-white flex flex-col h-full">
-          <div className="p-3 border-b border-slate-100 space-y-2.5">
-            <div className="relative">
-              <Search className="absolute left-3 top-2.5 h-4 w-4 text-slate-400" />
-              <Input
-                placeholder="Search past campaigns..."
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                className="pl-9 h-9 text-xs rounded-lg border-slate-200 bg-slate-50/60"
-              />
-            </div>
-
-            <div className="flex items-center justify-between text-xs pt-1">
-              <span className="text-slate-500 font-medium">
-                {pastCampaigns.length} Broadcasts
-              </span>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={resetForm}
-                className="h-7 text-xs font-semibold text-indigo-600 hover:text-indigo-700 hover:bg-indigo-50 px-2 gap-1"
-              >
-                <Plus className="h-3.5 w-3.5" />
-                <span>New Campaign</span>
-              </Button>
-            </div>
-          </div>
-
-          <div className="flex-1 overflow-y-auto divide-y divide-slate-100">
-            {pastCampaigns.map((bc) => (
-              <div
-                key={bc.id}
-                className="p-3.5 hover:bg-slate-50 cursor-pointer flex items-center justify-between transition-colors"
-              >
-                <div className="space-y-1">
-                  <div className="font-bold text-xs text-indigo-950">{bc.name}</div>
-                  <div className="flex items-center gap-2 text-[11px] text-slate-400 font-medium">
-                    <span>{bc.timeAgo}</span>
-                    <span className="flex items-center gap-1">
-                      <Users className="h-3 w-3" /> {bc.leads} leads
-                    </span>
-                  </div>
-                </div>
-
-                <div
-                  className={`w-10 h-10 rounded-full border-2 flex items-center justify-center font-bold text-[10px] ${bc.rateColor}`}
-                >
-                  {bc.rate}
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
 
         {/* Right Campaign Wizard */}
         <div className="flex-1 flex flex-col p-6 overflow-y-auto">

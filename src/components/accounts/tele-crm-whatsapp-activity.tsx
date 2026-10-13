@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import {
   MessageSquare,
   Megaphone,
@@ -208,12 +208,59 @@ export default function TeleCRMWhatsAppActivity({
   const [activeTab, setActiveTab] = useState<'whatsapp_messages' | 'broadcast_msg'>('whatsapp_messages');
   const [broadcastCount, setBroadcastCount] = useState<number | null>(null);
 
+  // Broadcast Msg state & controls
+  const [broadcastFilter, setBroadcastFilter] = useState<'all' | 'outgoing' | 'incoming'>('all');
+  const [broadcastCounts, setBroadcastCounts] = useState<{ total: number; outgoing: number; incoming: number }>({
+    total: 0,
+    outgoing: 0,
+    incoming: 0,
+  });
+  const [broadcastRefreshKey, setBroadcastRefreshKey] = useState<number>(0);
+  const [isBroadcastLoading, setIsBroadcastLoading] = useState<boolean>(false);
+
+  const handleBroadcastCountsChange = useCallback(
+    (counts: { total: number; outgoing: number; incoming: number }) => {
+      setBroadcastCounts(counts);
+      setBroadcastCount(counts.total);
+    },
+    [],
+  );
+
+  const handleBroadcastLoadingChange = useCallback((loading: boolean) => {
+    setIsBroadcastLoading(loading);
+  }, []);
+
   const [activeFilter, setActiveFilter] = useState<'all' | 'outgoing' | 'incoming'>('all');
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const [selectedItem, setSelectedItem] = useState<TeleCRMWhatsAppPayload | null>(null);
 
-  // Pagination requirement: 3 messages initially, click See More expands to 6
-  const [visibleCount, setVisibleCount] = useState<number>(3);
+  // Available phone numbers for this account
+  const availablePhones = useMemo(() => {
+    const list: Array<{ label: string; phone: string }> = [];
+    if (leadPhone) {
+      list.push({ label: `${accountName || 'Account'} Primary`, phone: String(leadPhone) });
+    }
+    contacts.forEach((c) => {
+      const p = c.phone || c.mobile;
+      if (p && !list.some((item) => item.phone === p)) {
+        list.push({
+          label: c.contact_name || c.name || 'Contact',
+          phone: String(p),
+        });
+      }
+    });
+    return list;
+  }, [leadPhone, accountName, contacts]);
+
+  const [broadcastPhone, setBroadcastPhone] = useState<string>(
+    leadPhone || availablePhones[0]?.phone || '',
+  );
+
+  useEffect(() => {
+    if (leadPhone && !broadcastPhone) {
+      setBroadcastPhone(leadPhone);
+    }
+  }, [leadPhone, broadcastPhone]);
 
   const fetchWhatsAppActivities = useCallback(async () => {
     if (!leadPhone) {
@@ -252,10 +299,6 @@ export default function TeleCRMWhatsAppActivity({
     fetchWhatsAppActivities();
   }, [fetchWhatsAppActivities]);
 
-  useEffect(() => {
-    setVisibleCount(3);
-  }, [activeFilter, leadPhone]);
-
   const handleCopy = (text: string, id: string) => {
     navigator.clipboard.writeText(text);
     setCopiedId(id);
@@ -271,9 +314,6 @@ export default function TeleCRMWhatsAppActivity({
     if (activeFilter === 'incoming') return isIn;
     return true;
   });
-
-  // Display only 3 initially, up to 6 on See More
-  const displayedList = filteredList.slice(0, visibleCount);
 
   const primaryItem = activities[0];
   const displayPhone = primaryItem?.lead_phone || leadPhone || '';
@@ -350,8 +390,23 @@ export default function TeleCRMWhatsAppActivity({
               </button>
             </div>
 
-            {/* Phone number display with copy */}
-            {displayPhone && (
+            {/* Phone number display with copy or contact selector */}
+            {activeTab === 'broadcast_msg' && availablePhones.length > 1 ? (
+              <div className='flex items-center gap-1.5 bg-background border px-2.5 py-1.5 rounded-md text-xs font-medium'>
+                <Phone className='size-3.5 text-muted-foreground' />
+                <select
+                  value={broadcastPhone || displayPhone}
+                  onChange={(e) => setBroadcastPhone(e.target.value)}
+                  className='bg-transparent border-0 text-foreground text-xs font-medium focus:outline-none cursor-pointer pr-1'
+                >
+                  {availablePhones.map((item, idx) => (
+                    <option key={idx} value={item.phone}>
+                      {item.label}: {formatPhone(item.phone)}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            ) : displayPhone ? (
               <div className='flex items-center gap-2 bg-background border px-3 py-1.5 rounded-md text-sm font-medium'>
                 <Phone className='size-3.5 text-muted-foreground' />
                 <span className='font-semibold text-foreground tracking-wide font-mono'>
@@ -370,11 +425,11 @@ export default function TeleCRMWhatsAppActivity({
                   )}
                 </button>
               </div>
-            )}
+            ) : null}
           </div>
 
-          {/* Right Header Controls (Filter Pills & Refresh for TeleCRM) */}
-          {activeTab === 'whatsapp_messages' && (
+          {/* Right Header Controls (Filter Pills & Refresh for TeleCRM or Broadcast) */}
+          {activeTab === 'whatsapp_messages' ? (
             <div className='flex items-center gap-2 self-start md:self-auto flex-wrap'>
               <Button
                 type='button'
@@ -433,22 +488,68 @@ export default function TeleCRMWhatsAppActivity({
                 ))}
               </div>
             </div>
+          ) : (
+            <div className='flex items-center gap-2 self-start md:self-auto flex-wrap'>
+              <Button
+                type='button'
+                variant='outline'
+                size='sm'
+                onClick={() => setBroadcastRefreshKey((k) => k + 1)}
+                disabled={isBroadcastLoading}
+                className='h-7 text-xs flex items-center gap-1.5 cursor-pointer'
+                title='Refresh broadcast messages from MongoDB'
+              >
+                <RefreshCw
+                  className={`size-3 ${isBroadcastLoading ? 'animate-spin text-emerald-600' : ''}`}
+                />
+                <span>Refresh</span>
+              </Button>
+
+              <div className='flex items-center gap-1 bg-muted/50 p-1 rounded-lg border text-xs'>
+                {(
+                  [
+                    { id: 'all', label: 'All', count: broadcastCounts.total },
+                    { id: 'outgoing', label: 'Outgoing', count: broadcastCounts.outgoing },
+                    { id: 'incoming', label: 'Incoming', count: broadcastCounts.incoming },
+                  ] as const
+                ).map((tab) => (
+                  <button
+                    key={tab.id}
+                    type='button'
+                    onClick={() => setBroadcastFilter(tab.id)}
+                    className={`px-2.5 py-1 rounded-md transition-all font-medium flex items-center gap-1.5 cursor-pointer ${
+                      broadcastFilter === tab.id
+                        ? 'bg-background text-foreground shadow-xs font-semibold'
+                        : 'text-muted-foreground hover:text-foreground'
+                    }`}
+                  >
+                    <span>{tab.label}</span>
+                    <span className='text-[10px] px-1 rounded-full bg-muted text-muted-foreground'>
+                      {tab.count}
+                    </span>
+                  </button>
+                ))}
+              </div>
+            </div>
           )}
         </div>
 
         {/* ================= Tab Content ================= */}
         {activeTab === 'broadcast_msg' ? (
           <BroadcastMessagesTab
-            leadPhone={displayPhone || leadPhone}
+            leadPhone={broadcastPhone || displayPhone || leadPhone}
             accountName={accountName}
             contacts={contacts}
             hideHeaderCard={true}
-            onTotalCountChange={(count) => setBroadcastCount(count)}
+            activeFilter={broadcastFilter}
+            refreshTrigger={broadcastRefreshKey}
+            onCountsChange={handleBroadcastCountsChange}
+            onLoadingChange={handleBroadcastLoadingChange}
           />
         ) : (
           <>
             {/* ================= WhatsApp Activity List ================= */}
-            <div className='divide-y divide-border/60'>
+            <div className='h-[420px] overflow-y-auto divide-y divide-border/60'>
           {isLoading ? (
             <div className='p-8 flex flex-col items-center justify-center gap-2 text-sm text-muted-foreground'>
               <Loader2 className='size-5 animate-spin text-emerald-600' />
@@ -463,7 +564,7 @@ export default function TeleCRMWhatsAppActivity({
               {error && <p className='text-xs text-rose-500'>{error}</p>}
             </div>
           ) : (
-            displayedList.map((item, index) => {
+            filteredList.map((item, index) => {
               const rawType = (item.normalized_type || item.type || '').toLowerCase();
               const isOutgoing = rawType.includes('out') || rawType.includes('sent');
               const messageText = item.messageText || item.wa_msg_txt || '—';
@@ -596,38 +697,11 @@ export default function TeleCRMWhatsAppActivity({
           )}
         </div>
 
-        {/* See More (expands from 3 to 6 messages) */}
-        {filteredList.length > 3 && (
-          <div className='p-2.5 bg-muted/20 border-t flex items-center justify-center'>
-            {visibleCount === 3 ? (
-              <Button
-                type='button'
-                variant='outline'
-                size='sm'
-                onClick={() => setVisibleCount(6)}
-                className='h-8 text-xs font-medium gap-1.5 cursor-pointer hover:bg-muted'
-              >
-                <span>See More ({Math.min(filteredList.length, 6) - 3} more)</span>
-              </Button>
-            ) : (
-              <Button
-                type='button'
-                variant='outline'
-                size='sm'
-                onClick={() => setVisibleCount(3)}
-                className='h-8 text-xs font-medium gap-1.5 cursor-pointer hover:bg-muted'
-              >
-                <span>See Less</span>
-              </Button>
-            )}
-          </div>
-        )}
-
         {/* Footer info banner */}
         <div className='px-4 py-2 bg-muted/10 border-t flex items-center justify-between text-xs text-muted-foreground'>
           <span>
-            TeleCRM WhatsApp History • Showing {displayedList.length} of{' '}
-            {filteredList.length} messages
+            Showing {filteredList.length} of{' '}
+            {activities.length} messages
           </span>
           {primaryItem?.telecrm_url && (
             <a

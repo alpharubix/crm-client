@@ -117,47 +117,6 @@ export const ConversationList: React.FC<ConversationListProps> = ({
         <WhatsAppMenuDropdown onNavigate={onNavigateMenu} />
       </div>
 
-      {/* 2. Search & Lead filter input */}
-      <div className="p-3 border-b border-slate-100 space-y-2.5">
-        <div className="relative">
-          <Search className="absolute left-3 top-2.5 h-4 w-4 text-slate-400" />
-          <Input
-            placeholder="Search lead(s)"
-            value={search}
-            onChange={(e) => onSearchChange(e.target.value)}
-            className="pl-9 pr-3 h-9 text-xs rounded-lg border-slate-200 bg-slate-50/60 focus:bg-white transition-colors"
-          />
-        </div>
-
-        {/* Filters pills: Assignee, Lead Status, + Add Filters */}
-        <div className="flex items-center gap-1.5 overflow-x-auto pb-0.5 text-xs">
-          <Button
-            variant="outline"
-            size="sm"
-            className="h-7 text-[11px] font-medium text-slate-600 rounded-md border-slate-200 gap-1 px-2"
-          >
-            <span>Assignee</span>
-            <ChevronDown className="h-3 w-3 text-slate-400" />
-          </Button>
-
-          <Button
-            variant="outline"
-            size="sm"
-            className="h-7 text-[11px] font-medium text-slate-600 rounded-md border-slate-200 gap-1 px-2"
-          >
-            <span>Lead Status</span>
-            <ChevronDown className="h-3 w-3 text-slate-400" />
-          </Button>
-
-          <Button
-            variant="ghost"
-            size="sm"
-            className="h-7 text-[11px] font-semibold text-indigo-600 hover:text-indigo-700 hover:bg-indigo-50 rounded-md px-2"
-          >
-            + Add Filters
-          </Button>
-        </div>
-      </div>
 
       {/* 3. Filter Tabs: All (7), Pending (5), Intervened (1), Closed (1) */}
       <div className="flex items-center border-b border-slate-100 px-2 text-xs font-semibold text-slate-500">
