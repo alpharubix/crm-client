@@ -100,7 +100,9 @@ export default function App() {
                 path='/whatsapp-records'
                 element={<CallRecordingsPage defaultTab='whatsapp' />}
               />
-              <Route path='/whatsapp' element={<WhatsAppPage />} />
+              <Route element={<ProtectedLogRoute />}>
+                <Route path='/whatsapp' element={<WhatsAppPage />} />
+              </Route>
               {/* <Route path='/acc-status-journey' element={<AccStatusJourney />} /> */}
               <Route path='/accounts/:id' element={<UpdateAccounts />} />
               <Route path='/accounts/:id/bsa' element={<BsaAnalysisPage />} />

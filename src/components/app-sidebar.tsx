@@ -259,7 +259,11 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                 return item.title === 'Workspace';
               }
 
-              if (item.title === 'Tools & Logs' && !isSuperAdmin) {
+              if (
+                (item.title === 'Tools & Logs' ||
+                  item.title === 'WhatsApp CRM') &&
+                !isSuperAdmin
+              ) {
                 return false;
               }
 
