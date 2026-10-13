@@ -52,6 +52,7 @@ import {
   ExternalLink,
   LayoutDashboard,
   CheckSquare,
+  Megaphone,
 } from 'lucide-react';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { formatAmount } from '@/utils/number-formatter';
@@ -2804,6 +2805,8 @@ export default function UpdateAccounts() {
                   <TeleCRMWhatsAppActivity
                     leadPhone={data?.phone || accountData?.phone}
                     leadStatus={accountData?.account_status}
+                    accountName={accountData?.trade_name || accountData?.name || data?.name}
+                    contacts={contacts}
                   />
                 </CardContent>
 

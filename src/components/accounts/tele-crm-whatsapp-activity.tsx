@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import {
   MessageSquare,
+  Megaphone,
   Send,
   ArrowUpRight,
   ArrowDownLeft,
@@ -32,6 +33,8 @@ import {
 } from '@/components/ui/dialog';
 import { ENV } from '@/conf';
 import telecrmUsers from '@/utils/telecrm_users.json';
+import BroadcastMessagesTab from './broadcast-messages-tab';
+import { fetchMessagesByPhone } from '@/api/whatsapp';
 
 // WhatsApp Payload structure from telecrm-whatsapp collection
 export interface TeleCRMWhatsAppPayload {
@@ -182,15 +185,28 @@ function formatCreationTimestamp(ts?: string | null): string {
 interface TeleCRMWhatsAppActivityProps {
   leadPhone?: string;
   leadStatus?: string;
+  accountName?: string;
+  contacts?: Array<{
+    id?: number | string;
+    contact_name?: string;
+    name?: string;
+    phone?: string;
+    mobile?: string;
+  }>;
 }
 
 export default function TeleCRMWhatsAppActivity({
   leadPhone,
   leadStatus,
+  accountName,
+  contacts = [],
 }: TeleCRMWhatsAppActivityProps) {
   const [activities, setActivities] = useState<TeleCRMWhatsAppPayload[]>([]);
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
+
+  const [activeTab, setActiveTab] = useState<'whatsapp_messages' | 'broadcast_msg'>('whatsapp_messages');
+  const [broadcastCount, setBroadcastCount] = useState<number | null>(null);
 
   const [activeFilter, setActiveFilter] = useState<'all' | 'outgoing' | 'incoming'>('all');
   const [copiedId, setCopiedId] = useState<string | null>(null);
@@ -262,16 +278,76 @@ export default function TeleCRMWhatsAppActivity({
   const primaryItem = activities[0];
   const displayPhone = primaryItem?.lead_phone || leadPhone || '';
 
+  // Prefetch broadcast messages count from MongoDB
+  useEffect(() => {
+    const phoneToQuery = displayPhone || leadPhone;
+    if (!phoneToQuery) return;
+    let isMounted = true;
+    fetchMessagesByPhone({ phone: phoneToQuery, limit: 1, skip: 0 })
+      .then((res) => {
+        if (isMounted) setBroadcastCount(res.total);
+      })
+      .catch((err) => {
+        console.error('Failed to prefetch broadcast count:', err);
+      });
+    return () => {
+      isMounted = false;
+    };
+  }, [displayPhone, leadPhone]);
+
   return (
     <TooltipProvider delayDuration={150}>
       <div className='rounded-lg border bg-card text-card-foreground shadow-xs overflow-hidden'>
         {/* ================= Header Summary Bar ================= */}
         <div className='p-4 border-b bg-muted/20 flex flex-col md:flex-row md:items-center justify-between gap-4'>
           <div className='flex flex-wrap items-center gap-3'>
-            {/* Section Badge with Icon */}
-            <div className='flex items-center gap-2 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 px-3 py-1.5 rounded-md text-sm font-semibold'>
-              <MessageSquare className='size-4' />
-              <span>WhatsApp Messages</span>
+            {/* Section Tabs: WhatsApp Messages | Broadcast Msg */}
+            <div className='flex items-center gap-2'>
+              <button
+                type='button'
+                onClick={() => setActiveTab('whatsapp_messages')}
+                className={`flex items-center gap-2 px-3 py-1.5 rounded-md text-sm font-semibold transition-all cursor-pointer border ${
+                  activeTab === 'whatsapp_messages'
+                    ? 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border-emerald-500/30 shadow-xs'
+                    : 'bg-muted/40 text-muted-foreground border-border/50 hover:text-foreground hover:bg-muted/60'
+                }`}
+              >
+                <MessageSquare className='size-4 text-emerald-600 dark:text-emerald-400' />
+                <span>WhatsApp Messages</span>
+                <span
+                  className={`text-[11px] px-1.5 py-0.5 rounded-full font-medium ${
+                    activeTab === 'whatsapp_messages'
+                      ? 'bg-emerald-500/20 text-emerald-800 dark:text-emerald-200'
+                      : 'bg-muted text-muted-foreground'
+                  }`}
+                >
+                  {activities.length}
+                </span>
+              </button>
+
+              <button
+                type='button'
+                onClick={() => setActiveTab('broadcast_msg')}
+                className={`flex items-center gap-2 px-3 py-1.5 rounded-md text-sm font-semibold transition-all cursor-pointer border ${
+                  activeTab === 'broadcast_msg'
+                    ? 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border-emerald-500/30 shadow-xs'
+                    : 'bg-muted/40 text-muted-foreground border-border/50 hover:text-foreground hover:bg-muted/60'
+                }`}
+              >
+                <Megaphone className='size-4 text-emerald-600 dark:text-emerald-400' />
+                <span>Broadcast Msg</span>
+                {broadcastCount !== null && (
+                  <span
+                    className={`text-[11px] px-1.5 py-0.5 rounded-full font-medium ${
+                      activeTab === 'broadcast_msg'
+                        ? 'bg-emerald-500/20 text-emerald-800 dark:text-emerald-200'
+                        : 'bg-muted text-muted-foreground'
+                    }`}
+                  >
+                    {broadcastCount}
+                  </span>
+                )}
+              </button>
             </div>
 
             {/* Phone number display with copy */}
@@ -295,79 +371,84 @@ export default function TeleCRMWhatsAppActivity({
                 </button>
               </div>
             )}
-
-            {/* Total Messages Count */}
-            <Badge
-              variant='outline'
-              className='bg-muted/50 text-foreground font-medium text-xs px-2.5 py-1'
-            >
-              Total: {activities.length}
-            </Badge>
           </div>
 
-          {/* Filter Pills & Refresh */}
-          <div className='flex items-center gap-2 self-start md:self-auto flex-wrap'>
-            <Button
-              type='button'
-              variant='outline'
-              size='sm'
-              onClick={fetchWhatsAppActivities}
-              disabled={isLoading}
-              className='h-7 text-xs flex items-center gap-1.5 cursor-pointer'
-              title='Refresh WhatsApp activities'
-            >
-              <RefreshCw
-                className={`size-3 ${isLoading ? 'animate-spin text-emerald-600' : ''}`}
-              />
-              <span>Refresh</span>
-            </Button>
+          {/* Right Header Controls (Filter Pills & Refresh for TeleCRM) */}
+          {activeTab === 'whatsapp_messages' && (
+            <div className='flex items-center gap-2 self-start md:self-auto flex-wrap'>
+              <Button
+                type='button'
+                variant='outline'
+                size='sm'
+                onClick={fetchWhatsAppActivities}
+                disabled={isLoading}
+                className='h-7 text-xs flex items-center gap-1.5 cursor-pointer'
+                title='Refresh WhatsApp activities'
+              >
+                <RefreshCw
+                  className={`size-3 ${isLoading ? 'animate-spin text-emerald-600' : ''}`}
+                />
+                <span>Refresh</span>
+              </Button>
 
-            <div className='flex items-center gap-1 bg-muted/50 p-1 rounded-lg border text-xs'>
-              {(
-                [
-                  { id: 'all', label: 'All', count: activities.length },
-                  {
-                    id: 'outgoing',
-                    label: 'Outgoing',
-                    count: activities.filter(
-                      (i) =>
-                        (i.normalized_type || i.type || '').toLowerCase().includes('out') ||
-                        (i.normalized_type || i.type || '').toLowerCase().includes('sent'),
-                    ).length,
-                  },
-                  {
-                    id: 'incoming',
-                    label: 'Incoming',
-                    count: activities.filter(
-                      (i) =>
-                        (i.normalized_type || i.type || '').toLowerCase().includes('in') ||
-                        (i.normalized_type || i.type || '').toLowerCase().includes('rec'),
-                    ).length,
-                  },
-                ] as const
-              ).map((tab) => (
-                <button
-                  key={tab.id}
-                  type='button'
-                  onClick={() => setActiveFilter(tab.id)}
-                  className={`px-2.5 py-1 rounded-md transition-all font-medium flex items-center gap-1.5 cursor-pointer ${
-                    activeFilter === tab.id
-                      ? 'bg-background text-foreground shadow-xs font-semibold'
-                      : 'text-muted-foreground hover:text-foreground'
-                  }`}
-                >
-                  <span>{tab.label}</span>
-                  <span className='text-[10px] px-1 rounded-full bg-muted text-muted-foreground'>
-                    {tab.count}
-                  </span>
-                </button>
-              ))}
+              <div className='flex items-center gap-1 bg-muted/50 p-1 rounded-lg border text-xs'>
+                {(
+                  [
+                    { id: 'all', label: 'All', count: activities.length },
+                    {
+                      id: 'outgoing',
+                      label: 'Outgoing',
+                      count: activities.filter(
+                        (i) =>
+                          (i.normalized_type || i.type || '').toLowerCase().includes('out') ||
+                          (i.normalized_type || i.type || '').toLowerCase().includes('sent'),
+                      ).length,
+                    },
+                    {
+                      id: 'incoming',
+                      label: 'Incoming',
+                      count: activities.filter(
+                        (i) =>
+                          (i.normalized_type || i.type || '').toLowerCase().includes('in') ||
+                          (i.normalized_type || i.type || '').toLowerCase().includes('rec'),
+                      ).length,
+                    },
+                  ] as const
+                ).map((tab) => (
+                  <button
+                    key={tab.id}
+                    type='button'
+                    onClick={() => setActiveFilter(tab.id)}
+                    className={`px-2.5 py-1 rounded-md transition-all font-medium flex items-center gap-1.5 cursor-pointer ${
+                      activeFilter === tab.id
+                        ? 'bg-background text-foreground shadow-xs font-semibold'
+                        : 'text-muted-foreground hover:text-foreground'
+                    }`}
+                  >
+                    <span>{tab.label}</span>
+                    <span className='text-[10px] px-1 rounded-full bg-muted text-muted-foreground'>
+                      {tab.count}
+                    </span>
+                  </button>
+                ))}
+              </div>
             </div>
-          </div>
+          )}
         </div>
 
-        {/* ================= WhatsApp Activity List ================= */}
-        <div className='divide-y divide-border/60'>
+        {/* ================= Tab Content ================= */}
+        {activeTab === 'broadcast_msg' ? (
+          <BroadcastMessagesTab
+            leadPhone={displayPhone || leadPhone}
+            accountName={accountName}
+            contacts={contacts}
+            hideHeaderCard={true}
+            onTotalCountChange={(count) => setBroadcastCount(count)}
+          />
+        ) : (
+          <>
+            {/* ================= WhatsApp Activity List ================= */}
+            <div className='divide-y divide-border/60'>
           {isLoading ? (
             <div className='p-8 flex flex-col items-center justify-center gap-2 text-sm text-muted-foreground'>
               <Loader2 className='size-5 animate-spin text-emerald-600' />
@@ -560,6 +641,8 @@ export default function TeleCRMWhatsAppActivity({
             </a>
           )}
         </div>
+      </>
+    )}
 
         {/* ================= Details Dialog (Full Message View) ================= */}
         <Dialog

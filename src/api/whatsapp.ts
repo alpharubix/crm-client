@@ -145,3 +145,38 @@ export async function sendBroadcastCampaign(payload: {
   }
   return res.json();
 }
+
+export async function fetchMessagesByPhone(params: {
+  phone: string;
+  limit?: number;
+  skip?: number;
+  direction?: string;
+}): Promise<{
+  data: WhatsAppMessage[];
+  total: number;
+  skip: number;
+  limit: number;
+  has_more: boolean;
+}> {
+  const query = new URLSearchParams({
+    phone: params.phone,
+    limit: (params.limit ?? 6).toString(),
+    skip: (params.skip ?? 0).toString(),
+  });
+  if (params.direction && params.direction !== 'all') {
+    query.append('direction', params.direction);
+  }
+
+  const res = await fetch(`${BASE_URL}/messages/by-phone?${query.toString()}`, {
+    credentials: 'include',
+  });
+  if (!res.ok) throw new Error('Failed to fetch broadcast messages for phone');
+  const json = await res.json();
+  return {
+    data: json.data || [],
+    total: json.total || 0,
+    skip: json.skip || 0,
+    limit: json.limit || 6,
+    has_more: Boolean(json.has_more),
+  };
+}
