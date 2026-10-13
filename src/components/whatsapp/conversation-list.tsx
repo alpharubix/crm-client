@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Search, Filter, RefreshCw, ChevronDown, Check, CheckCheck } from 'lucide-react';
 import { WhatsAppMenuDropdown } from './whatsapp-menu-dropdown';
+import { parseUTCDate } from '@/lib/date-utils';
 
 interface ConversationListProps {
   conversations: WhatsAppConversation[];
@@ -58,7 +59,8 @@ export const ConversationList: React.FC<ConversationListProps> = ({
   const formatTime = (isoString?: string | null) => {
     if (!isoString) return '';
     try {
-      const date = new Date(isoString);
+      const date = parseUTCDate(isoString);
+      if (!date) return '';
       const now = new Date();
       const isToday =
         date.toLocaleDateString('en-IN', { timeZone: 'Asia/Kolkata' }) ===
