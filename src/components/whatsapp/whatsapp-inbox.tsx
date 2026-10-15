@@ -112,17 +112,69 @@ export const WhatsAppInbox: React.FC = () => {
               const activeConvId = currentActive?.id || currentActive?._id;
               const msgConvId = newMsg.conversation_id || data.conversation_id;
 
-              // If message belongs to active chat, add to thread immediately
+              // If message belongs to active chat, add or reconcile with optimistic placeholder
               if (!activeConvId || String(activeConvId) === String(msgConvId)) {
                 setMessages((prev) => {
-                  if (prev.some((m) => (m.id || m._id) === (newMsg.id || newMsg._id))) {
-                    return prev;
+                  // 1. If message already exists by ID or wamid, ignore
+                  const alreadyExists = prev.some(
+                    (m) =>
+                      (m.id && (m.id === newMsg.id || m.id === newMsg._id)) ||
+                      (m._id && (m._id === newMsg.id || m._id === newMsg._id)) ||
+                      (m.wamid && newMsg.wamid && m.wamid === newMsg.wamid)
+                  );
+                  if (alreadyExists) return prev;
+
+                  // 2. If it's an outbound message, check if there's an optimistic 'temp_' message to replace
+                  if (newMsg.direction === 'outbound') {
+                    const tempIndex = prev.findIndex(
+                      (m) =>
+                        String(m.id || m._id).startsWith('temp_') &&
+                        m.content?.text === newMsg.content?.text
+                    );
+                    if (tempIndex !== -1) {
+                      const updated = [...prev];
+                      updated[tempIndex] = newMsg;
+                      return updated;
+                    }
                   }
+
+                  // 3. Otherwise append new message
                   return [...prev, newMsg];
                 });
               }
-              // Silently refresh left sidebar snippet
-              loadConversations(true);
+
+              // Update left sidebar conversation purely in memory via WebSocket:
+              // Update details AND move this active/updated conversation to the very top!
+              setConversations((prev) => {
+                const preview =
+                  newMsg.content?.text ||
+                  newMsg.preview_text ||
+                  (newMsg.type === 'image' ? '[IMAGE]' : newMsg.type === 'audio' ? '[AUDIO]' : '[MESSAGE]');
+
+                const targetConvId = String(msgConvId);
+                const isActiveChat = activeConvId && String(activeConvId) === targetConvId;
+
+                const foundIndex = prev.findIndex(
+                  (c) =>
+                    String(c.id || c._id) === targetConvId ||
+                    (c.customer_wa_id && c.customer_wa_id === newMsg.customer_wa_id)
+                );
+
+                if (foundIndex === -1) return prev;
+
+                const targetConv = {
+                  ...prev[foundIndex],
+                  last_message_preview: preview,
+                  last_message_at: newMsg.timestamp || new Date().toISOString(),
+                  last_message_direction: newMsg.direction,
+                  last_message_status: newMsg.status || 'received',
+                  unread_count: isActiveChat ? 0 : (newMsg.direction === 'inbound' ? (prev[foundIndex].unread_count || 0) + 1 : prev[foundIndex].unread_count || 0),
+                };
+
+                // Move targetConv to the top (index 0) of the list
+                const filtered = prev.filter((_, idx) => idx !== foundIndex);
+                return [targetConv, ...filtered];
+              });
             }
 
             // 2. Outbound status update (sent -> delivered -> read)
@@ -132,7 +184,26 @@ export const WhatsAppInbox: React.FC = () => {
                   m.wamid === data.wamid ? { ...m, status: data.status } : m
                 )
               );
-              loadConversations(true);
+              // Update status in sidebar purely in memory
+              setConversations((prev) =>
+                prev.map((c) => {
+                  if (data.conversation_id && String(c.id || c._id) === String(data.conversation_id)) {
+                    return { ...c, last_message_status: data.status };
+                  }
+                  return c;
+                })
+              );
+            }
+
+            // 3. Conversation read event via WebSocket
+            if (data.type === 'conversation_read' && data.conversation_id) {
+              setConversations((prev) =>
+                prev.map((c) =>
+                  (c.id === data.conversation_id || c._id === data.conversation_id)
+                    ? { ...c, unread_count: 0 }
+                    : c
+                )
+              );
             }
           } catch (e) {
             console.error('Error parsing WS message:', e);
@@ -167,13 +238,18 @@ export const WhatsAppInbox: React.FC = () => {
     };
   }, [loadConversations]);
 
-  // When active conversation changes, load messages & mark read
+  // When active conversation changes, load messages & clear unread locally
   useEffect(() => {
     if (activeConversation) {
       const convId = activeConversation.id || activeConversation._id;
       if (convId) {
+        // Optimistically clear unread count in local sidebar list immediately
+        setConversations((prev) =>
+          prev.map((c) =>
+            (c.id === convId || c._id === convId) ? { ...c, unread_count: 0 } : c
+          )
+        );
         loadMessages(convId);
-        markConversationAsRead(convId).catch(() => {});
       }
     } else {
       setMessages([]);
@@ -205,11 +281,33 @@ export const WhatsAppInbox: React.FC = () => {
 
     try {
       const savedMsg = await sendTextMessage(cleanPhone, text);
-      // Replace optimistic placeholder with actual confirmed message doc
-      setMessages((prev) =>
-        prev.map((m) => (m.id === tempId || m._id === tempId ? savedMsg : m))
-      );
-      loadConversations(true);
+      // Replace optimistic placeholder with actual confirmed message doc,
+      // or if WebSocket already inserted savedMsg, remove tempId to avoid duplicates
+      setMessages((prev) => {
+        const alreadyHasSaved = prev.some(
+          (m) =>
+            m.id === savedMsg.id ||
+            m._id === savedMsg._id ||
+            (m.wamid && savedMsg.wamid && m.wamid === savedMsg.wamid)
+        );
+        if (alreadyHasSaved) {
+          return prev.filter((m) => m.id !== tempId && m._id !== tempId);
+        }
+        return prev.map((m) => (m.id === tempId || m._id === tempId ? savedMsg : m));
+      });
+      // Move this conversation to the top and update preview in memory without HTTP call
+      setConversations((prev) => {
+        const foundIndex = prev.findIndex((c) => String(c.id || c._id) === String(convId));
+        if (foundIndex === -1) return prev;
+        const targetConv = {
+          ...prev[foundIndex],
+          last_message_preview: text,
+          last_message_at: new Date().toISOString(),
+          last_message_direction: 'outbound',
+          last_message_status: savedMsg.status || 'sent',
+        };
+        return [targetConv, ...prev.filter((_, idx) => idx !== foundIndex)];
+      });
     } catch (err) {
       console.error('Failed to send text message:', err);
       // Remove temporary message on failure
@@ -246,10 +344,31 @@ export const WhatsAppInbox: React.FC = () => {
 
     try {
       const savedMsg = await sendTemplateMessage(cleanPhone, templateName, language, components);
-      setMessages((prev) =>
-        prev.map((m) => (m.id === tempId || m._id === tempId ? savedMsg : m))
-      );
-      loadConversations(true);
+      setMessages((prev) => {
+        const alreadyHasSaved = prev.some(
+          (m) =>
+            m.id === savedMsg.id ||
+            m._id === savedMsg._id ||
+            (m.wamid && savedMsg.wamid && m.wamid === savedMsg.wamid)
+        );
+        if (alreadyHasSaved) {
+          return prev.filter((m) => m.id !== tempId && m._id !== tempId);
+        }
+        return prev.map((m) => (m.id === tempId || m._id === tempId ? savedMsg : m));
+      });
+      // Move conversation to top in memory without HTTP call
+      setConversations((prev) => {
+        const foundIndex = prev.findIndex((c) => String(c.id || c._id) === String(convId));
+        if (foundIndex === -1) return prev;
+        const targetConv = {
+          ...prev[foundIndex],
+          last_message_preview: `Template: ${templateName}`,
+          last_message_at: new Date().toISOString(),
+          last_message_direction: 'outbound',
+          last_message_status: savedMsg.status || 'sent',
+        };
+        return [targetConv, ...prev.filter((_, idx) => idx !== foundIndex)];
+      });
     } catch (err) {
       console.error('Failed to send template message:', err);
       setMessages((prev) => prev.filter((m) => m.id !== tempId && m._id !== tempId));
