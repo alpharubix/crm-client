@@ -22,9 +22,11 @@ import {
   X,
   Play,
   MessageSquare,
+  Megaphone,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import WhatsAppRecordsTab from '@/components/telecrm/whatsapp-records-tab';
+import BroadcastMessagesRecordsTab from '@/components/telecrm/broadcast-messages-records-tab';
 import { cn } from '@/lib/utils';
 
 import { Button } from '@/components/ui/button';
@@ -227,15 +229,26 @@ export function formatCreationTimestamp(ts?: string | null): string {
 export default function CallRecordingsPage({
   defaultTab,
 }: {
-  defaultTab?: 'calls' | 'whatsapp';
+  defaultTab?: 'calls' | 'whatsapp' | 'broadcast';
 } = {}) {
   const navigate = useNavigate();
   const location = useLocation();
   const [searchParams, setSearchParams] = useSearchParams();
 
-  const currentTab = useMemo(() => {
+  const currentTab = useMemo<'calls' | 'whatsapp' | 'broadcast'>(() => {
+    if (location.pathname === '/broadcast-whatsapp' || location.pathname === '/broadcast-messages') {
+      return 'broadcast';
+    }
     if (location.pathname === '/whatsapp-records') return 'whatsapp';
+
     const tabParam = searchParams.get('tab');
+    if (
+      tabParam === 'broadcast' ||
+      tabParam === 'broadcast-whatsapp' ||
+      tabParam === 'broadcast-messages'
+    ) {
+      return 'broadcast';
+    }
     if (
       tabParam === 'whatsapp' ||
       tabParam === 'whatsapp-record' ||
@@ -243,20 +256,35 @@ export default function CallRecordingsPage({
     ) {
       return 'whatsapp';
     }
+    if (defaultTab === 'broadcast') return 'broadcast';
     if (defaultTab === 'whatsapp') return 'whatsapp';
     return 'calls';
   }, [location.pathname, searchParams, defaultTab]);
 
-  const handleTabChange = (targetTab: 'calls' | 'whatsapp') => {
-    if (location.pathname === '/whatsapp-records') {
+  const handleTabChange = (targetTab: 'calls' | 'whatsapp' | 'broadcast') => {
+    if (
+      location.pathname === '/whatsapp-records' ||
+      location.pathname === '/broadcast-whatsapp' ||
+      location.pathname === '/broadcast-messages'
+    ) {
       if (targetTab === 'calls') {
         navigate('/call-recordings');
+      } else if (targetTab === 'whatsapp') {
+        navigate('/whatsapp-records');
+      } else if (targetTab === 'broadcast') {
+        navigate('/broadcast-whatsapp');
       }
     } else {
       if (targetTab === 'whatsapp') {
         setSearchParams((prev) => {
           const next = new URLSearchParams(prev);
           next.set('tab', 'whatsapp');
+          return next;
+        });
+      } else if (targetTab === 'broadcast') {
+        setSearchParams((prev) => {
+          const next = new URLSearchParams(prev);
+          next.set('tab', 'broadcast');
           return next;
         });
       } else {
@@ -575,10 +603,34 @@ export default function CallRecordingsPage({
                 telecrm-whatsapp
               </Badge>
             </button>
+
+            <button
+              type='button'
+              onClick={() => handleTabChange('broadcast')}
+              className={cn(
+                'inline-flex items-center gap-2 px-3.5 py-2.5 text-xs sm:text-sm font-semibold border-b-2 transition-all cursor-pointer',
+                currentTab === 'broadcast'
+                  ? 'border-purple-600 text-purple-600 dark:text-purple-400 font-bold'
+                  : 'border-transparent text-muted-foreground hover:text-foreground hover:border-border/80',
+              )}
+            >
+              <Megaphone className='h-4 w-4' />
+              <span>Broadcast WhatsApp</span>
+              <Badge
+                variant='outline'
+                className='text-[10px] px-1.5 py-0 font-normal bg-purple-500/10 text-purple-600 border-purple-500/20'
+              >
+                messages
+              </Badge>
+            </button>
           </div>
         </div>
 
-        {currentTab === 'whatsapp' ? (
+        {currentTab === 'broadcast' ? (
+          <div className='flex-1 flex flex-col overflow-hidden'>
+            <BroadcastMessagesRecordsTab />
+          </div>
+        ) : currentTab === 'whatsapp' ? (
           <div className='flex-1 flex flex-col overflow-hidden'>
             <WhatsAppRecordsTab />
           </div>

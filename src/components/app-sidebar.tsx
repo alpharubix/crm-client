@@ -63,6 +63,10 @@ const data = {
           title: 'WhatsApp Record',
           url: '/whatsapp-records',
         },
+        {
+          title: 'Broadcast WhatsApp',
+          url: '/broadcast-whatsapp',
+        },
       ],
     },
     {
