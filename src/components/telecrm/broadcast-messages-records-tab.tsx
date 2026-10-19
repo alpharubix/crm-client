@@ -747,12 +747,6 @@ export default function BroadcastMessagesRecordsTab() {
                           Not Interested
                         </span>
                       </SelectItem>
-                      <SelectItem value='responded'>
-                        <span className='flex items-center gap-1.5 text-blue-600 dark:text-blue-400 font-medium'>
-                          <span className='h-2 w-2 rounded-full bg-blue-500' />
-                          All Responded
-                        </span>
-                      </SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
