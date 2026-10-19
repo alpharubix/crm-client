@@ -96,6 +96,7 @@ export interface BroadcastRecordItem {
   template_name?: string;
   response_intent?: string | null;
   response_button?: string | null;
+  is_exact_reply?: boolean;
   buttons?: Array<{ id?: string; title?: string; text?: string }>;
   status: string;
   status_history?: Array<{
@@ -251,6 +252,7 @@ export default function BroadcastMessagesRecordsTab() {
   const [msgTypeFilter, setMsgTypeFilter] = useState<string>('all');
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [templateFilter, setTemplateFilter] = useState<string>('all');
+  const [interestedFilter, setInterestedFilter] = useState<string>('all');
   const [responseScope, setResponseScope] = useState<'all' | 'replies_only'>('all');
   const [fromDate, setFromDate] = useState<string>('');
   const [fromTime, setFromTime] = useState<string>('');
@@ -305,6 +307,7 @@ export default function BroadcastMessagesRecordsTab() {
         msgTypeFilter,
         statusFilter,
         templateFilter,
+        interestedFilter,
         responseScope,
         fromDate,
         fromTime,
@@ -330,6 +333,14 @@ export default function BroadcastMessagesRecordsTab() {
         }
         if (templateFilter && templateFilter !== 'all') {
           params.append('template_name', templateFilter);
+        }
+        if (interestedFilter && interestedFilter !== 'all') {
+          params.append('interested_status', interestedFilter);
+        }
+        if (
+          (templateFilter && templateFilter !== 'all') ||
+          (interestedFilter && interestedFilter !== 'all')
+        ) {
           params.append('response_scope', responseScope);
         }
         if (fromDate) {
@@ -462,6 +473,7 @@ export default function BroadcastMessagesRecordsTab() {
     setMsgTypeFilter('all');
     setStatusFilter('all');
     setTemplateFilter('all');
+    setInterestedFilter('all');
     setResponseScope('all');
     setFromDate('');
     setFromTime('');
@@ -477,6 +489,7 @@ export default function BroadcastMessagesRecordsTab() {
     msgTypeFilter !== 'all' ||
     statusFilter !== 'all' ||
     templateFilter !== 'all' ||
+    interestedFilter !== 'all' ||
     Boolean(fromDate) ||
     Boolean(toDate);
 
@@ -700,8 +713,52 @@ export default function BroadcastMessagesRecordsTab() {
                   </Select>
                 </div>
 
-                {/* Response Scope Toggle (visible when template is selected) */}
-                {templateFilter !== 'all' && (
+                {/* Interested Accounts Filter */}
+                <div className='flex items-center gap-1.5'>
+                  <span className='text-xs text-muted-foreground whitespace-nowrap font-medium'>
+                    Interested Accounts:
+                  </span>
+                  <Select
+                    value={interestedFilter}
+                    onValueChange={(val) => {
+                      setInterestedFilter(val);
+                      if (val !== 'all') {
+                        setResponseScope('replies_only');
+                      } else if (templateFilter === 'all') {
+                        setResponseScope('all');
+                      }
+                      setCurrentPage(1);
+                    }}
+                  >
+                    <SelectTrigger className='h-9 text-xs w-[160px] rounded-lg bg-background'>
+                      <SelectValue placeholder='All' />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value='all'>All Accounts</SelectItem>
+                      <SelectItem value='interested'>
+                        <span className='flex items-center gap-1.5 text-emerald-600 dark:text-emerald-400 font-medium'>
+                          <span className='h-2 w-2 rounded-full bg-emerald-500' />
+                          Interested
+                        </span>
+                      </SelectItem>
+                      <SelectItem value='not_interested'>
+                        <span className='flex items-center gap-1.5 text-rose-600 dark:text-rose-400 font-medium'>
+                          <span className='h-2 w-2 rounded-full bg-rose-500' />
+                          Not Interested
+                        </span>
+                      </SelectItem>
+                      <SelectItem value='responded'>
+                        <span className='flex items-center gap-1.5 text-blue-600 dark:text-blue-400 font-medium'>
+                          <span className='h-2 w-2 rounded-full bg-blue-500' />
+                          All Responded
+                        </span>
+                      </SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                {/* Response Scope Toggle (visible when template or interested filter is selected) */}
+                {(templateFilter !== 'all' || interestedFilter !== 'all') && (
                   <div className='flex items-center bg-muted/60 p-0.5 rounded-lg border border-purple-500/30 gap-1 text-xs'>
                     <button
                       type='button'
@@ -714,7 +771,7 @@ export default function BroadcastMessagesRecordsTab() {
                           ? 'bg-purple-600 text-white shadow-xs'
                           : 'text-muted-foreground hover:text-foreground'
                       }`}
-                      title='Show all conversation messages of customers who responded to this template'
+                      title='Show all conversation messages of customers matching this filter'
                     >
                       All Messages
                     </button>
@@ -729,7 +786,7 @@ export default function BroadcastMessagesRecordsTab() {
                           ? 'bg-purple-600 text-white shadow-xs'
                           : 'text-muted-foreground hover:text-foreground'
                       }`}
-                      title='Show only the customer reply messages received for this template'
+                      title='Show only the customer reply messages received'
                     >
                       Replies Only
                     </button>
@@ -1064,7 +1121,7 @@ export default function BroadcastMessagesRecordsTab() {
                               <span className='text-sm font-medium text-foreground truncate'>
                                 {item.customer_name || '—'}
                               </span>
-                              {item.template_name && (
+                              {(item.template_name || (item.direction === 'inbound' && item.response_intent)) && (
                                 <span
                                   className={`text-[10px] truncate flex items-center gap-1 font-medium ${
                                     item.direction === 'inbound'
@@ -1073,21 +1130,25 @@ export default function BroadcastMessagesRecordsTab() {
                                   }`}
                                   title={
                                     item.direction === 'inbound'
-                                      ? `Responded to template: ${item.template_name}`
-                                      : `Template: ${item.template_name}`
+                                      ? `Responded: ${item.response_intent || item.template_name}`
+                                      : `Template: ${item.template_name || 'Broadcast'}`
                                   }
                                 >
-                                  <Sparkles className='h-2.5 w-2.5 shrink-0' />
-                                  <span className='truncate'>{item.template_name}</span>
-                                  {item.response_intent && (
+                                  {item.template_name && (
+                                    <>
+                                      <Sparkles className='h-2.5 w-2.5 shrink-0' />
+                                      <span className='truncate'>{item.template_name}</span>
+                                    </>
+                                  )}
+                                  {item.direction === 'inbound' && item.response_intent && (
                                     <span
-                                      className={`ml-1 px-1 py-0.2 rounded text-[9px] uppercase font-bold shrink-0 ${
+                                      className={`px-1.5 py-0.2 rounded text-[9px] uppercase font-bold shrink-0 ${
                                         item.response_intent.toLowerCase().includes('not')
-                                          ? 'bg-rose-100 text-rose-700 dark:bg-rose-950 dark:text-rose-400'
-                                          : 'bg-emerald-100 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-400'
+                                          ? 'bg-rose-100 text-rose-700 dark:bg-rose-950 dark:text-rose-400 border border-rose-200/50'
+                                          : 'bg-emerald-100 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-400 border border-emerald-200/50'
                                       }`}
                                     >
-                                      {item.response_intent}
+                                      {item.response_intent.replace('_', ' ')}
                                     </span>
                                   )}
                                 </span>
@@ -1379,13 +1440,19 @@ export default function BroadcastMessagesRecordsTab() {
                     </div>
                   )}
 
-                  {activeDetailItem.response_intent && (
+                  {activeDetailItem.direction === 'inbound' && activeDetailItem.response_intent && (
                     <div className='flex flex-col gap-0.5'>
                       <span className='text-muted-foreground font-medium'>
-                        Response Intent:
+                        Customer Response:
                       </span>
-                      <span className='font-medium capitalize text-emerald-600 dark:text-emerald-400'>
-                        {activeDetailItem.response_intent}
+                      <span
+                        className={`font-semibold capitalize ${
+                          activeDetailItem.response_intent.toLowerCase().includes('not')
+                            ? 'text-rose-600 dark:text-rose-400'
+                            : 'text-emerald-600 dark:text-emerald-400'
+                        }`}
+                      >
+                        {activeDetailItem.response_intent.replace('_', ' ')}
                         {activeDetailItem.response_button && ` (${activeDetailItem.response_button})`}
                       </span>
                     </div>

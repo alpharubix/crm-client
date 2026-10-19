@@ -277,6 +277,7 @@ export default function AccountsPage() {
     source: [] as Option[],
     industry: [] as Option[],
     phone: searchParams.get('phone') || '',
+    email: searchParams.get('email') || '',
     city: searchParams.get('city') || '',
     state: searchParams.get('state') || '',
     accountOwnerId: [] as Option[],
@@ -425,6 +426,11 @@ export default function AccountsPage() {
       if (toDate) loadedFilters.createdToDate = toDate;
     }
 
+    const emailParam = searchParams.get('email');
+    if (emailParam) {
+      loadedFilters.email = emailParam;
+    }
+
     if (Object.keys(loadedFilters).length > 0) {
       setFilters((prev) => ({ ...prev, ...loadedFilters }));
       setAppliedFilters((prev) => ({ ...prev, ...loadedFilters }));
@@ -486,6 +492,7 @@ export default function AccountsPage() {
         );
       }
       if (appliedFilters.phone) params.set('phone', appliedFilters.phone);
+      if (appliedFilters.email) params.set('email', appliedFilters.email);
       if (appliedFilters.city) params.set('city', appliedFilters.city);
       if (appliedFilters.state) params.set('state', appliedFilters.state);
       if (
@@ -737,6 +744,7 @@ export default function AccountsPage() {
     if (searchFilters.accountId) params.set('account_id', searchFilters.accountId);
     if (searchFilters.accountName) params.set('account_name', searchFilters.accountName);
     if (searchFilters.phone) params.set('phone', searchFilters.phone);
+    if (searchFilters.email) params.set('email', searchFilters.email);
     if (searchFilters.city) params.set('city', searchFilters.city);
     if (searchFilters.state) params.set('state', searchFilters.state);
 
@@ -800,6 +808,7 @@ export default function AccountsPage() {
       source: [] as Option[],
       industry: [] as Option[],
       phone: '',
+      email: '',
       city: '',
       state: '',
       accountOwnerId: [] as Option[],
@@ -1522,6 +1531,17 @@ export default function AccountsPage() {
                                   </TableCell>
                                 );
 
+                              case 'email':
+                                return (
+                                  <TableCell key={col.id} className='text-xs text-muted-foreground py-3.5'>
+                                    {acc.email ? (
+                                      <span className='text-foreground font-medium'>{acc.email}</span>
+                                    ) : (
+                                      '—'
+                                    )}
+                                  </TableCell>
+                                );
+
                               case 'pincode':
                                 return (
                                   <TableCell key={col.id} className='text-xs text-muted-foreground py-3.5'>
@@ -2006,6 +2026,20 @@ export default function AccountsPage() {
                 placeholder='Enter phone number...'
                 value={filters.phone}
                 onChange={(e) => handleFilterChange('phone', e.target.value)}
+                className='h-9 text-xs rounded-lg'
+              />
+            </div>
+
+            {/* Email */}
+            <div className='space-y-1.5'>
+              <Label className='text-xs font-semibold text-foreground'>
+                Email
+              </Label>
+              <Input
+                type='email'
+                placeholder='Enter email address...'
+                value={filters.email}
+                onChange={(e) => handleFilterChange('email', e.target.value)}
                 className='h-9 text-xs rounded-lg'
               />
             </div>
