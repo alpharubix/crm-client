@@ -38,7 +38,7 @@ const LOAN_TYPES = [
   'Secured Loan',
   'Secured BT',
   'Vehicle Loan',
-  'CGTMSE'
+  'CGTMSE',
 ]
 
 const TICKET_STATUSES = [
@@ -335,11 +335,7 @@ export default function CreateTicket() {
                   placeholder='Search Account...'
                   disabled={true}
                   className='h-8'
-                  value={
-                    dealData
-                      ? `${accountSearch}`
-                      : accountSearch
-                  }
+                  value={dealData ? `${accountSearch}` : accountSearch}
                   onChange={(e) => {
                     setAccountSearch(e.target.value)
                     setIsAccountOpen(true)
@@ -504,7 +500,10 @@ export default function CreateTicket() {
               </div>
             </FieldRow>
 
-            <FieldRow label='Partner Name *' error={errors.partnerName?.message}>
+            <FieldRow
+              label='Partner Name *'
+              error={errors.partnerName?.message}
+            >
               <SelectField
                 isEdit={true}
                 options={[
@@ -513,7 +512,7 @@ export default function CreateTicket() {
                   'Recur Club Technologies Private Ltd',
                   'Rupeeboss Financial Services Pvt Ltd',
                   'MONK ADVISORS PRIVATE LIMITED',
-                  'Others',
+                  'NA',
                 ]}
                 value={formValues.partnerName ?? ''}
                 onChange={(value) =>
@@ -538,8 +537,6 @@ export default function CreateTicket() {
                 }
               />
             </FieldRow>
-
-
 
             <FieldRow label='Type of Loan *' error={errors.typeOfLoan?.message}>
               <SelectField

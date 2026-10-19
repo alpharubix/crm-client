@@ -113,6 +113,20 @@ export function buildCommentTree(rawNotes: any[]): Comment[] {
     });
   });
 
+  // Helper to parse note date strings accurately
+  const parseNoteDate = (dateStr?: string): number => {
+    if (!dateStr) return 0;
+    const timestamp = Date.parse(dateStr);
+    if (!isNaN(timestamp)) return timestamp;
+    try {
+      const d = new Date(dateStr);
+      if (!isNaN(d.getTime())) return d.getTime();
+    } catch {
+      // ignore
+    }
+    return 0;
+  };
+
   // Step 2: Build tree hierarchy
   commentMap.forEach((comment) => {
     if (comment.parentId && commentMap.has(comment.parentId)) {
@@ -121,6 +135,9 @@ export function buildCommentTree(rawNotes: any[]): Comment[] {
       rootComments.push(comment);
     }
   });
+
+  // Sort root comments: latest one first
+  rootComments.sort((a, b) => parseNoteDate(b.createdAt) - parseNoteDate(a.createdAt));
 
   return rootComments;
 }

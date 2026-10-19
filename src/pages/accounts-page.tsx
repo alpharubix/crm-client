@@ -42,6 +42,7 @@ import { useAuth } from '@/context/auth-context';
 import type { Option } from '@/components/ui/multi-select';
 import { useManageColumns } from '@/hooks/use-manage-columns';
 import { ManageColumnsDialog } from '@/components/shared/manage-columns';
+import { useDateSort, isDateColumn, SortableDateHeader } from '@/utils/table-sort';
 import { MultiSelect } from '@/components/ui/multi-select';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -195,11 +196,23 @@ const DEFAULT_COLUMNS = [
   { id: 'phone', label: 'Phone', selected: true },
   { id: 'city', label: 'City', selected: true },
   { id: 'state', label: 'State', selected: true },
-  { id: 'business_status', label: 'Business Status', selected: true },
-  { id: 'priority_account', label: 'Priority Account', selected: true },
-  { id: 'source_date', label: 'Source Date', selected: true },
-  { id: 'assignment_date', label: 'Assignment Date', selected: true },
   { id: 'modified_time', label: 'Modified At', selected: true },
+  // Additional backend fields
+  { id: 'business_status', label: 'Business Status', selected: false },
+  { id: 'priority_account', label: 'Priority Account', selected: false },
+  { id: 'source_date', label: 'Source Date', selected: false },
+  { id: 'source_type', label: 'Source Type', selected: false },
+  { id: 'source_description', label: 'Source Description', selected: false },
+  { id: 'assignment_date', label: 'Assignment Date', selected: false },
+  { id: 'email', label: 'Email', selected: false },
+  { id: 'first_name', label: 'First Name', selected: false },
+  { id: 'last_name', label: 'Last Name', selected: false },
+  { id: 'pincode', label: 'Pincode', selected: false },
+  { id: 'account_stage', label: 'Account Stage', selected: false },
+  { id: 'distributor_code', label: 'Distributor Code', selected: false },
+  { id: 'profile_type', label: 'Profile Type', selected: false },
+  { id: 'call_back_date_time', label: 'Call Back Date Time', selected: false },
+  { id: 'created_time', label: 'Created At', selected: false },
 ];
 
 const getInitialAvatarColor = (name: string) => {
@@ -339,7 +352,7 @@ export default function AccountsPage() {
     DEFAULT_COLUMNS,
   );
 
-  const visibleColumns = columns.filter((c) => c.selected);
+  const visibleColumns = columns.filter((c) => c.selected).slice(0, 10);
 
   const [appliedFilters, setAppliedFilters] = useState(filters);
 
@@ -584,7 +597,13 @@ export default function AccountsPage() {
     placeholderData: keepPreviousData,
   });
 
-  const accounts = data?.data || [];
+  const accountsRaw = data?.data || [];
+  const {
+    sortField,
+    sortOrder,
+    toggleSort,
+    sortedRecords: accounts,
+  } = useDateSort(accountsRaw);
   const pageInfo = data?.page_info || { page: 1, total_pages: 1, data_size: 0 };
   const totalCount =
     pageInfo.data_size ||
@@ -1216,7 +1235,14 @@ export default function AccountsPage() {
                         key={col.id}
                         className='text-xs font-semibold text-muted-foreground tracking-wide py-3'
                       >
-                        {col.label}
+                        <SortableDateHeader
+                          label={col.label}
+                          colId={col.id}
+                          isDate={isDateColumn(col.id, col.label)}
+                          sortField={sortField}
+                          sortOrder={sortOrder}
+                          onToggle={toggleSort}
+                        />
                       </TableHead>
                     ))}
                     <TableHead className='w-[48px] px-3' />
@@ -1475,8 +1501,101 @@ export default function AccountsPage() {
                                   </TableCell>
                                 );
 
-                              default:
-                                return <TableCell key={col.id} />;
+                              case 'email':
+                                return (
+                                  <TableCell key={col.id} className='text-xs text-blue-600 dark:text-blue-400 py-3.5'>
+                                    {acc.email || '—'}
+                                  </TableCell>
+                                );
+
+                              case 'first_name':
+                                return (
+                                  <TableCell key={col.id} className='text-xs text-muted-foreground py-3.5'>
+                                    {acc.first_name || '—'}
+                                  </TableCell>
+                                );
+
+                              case 'last_name':
+                                return (
+                                  <TableCell key={col.id} className='text-xs text-muted-foreground py-3.5'>
+                                    {acc.last_name || '—'}
+                                  </TableCell>
+                                );
+
+                              case 'pincode':
+                                return (
+                                  <TableCell key={col.id} className='text-xs text-muted-foreground py-3.5'>
+                                    {acc.pincode || '—'}
+                                  </TableCell>
+                                );
+
+                              case 'source_type':
+                                return (
+                                  <TableCell key={col.id} className='text-xs text-muted-foreground py-3.5'>
+                                    {acc.source_type || '—'}
+                                  </TableCell>
+                                );
+
+                              case 'source_description':
+                                return (
+                                  <TableCell key={col.id} className='text-xs text-muted-foreground py-3.5'>
+                                    {acc.source_description || '—'}
+                                  </TableCell>
+                                );
+
+                              case 'account_stage':
+                                return (
+                                  <TableCell key={col.id} className='text-xs text-muted-foreground py-3.5'>
+                                    {acc.account_stage || '—'}
+                                  </TableCell>
+                                );
+
+                              case 'distributor_code':
+                                return (
+                                  <TableCell key={col.id} className='text-xs text-muted-foreground py-3.5'>
+                                    {acc.distributor_code || '—'}
+                                  </TableCell>
+                                );
+
+                              case 'profile_type':
+                                return (
+                                  <TableCell key={col.id} className='text-xs text-muted-foreground py-3.5'>
+                                    {acc.profile_type || '—'}
+                                  </TableCell>
+                                );
+
+                              case 'call_back_date_time':
+                                return (
+                                  <TableCell key={col.id} className='text-xs text-muted-foreground py-3.5'>
+                                    {acc.call_back_date_time
+                                      ? formatExactDate(
+                                          acc.call_back_date_time,
+                                          'dd MMM yyyy, hh:mm a',
+                                        )
+                                      : '—'}
+                                  </TableCell>
+                                );
+
+                              case 'created_time':
+                                return (
+                                  <TableCell key={col.id} className='text-xs text-muted-foreground py-3.5'>
+                                    {acc.created_time
+                                      ? formatExactDate(
+                                          acc.created_time,
+                                          'dd MMM yyyy',
+                                        )
+                                      : '—'}
+                                  </TableCell>
+                                );
+
+                              default: {
+                                const val = acc[col.id];
+                                return (
+                                  <TableCell key={col.id} className='text-xs text-muted-foreground py-3.5'>
+                                    {val !== null && val !== undefined && val !== '' ? String(val) : '—'}
+                                  </TableCell>
+                                );
+                              }
                             }
                           })}
 

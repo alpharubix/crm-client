@@ -12,6 +12,20 @@ export function useManageColumns(
 ) {
   const getStorageKey = () => `columns-preferences-${moduleName}`
 
+  const clampToMaxSelected = (cols: TableColumn[], max: number = 10): TableColumn[] => {
+    let count = 0
+    return cols.map((col) => {
+      if (col.selected) {
+        if (count < max) {
+          count++
+          return col
+        }
+        return { ...col, selected: false }
+      }
+      return col
+    })
+  }
+
   const [columns, setColumns] = useState<TableColumn[]>(() => {
     try {
       const saved = localStorage.getItem(getStorageKey())
@@ -26,13 +40,13 @@ export function useManageColumns(
             return defaultCol ? { ...defaultCol, selected: savedCol.selected } : savedCol
           })
           
-          return [...merged, ...missingDefaults]
+          return clampToMaxSelected([...merged, ...missingDefaults], 10)
         }
       }
     } catch (error) {
       console.error('Failed to parse saved columns', error)
     }
-    return defaultColumns
+    return clampToMaxSelected(defaultColumns, 10)
   })
 
   useEffect(() => {
@@ -40,7 +54,7 @@ export function useManageColumns(
       if (e.key === getStorageKey() && e.newValue) {
         try {
           const parsed = JSON.parse(e.newValue) as TableColumn[]
-          setColumns(parsed)
+          setColumns(clampToMaxSelected(parsed, 10))
         } catch (err) {
           // Ignore
         }
@@ -52,14 +66,16 @@ export function useManageColumns(
 
   const savePreferences = useCallback(
     (newColumns: TableColumn[]) => {
-      setColumns(newColumns)
-      localStorage.setItem(getStorageKey(), JSON.stringify(newColumns))
+      const clamped = clampToMaxSelected(newColumns, 10)
+      setColumns(clamped)
+      localStorage.setItem(getStorageKey(), JSON.stringify(clamped))
     },
     [moduleName],
   )
 
   const resetToDefault = useCallback(() => {
-    setColumns(defaultColumns)
+    const clamped = clampToMaxSelected(defaultColumns, 10)
+    setColumns(clamped)
     localStorage.removeItem(getStorageKey())
   }, [moduleName, defaultColumns])
 

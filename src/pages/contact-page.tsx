@@ -48,6 +48,9 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 
+import { formatExactDate } from '@/utils/date-formatter'
+import { useDateSort, SortableDateHeader } from '@/utils/table-sort'
+
 const DEFAULT_COLUMNS = [
   { id: 'contact_name', label: 'Contact Name', selected: true },
   { id: 'designation', label: 'Designation', selected: true },
@@ -56,6 +59,13 @@ const DEFAULT_COLUMNS = [
   { id: 'email', label: 'Email', selected: true },
   { id: 'city', label: 'City', selected: true },
   { id: 'state', label: 'State', selected: true },
+  { id: 'secondary_email', label: 'Secondary Email', selected: false },
+  { id: 'lead_source', label: 'Lead Source', selected: false },
+  { id: 'street', label: 'Street', selected: false },
+  { id: 'country', label: 'Country', selected: false },
+  { id: 'pincode', label: 'Pincode', selected: false },
+  { id: 'created_time', label: 'Created Time', selected: false },
+  { id: 'modified_time', label: 'Modified Time', selected: false },
 ]
 
 const getInitialAvatarColor = (name: string) => {
@@ -91,7 +101,7 @@ export default function ContactsPage() {
     DEFAULT_COLUMNS,
   )
 
-  const visibleColumns = columns.filter((c) => c.selected)
+  const visibleColumns = columns.filter((c) => c.selected).slice(0, 10)
   const [appliedFilters, setAppliedFilters] = useState(filters)
 
   const [currentPage, setCurrentPage] = useState(() => {
@@ -125,7 +135,8 @@ export default function ContactsPage() {
     placeholderData: keepPreviousData,
   })
 
-  const contacts: Contact[] = data?.data || []
+  const rawContacts: Contact[] = data?.data || []
+  const { sortedData: contacts = [], sortConfig, requestSort } = useDateSort(rawContacts)
   const pageInfo = data?.page_info || { page: 1, total_pages: 1, data_size: 0 }
   const totalCount = pageInfo.data_size || (pageInfo.total_pages ? pageInfo.total_pages * pageSize : contacts.length)
 
@@ -356,7 +367,12 @@ export default function ContactsPage() {
                         key={col.id}
                         className='text-xs font-semibold text-muted-foreground tracking-wide py-3'
                       >
-                        {col.label}
+                        <SortableDateHeader
+                          columnId={col.id}
+                          label={col.label}
+                          sortConfig={sortConfig}
+                          onSort={requestSort}
+                        />
                       </TableHead>
                     ))}
                     <TableHead className='w-[48px] px-3' />
@@ -459,8 +475,65 @@ export default function ContactsPage() {
                                   </TableCell>
                                 )
 
+                              case 'secondary_email':
+                                return (
+                                  <TableCell key={col.id} className='text-xs text-muted-foreground py-3.5'>
+                                    {contact.secondary_email || '—'}
+                                  </TableCell>
+                                )
+
+                              case 'lead_source':
+                                return (
+                                  <TableCell key={col.id} className='text-xs text-muted-foreground py-3.5'>
+                                    {contact.lead_source || '—'}
+                                  </TableCell>
+                                )
+
+                              case 'street':
+                                return (
+                                  <TableCell key={col.id} className='text-xs text-muted-foreground py-3.5'>
+                                    {contact.street || '—'}
+                                  </TableCell>
+                                )
+
+                              case 'country':
+                                return (
+                                  <TableCell key={col.id} className='text-xs text-muted-foreground py-3.5'>
+                                    {contact.country || '—'}
+                                  </TableCell>
+                                )
+
+                              case 'pincode':
+                                return (
+                                  <TableCell key={col.id} className='text-xs text-muted-foreground py-3.5'>
+                                    {contact.pincode || '—'}
+                                  </TableCell>
+                                )
+
+                              case 'created_time':
+                                return (
+                                  <TableCell key={col.id} className='text-xs text-muted-foreground py-3.5'>
+                                    {contact.created_time
+                                      ? formatExactDate(contact.created_time, 'dd MMM yyyy')
+                                      : '—'}
+                                  </TableCell>
+                                )
+
+                              case 'modified_time':
+                                return (
+                                  <TableCell key={col.id} className='text-xs text-muted-foreground py-3.5'>
+                                    {contact.modified_time
+                                      ? formatExactDate(contact.modified_time, 'dd MMM yyyy')
+                                      : '—'}
+                                  </TableCell>
+                                )
+
                               default:
-                                return <TableCell key={col.id} />
+                                return (
+                                  <TableCell key={col.id} className='text-xs text-muted-foreground py-3.5'>
+                                    {(contact as any)[col.id] || '—'}
+                                  </TableCell>
+                                )
                             }
                           })}
 
