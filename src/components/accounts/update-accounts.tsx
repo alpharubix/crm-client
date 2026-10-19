@@ -77,6 +77,7 @@ import { useAuth } from '@/context/auth-context';
 import { NestedComments } from '../nested-notes';
 import TeleCRMActivityHistory from './tele-crm-activity';
 import TeleCRMWhatsAppActivity from './tele-crm-whatsapp-activity';
+import AccountWhatsAppResponsesSection from './account-whatsapp-responses-section';
 
 const LANGUAGE_OPTIONS = [
   'English',
@@ -2807,6 +2808,15 @@ export default function UpdateAccounts() {
                     leadStatus={accountData?.account_status}
                     accountName={accountData?.trade_name || accountData?.name || data?.name}
                     contacts={contacts}
+                  />
+                </CardContent>
+
+                {/* ================= WhatsApp Template Feedback / Responses ================= */}
+                <SectionHeader title='WhatsApp Template Responses' />
+                <CardContent className='p-0'>
+                  <AccountWhatsAppResponsesSection
+                    accountId={accountData?.id || data?.id || id}
+                    accountName={accountData?.trade_name || accountData?.name || data?.name}
                   />
                 </CardContent>
 

@@ -82,6 +82,8 @@ export const WhatsAppInbox: React.FC = () => {
   }, []);
 
   // Connect to Real-Time WebSocket for instant live messages & checkmarks
+  const wsRef = React.useRef<WebSocket | null>(null);
+
   // Connect to Real-Time WebSocket for instant live messages & checkmarks
   useEffect(() => {
     const backendUrl = import.meta.env.VITE_BACKEND_BASE_URL || 'http://localhost:8080';
@@ -96,6 +98,7 @@ export const WhatsAppInbox: React.FC = () => {
     const connectWs = () => {
       try {
         ws = new WebSocket(wsUrl);
+        wsRef.current = ws;
 
         ws.onopen = () => {
           console.log('✅ WhatsApp WebSocket connected');
@@ -238,7 +241,7 @@ export const WhatsAppInbox: React.FC = () => {
     };
   }, [loadConversations]);
 
-  // When active conversation changes, load messages & clear unread locally
+  // When active conversation changes, load messages & mark read via WebSocket
   useEffect(() => {
     if (activeConversation) {
       const convId = activeConversation.id || activeConversation._id;
@@ -250,6 +253,19 @@ export const WhatsAppInbox: React.FC = () => {
           )
         );
         loadMessages(convId);
+
+        // Send mark_read over WebSocket (0 HTTP requests!)
+        if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {
+          wsRef.current.send(
+            JSON.stringify({
+              action: 'mark_read',
+              conversation_id: String(convId),
+            })
+          );
+        } else {
+          // Fallback if WS not open at this exact millisecond
+          markConversationAsRead(convId).catch(() => {});
+        }
       }
     } else {
       setMessages([]);

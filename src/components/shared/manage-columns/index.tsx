@@ -77,8 +77,13 @@ export function ManageColumnsDialog({
     }
   }
 
+  const selectedColumns = columns.filter((col) => col.selected)
+  const canAddMore = selectedColumns.length < 10
+
   const handleAdd = (id: string) => {
     setColumns((items) => {
+      const currentSelected = items.filter((col) => col.selected)
+      if (currentSelected.length >= 10) return items
       const itemToAdd = items.find((col) => col.id === id)
       if (!itemToAdd) return items
       // Move to the end of the selected list
@@ -131,17 +136,34 @@ export function ManageColumnsDialog({
         <div className='grid grid-cols-2 gap-6'>
           {/* Available Fields */}
           <div className='flex flex-col gap-2'>
-            <div className='font-semibold text-sm'>Available Fields</div>
+            <div className='font-semibold text-sm flex items-center justify-between'>
+              <span>Available Fields</span>
+              <span className='text-xs text-muted-foreground font-normal'>
+                {columns.filter((c) => !c.selected).length} available
+              </span>
+            </div>
             <AvailableFieldsList
               columns={columns}
               searchQuery={searchQuery}
               onAdd={handleAdd}
+              canAdd={canAddMore}
             />
           </div>
 
           {/* Selected Fields */}
           <div className='flex flex-col gap-2'>
-            <div className='font-semibold text-sm'>Selected Fields</div>
+            <div className='font-semibold text-sm flex items-center justify-between'>
+              <span>Selected Fields</span>
+              <span
+                className={`text-xs px-2 py-0.5 rounded-full font-medium ${
+                  selectedColumns.length >= 10
+                    ? 'bg-amber-100 text-amber-700 dark:bg-amber-950/40 dark:text-amber-400'
+                    : 'bg-primary/10 text-primary'
+                }`}
+              >
+                {selectedColumns.length}/10
+              </span>
+            </div>
             <DndContext
               sensors={sensors}
               collisionDetection={closestCenter}

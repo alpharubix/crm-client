@@ -1,4 +1,4 @@
-import { Plus, RefreshCw, Search, SlidersHorizontal, RotateCw, Briefcase, IndianRupee, MoreVertical, ExternalLink } from 'lucide-react'
+import { Plus, RefreshCw, Search, SlidersHorizontal, RotateCw, Briefcase, IndianRupee, MoreVertical, ExternalLink, Info } from 'lucide-react'
 import { useState, useEffect } from 'react'
 import { useSearchParams, useNavigate } from 'react-router-dom'
 import { DatePicker } from '@/components/ui/date-picker'
@@ -56,25 +56,50 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '@/components/ui/tooltip'
+import { computeStageSummary, STATUS_COLOR_MAP } from './accounts-status-page'
+import { useDateSort, SortableDateHeader } from '@/utils/table-sort'
 
 const DEFAULT_COLUMNS = [
   { id: 'deal_name', label: 'Deal Name', selected: true },
   { id: 'account_name', label: 'Account Name', selected: true },
   { id: 'deal_owner', label: 'Deal Owner', selected: true },
   { id: 'deal_approval', label: 'Deal Approval', selected: true },
-  { id: 'case_status', label: 'Case Status', selected: true },
   { id: 'ticket_login', label: 'Ticket Login', selected: true },
   { id: 'type_of_loan', label: 'Type of Loan', selected: true },
   { id: 'type_of_case_login', label: 'Type of Case Login', selected: true },
   { id: 'deal_type', label: 'Deal Type', selected: true },
   { id: 'amount_required', label: 'Amount Required', selected: true },
-  {
-    id: 'deal_expected_closing',
-    label: 'Expected Closing Date',
-    selected: true,
-  },
-  { id: 'deal_status_closing', label: 'Deal Status Closing', selected: true },
-  { id: 'modified_time', label: 'Modified At', selected: true },
+  { id: 'partner_name', label: 'Partner Name', selected: true },
+  { id: 'deal_expected_closing', label: 'Expected Closing Date', selected: false },
+  { id: 'deal_status_closing', label: 'Deal Status Closing', selected: false },
+  { id: 'deal_stage', label: 'Deal Stage', selected: false },
+  { id: 'lender_name', label: 'Lender Name', selected: false },
+  { id: 'lender_login_type', label: 'Lender Login Type', selected: false },
+  { id: 'deal_call_back_datetime', label: 'Call Back Date Time', selected: false },
+  { id: 'disbursed_amount', label: 'Disbursed Amount', selected: false },
+  { id: 'sanction_amount', label: 'Sanction Amount', selected: false },
+  { id: 'approved_amount', label: 'Approved Amount', selected: false },
+  { id: 'processing_fees', label: 'Processing Fees', selected: false },
+  { id: 'pf_percentage', label: 'PF Percentage', selected: false },
+  { id: 'rate_of_interest', label: 'Rate of Interest', selected: false },
+  { id: 'interest_type', label: 'Interest Type', selected: false },
+  { id: 'tenure', label: 'Tenure', selected: false },
+  { id: 'disbursement_date', label: 'Disbursement Date', selected: false },
+  { id: 'lender_login_date', label: 'Lender Login Date', selected: false },
+  { id: 'targeted_disbursement_date', label: 'Targeted Disbursement Date', selected: false },
+  { id: 'loan_start_date', label: 'Loan Start Date', selected: false },
+  { id: 'loan_end_date', label: 'Loan End Date', selected: false },
+  { id: 'customer_rejection_reason', label: 'Customer Rejection Reason', selected: false },
+  { id: 'lender_rejection_reason', label: 'Lender Rejection Reason', selected: false },
+  { id: 'deal_description', label: 'Description', selected: false },
+  { id: 'created_at', label: 'Created At', selected: false },
+  { id: 'modified_time', label: 'Modified At', selected: false },
 ]
 
 const LOAN_TYPES = [
@@ -180,7 +205,9 @@ export default function DealsPage() {
     DEFAULT_COLUMNS,
   )
 
-  const visibleColumns = columns.filter((c) => c.selected)
+  const visibleColumns = columns
+    .filter((c) => c.selected && c.id !== 'case_status' && c.id !== 'deal_status')
+    .slice(0, 10)
 
   const [filters, setFilters] = useState({
     accountName: searchParams.get('accountName') || '',
@@ -344,7 +371,8 @@ export default function DealsPage() {
     placeholderData: keepPreviousData,
   })
 
-  const DealsData: Deal[] = data?.data || []
+  const rawDeals: Deal[] = data?.data || []
+  const { sortedData: DealsData = [], sortConfig, requestSort } = useDateSort(rawDeals)
   const pageInfo = data?.page_info || { page: 1, total_pages: 1, data_size: 0 }
   const totalCount = pageInfo.data_size || (pageInfo.total_pages ? pageInfo.total_pages * pageSize : DealsData.length)
 
@@ -593,7 +621,12 @@ export default function DealsPage() {
                         key={col.id}
                         className='text-xs font-semibold text-muted-foreground tracking-wide py-3'
                       >
-                        {col.label}
+                        <SortableDateHeader
+                          columnId={col.id}
+                          label={col.label}
+                          sortConfig={sortConfig}
+                          onSort={requestSort}
+                        />
                       </TableHead>
                     ))}
                     <TableHead className='w-[48px] px-3' />
@@ -615,207 +648,470 @@ export default function DealsPage() {
                       const dealName = deal.deal_name || `Deal #${deal.id}`
                       const initialColorClass = getInitialAvatarColor(dealName)
                       const ownerName = (users as Record<string, string>)[deal.deal_owner_id] || deal.deal_owner || '—'
-                      const statusStyle = getDealStatusBadgeStyle(deal.case_status)
+                      const statusVal = deal.case_status || deal.deal_status
+                      const statusStyle = getDealStatusBadgeStyle(statusVal)
+                      const journey = (deal as any).journey || (deal as any).status_journey || []
 
                       return (
-                        <TableRow
-                          key={deal.id}
-                          className='cursor-pointer transition-colors border-b border-border/40 hover:bg-slate-50/80 dark:hover:bg-muted/30'
-                          onClick={() => handleRowClick(deal.id.toString())}
-                        >
-                          {visibleColumns.map((col: any) => {
-                            switch (col.id) {
-                              case 'deal_name':
-                                return (
-                                  <TableCell key={col.id} className='py-3.5'>
-                                    <div className='flex items-center gap-3'>
-                                      <div
-                                        className={`h-8 w-8 rounded-full border ${initialColorClass} font-semibold text-xs flex items-center justify-center shrink-0 shadow-2xs`}
-                                      >
-                                        {dealName.charAt(0).toUpperCase()}
+                        <div key={deal.id} className='contents'>
+                          <TableRow
+                            className='cursor-pointer transition-colors border-b border-border/40 hover:bg-slate-50/80 dark:hover:bg-muted/30'
+                            onClick={() => handleRowClick(deal.id.toString())}
+                          >
+                            {visibleColumns.map((col: any) => {
+                              switch (col.id) {
+                                case 'deal_name':
+                                  return (
+                                    <TableCell key={col.id} className='py-3.5'>
+                                      <div className='flex items-center gap-3'>
+                                        <div
+                                          className={`h-8 w-8 rounded-full border ${initialColorClass} font-semibold text-xs flex items-center justify-center shrink-0 shadow-2xs`}
+                                        >
+                                          {dealName.charAt(0).toUpperCase()}
+                                        </div>
+                                        <span className='font-semibold text-foreground text-xs hover:text-blue-600 transition-colors'>
+                                          {dealName}
+                                        </span>
                                       </div>
-                                      <span className='font-semibold text-foreground text-xs hover:text-blue-600 transition-colors'>
-                                        {dealName}
-                                      </span>
-                                    </div>
-                                  </TableCell>
-                                )
+                                    </TableCell>
+                                  )
 
-                              case 'account_name':
-                                return (
-                                  <TableCell key={col.id} className='text-xs font-medium text-blue-600 dark:text-blue-400 py-3.5'>
-                                    <HighlightedText
-                                      text={deal.account_name}
-                                      highlight={appliedFilters.accountName}
-                                    />
-                                  </TableCell>
-                                )
+                                case 'account_name':
+                                  return (
+                                    <TableCell key={col.id} className='text-xs font-medium text-blue-600 dark:text-blue-400 py-3.5'>
+                                      <HighlightedText
+                                        text={deal.account_name}
+                                        highlight={appliedFilters.accountName}
+                                      />
+                                    </TableCell>
+                                  )
 
-                              case 'deal_owner':
-                                return (
-                                  <TableCell key={col.id} className='py-3.5'>
-                                    <div className='flex items-center gap-2'>
-                                      <Avatar className='h-6 w-6 border border-border/60'>
-                                        <AvatarFallback className='text-[10px] bg-slate-200 text-slate-700 font-semibold'>
-                                          {ownerName !== '—'
-                                            ? ownerName
-                                                .split(' ')
-                                                .map((n: string) => n[0])
-                                                .slice(0, 2)
-                                                .join('')
-                                            : 'U'}
-                                        </AvatarFallback>
-                                      </Avatar>
-                                      <span className='text-xs font-medium text-slate-700 dark:text-slate-200'>
-                                        {ownerName}
-                                      </span>
-                                    </div>
-                                  </TableCell>
-                                )
+                                case 'deal_owner':
+                                  return (
+                                    <TableCell key={col.id} className='py-3.5'>
+                                      <div className='flex items-center gap-2'>
+                                        <Avatar className='h-6 w-6 border border-border/60'>
+                                          <AvatarFallback className='text-[10px] bg-slate-200 text-slate-700 font-semibold'>
+                                            {ownerName !== '—'
+                                              ? ownerName
+                                                  .split(' ')
+                                                  .map((n: string) => n[0])
+                                                  .slice(0, 2)
+                                                  .join('')
+                                              : 'U'}
+                                          </AvatarFallback>
+                                        </Avatar>
+                                        <span className='text-xs font-medium text-slate-700 dark:text-slate-200'>
+                                          {ownerName}
+                                        </span>
+                                      </div>
+                                    </TableCell>
+                                  )
 
-                              case 'lender_name':
-                                return (
-                                  <TableCell key={col.id} className='text-xs text-muted-foreground py-3.5'>
-                                    {deal.lender_name || '—'}
-                                  </TableCell>
-                                )
+                                case 'lender_name':
+                                  return (
+                                    <TableCell key={col.id} className='text-xs text-muted-foreground py-3.5'>
+                                      {deal.lender_name || '—'}
+                                    </TableCell>
+                                  )
 
-                              case 'deal_approval': {
-                                const approval = deal.deal_approval
-                                let badgeClass =
-                                  'bg-amber-100 text-amber-700 border-amber-200 dark:bg-amber-950/40 dark:text-amber-400'
-                                if (approval === 'Approved') {
-                                  badgeClass =
-                                    'bg-emerald-100 text-emerald-700 border-emerald-200 dark:bg-emerald-950/40 dark:text-emerald-400'
-                                } else if (approval === 'Disapproved') {
-                                  badgeClass =
-                                    'bg-rose-100 text-rose-700 border-rose-200 dark:bg-rose-950/40 dark:text-rose-400'
-                                }
-                                return (
-                                  <TableCell key={col.id} className='py-3.5'>
-                                    <Badge
-                                      variant='outline'
-                                      className={`rounded-full px-3 py-0.5 text-[11px] font-medium border shadow-2xs ${badgeClass}`}
-                                    >
-                                      {approval}
-                                    </Badge>
-                                  </TableCell>
-                                )
-                              }
-
-                              case 'case_status':
-                                return (
-                                  <TableCell key={col.id} className='py-3.5'>
-                                    {deal.case_status ? (
+                                case 'deal_approval': {
+                                  const approval = deal.deal_approval
+                                  let badgeClass =
+                                    'bg-amber-100 text-amber-700 border-amber-200 dark:bg-amber-950/40 dark:text-amber-400'
+                                  if (approval === 'Approved') {
+                                    badgeClass =
+                                      'bg-emerald-100 text-emerald-700 border-emerald-200 dark:bg-emerald-950/40 dark:text-emerald-400'
+                                  } else if (approval === 'Disapproved') {
+                                    badgeClass =
+                                      'bg-rose-100 text-rose-700 border-rose-200 dark:bg-rose-950/40 dark:text-rose-400'
+                                  }
+                                  return (
+                                    <TableCell key={col.id} className='py-3.5'>
                                       <Badge
                                         variant='outline'
-                                        className={`rounded-full px-3 py-0.5 text-[11px] font-medium border border-transparent shadow-2xs ${statusStyle}`}
+                                        className={`rounded-full px-3 py-0.5 text-[11px] font-medium border shadow-2xs ${badgeClass}`}
                                       >
-                                        {deal.case_status}
+                                        {approval || '—'}
                                       </Badge>
-                                    ) : (
-                                      <span className='text-xs text-muted-foreground'>—</span>
-                                    )}
-                                  </TableCell>
-                                )
+                                    </TableCell>
+                                  )
+                                }
 
-                              case 'ticket_login':
-                                return (
-                                  <TableCell key={col.id} className='text-xs text-muted-foreground py-3.5'>
-                                    {deal.ticket_login || '—'}
-                                  </TableCell>
-                                )
+                                case 'deal_status':
+                                case 'case_status':
+                                  return (
+                                    <TableCell key={col.id} className='py-3.5'>
+                                      <div className='flex items-center gap-1.5'>
+                                        {statusVal ? (
+                                          <Badge
+                                            variant='outline'
+                                            className={`rounded-full px-3 py-0.5 text-[11px] font-medium border border-transparent shadow-2xs ${statusStyle}`}
+                                          >
+                                            {statusVal}
+                                          </Badge>
+                                        ) : (
+                                          <span className='text-xs text-muted-foreground'>—</span>
+                                        )}
+                                        {journey.length > 0 && (
+                                          <TooltipProvider>
+                                            <Tooltip>
+                                              <TooltipTrigger asChild>
+                                                <button
+                                                  type="button"
+                                                  onClick={(e) => e.stopPropagation()}
+                                                  className="inline-flex items-center justify-center p-1 rounded-full bg-amber-50 text-amber-600 hover:bg-amber-100 border border-amber-200 dark:bg-amber-950/50 dark:text-amber-300 dark:border-amber-800 transition-colors cursor-pointer"
+                                                  aria-label="Calculated Status grouping"
+                                                >
+                                                  <Info className="w-3 h-3" />
+                                                </button>
+                                              </TooltipTrigger>
+                                              <TooltipContent
+                                                side="top"
+                                                className="p-3 max-w-md bg-popover text-popover-foreground border shadow-md space-y-1.5"
+                                                onClick={(e) => e.stopPropagation()}
+                                              >
+                                                <div className="flex items-center gap-1.5 font-bold text-xs text-foreground border-b pb-1">
+                                                  <Info className="w-3.5 h-3.5 text-amber-500" />
+                                                  Calculated Status Grouping
+                                                </div>
+                                                <div className="px-2.5 py-1.5 rounded bg-yellow-100 dark:bg-yellow-950/70 border border-yellow-300 dark:border-yellow-700 text-yellow-900 dark:text-yellow-200 font-mono text-xs font-semibold tracking-wide">
+                                                  {computeStageSummary(journey)}
+                                                </div>
+                                                <p className="text-[11px] text-muted-foreground leading-tight">
+                                                  Calculated grouping on which Status has taken how many
+                                                  days and how many times it got changed to same Status.
+                                                </p>
+                                              </TooltipContent>
+                                            </Tooltip>
+                                          </TooltipProvider>
+                                        )}
+                                      </div>
+                                    </TableCell>
+                                  )
 
-                              case 'type_of_loan':
-                                return (
-                                  <TableCell key={col.id} className='text-xs text-slate-700 dark:text-slate-300 font-medium py-3.5'>
-                                    {deal.type_of_loan || deal.loan_type || '—'}
-                                  </TableCell>
-                                )
+                                case 'ticket_login':
+                                  return (
+                                    <TableCell key={col.id} className='text-xs text-muted-foreground py-3.5'>
+                                      {deal.ticket_login || '—'}
+                                    </TableCell>
+                                  )
 
-                              case 'type_of_case_login':
-                                return (
-                                  <TableCell key={col.id} className='text-xs text-muted-foreground py-3.5'>
-                                    {deal.type_of_case_login || '—'}
-                                  </TableCell>
-                                )
+                                case 'type_of_loan':
+                                  return (
+                                    <TableCell key={col.id} className='text-xs text-slate-700 dark:text-slate-300 font-medium py-3.5'>
+                                      {deal.type_of_loan || deal.loan_type || '—'}
+                                    </TableCell>
+                                  )
 
-                              case 'deal_type':
-                                return (
-                                  <TableCell key={col.id} className='text-xs text-muted-foreground py-3.5'>
-                                    {deal.deal_type || '—'}
-                                  </TableCell>
-                                )
+                                case 'type_of_case_login':
+                                  return (
+                                    <TableCell key={col.id} className='text-xs text-muted-foreground py-3.5'>
+                                      {deal.type_of_case_login || '—'}
+                                    </TableCell>
+                                  )
 
-                              case 'amount_required':
-                                return (
-                                  <TableCell key={col.id} className='text-xs font-semibold text-emerald-600 dark:text-emerald-400 py-3.5'>
-                                    {formatAmount(deal.amount_required)}
-                                  </TableCell>
-                                )
+                                case 'deal_type':
+                                  return (
+                                    <TableCell key={col.id} className='text-xs text-muted-foreground py-3.5'>
+                                      {deal.deal_type || '—'}
+                                    </TableCell>
+                                  )
 
-                              case 'partner_name':
-                                return (
-                                  <TableCell key={col.id} className='text-xs text-muted-foreground py-3.5'>
-                                    {deal.partner_name || '—'}
-                                  </TableCell>
-                                )
+                                case 'amount_required':
+                                  return (
+                                    <TableCell key={col.id} className='text-xs font-semibold text-emerald-600 dark:text-emerald-400 py-3.5'>
+                                      {formatAmount(deal.amount_required)}
+                                    </TableCell>
+                                  )
 
-                              case 'deal_expected_closing':
-                                return (
-                                  <TableCell key={col.id} className='text-xs text-muted-foreground py-3.5'>
-                                    {deal.deal_expected_closing
-                                      ? formatExactDate(deal.deal_expected_closing, 'dd MMM yyyy')
-                                      : '—'}
-                                  </TableCell>
-                                )
+                                case 'disbursed_amount':
+                                  return (
+                                    <TableCell key={col.id} className='text-xs font-semibold text-emerald-600 dark:text-emerald-400 py-3.5'>
+                                      {formatAmount(deal.disbursed_amount)}
+                                    </TableCell>
+                                  )
 
-                              case 'deal_status_closing':
-                                return (
-                                  <TableCell key={col.id} className='text-xs text-muted-foreground py-3.5'>
-                                    {deal.deal_status_closing || '—'}
-                                  </TableCell>
-                                )
+                                case 'sanction_amount':
+                                  return (
+                                    <TableCell key={col.id} className='text-xs font-semibold text-emerald-600 dark:text-emerald-400 py-3.5'>
+                                      {formatAmount(deal.sanction_amount)}
+                                    </TableCell>
+                                  )
 
-                              case 'modified_time':
-                                return (
-                                  <TableCell key={col.id} className='text-xs text-muted-foreground py-3.5'>
-                                    {deal.modified_time
-                                      ? formatExactDate(deal.modified_time, 'dd MMM yyyy')
-                                      : '—'}
-                                  </TableCell>
-                                )
+                                case 'approved_amount':
+                                  return (
+                                    <TableCell key={col.id} className='text-xs font-semibold text-emerald-600 dark:text-emerald-400 py-3.5'>
+                                      {formatAmount(deal.approved_amount)}
+                                    </TableCell>
+                                  )
 
-                              default:
-                                return <TableCell key={col.id} />
-                            }
-                          })}
+                                case 'processing_fees':
+                                  return (
+                                    <TableCell key={col.id} className='text-xs text-muted-foreground py-3.5'>
+                                      {formatAmount(deal.processing_fees)}
+                                    </TableCell>
+                                  )
 
-                          <TableCell
-                            className='w-[48px] px-3 py-3.5 text-center'
+                                case 'partner_name':
+                                  return (
+                                    <TableCell key={col.id} className='text-xs text-muted-foreground py-3.5'>
+                                      {deal.partner_name || '—'}
+                                    </TableCell>
+                                  )
+
+                                case 'deal_stage':
+                                  return (
+                                    <TableCell key={col.id} className='text-xs text-muted-foreground py-3.5'>
+                                      {deal.deal_stage || '—'}
+                                    </TableCell>
+                                  )
+
+                                case 'lender_login_type':
+                                  return (
+                                    <TableCell key={col.id} className='text-xs text-muted-foreground py-3.5'>
+                                      {deal.lender_login_type || '—'}
+                                    </TableCell>
+                                  )
+
+                                case 'deal_call_back_datetime':
+                                  return (
+                                    <TableCell key={col.id} className='text-xs text-muted-foreground py-3.5'>
+                                      {deal.deal_call_back_datetime
+                                        ? formatExactDate(deal.deal_call_back_datetime, 'dd MMM yyyy')
+                                        : '—'}
+                                    </TableCell>
+                                  )
+
+                                case 'deal_expected_closing':
+                                  return (
+                                    <TableCell key={col.id} className='text-xs text-muted-foreground py-3.5'>
+                                      {deal.deal_expected_closing
+                                        ? formatExactDate(deal.deal_expected_closing, 'dd MMM yyyy')
+                                        : '—'}
+                                    </TableCell>
+                                  )
+
+                                case 'deal_status_closing':
+                                  return (
+                                    <TableCell key={col.id} className='text-xs text-muted-foreground py-3.5'>
+                                      {deal.deal_status_closing
+                                        ? formatExactDate(deal.deal_status_closing, 'dd MMM yyyy')
+                                        : '—'}
+                                    </TableCell>
+                                  )
+
+                                case 'disbursement_date':
+                                  return (
+                                    <TableCell key={col.id} className='text-xs text-muted-foreground py-3.5'>
+                                      {deal.disbursement_date
+                                        ? formatExactDate(deal.disbursement_date, 'dd MMM yyyy')
+                                        : '—'}
+                                    </TableCell>
+                                  )
+
+                                case 'lender_login_date':
+                                  return (
+                                    <TableCell key={col.id} className='text-xs text-muted-foreground py-3.5'>
+                                      {deal.lender_login_date
+                                        ? formatExactDate(deal.lender_login_date, 'dd MMM yyyy')
+                                        : '—'}
+                                    </TableCell>
+                                  )
+
+                                case 'targeted_disbursement_date':
+                                  return (
+                                    <TableCell key={col.id} className='text-xs text-muted-foreground py-3.5'>
+                                      {deal.targeted_disbursement_date
+                                        ? formatExactDate(deal.targeted_disbursement_date, 'dd MMM yyyy')
+                                        : '—'}
+                                    </TableCell>
+                                  )
+
+                                case 'loan_start_date':
+                                  return (
+                                    <TableCell key={col.id} className='text-xs text-muted-foreground py-3.5'>
+                                      {deal.loan_start_date
+                                        ? formatExactDate(deal.loan_start_date, 'dd MMM yyyy')
+                                        : '—'}
+                                    </TableCell>
+                                  )
+
+                                case 'loan_end_date':
+                                  return (
+                                    <TableCell key={col.id} className='text-xs text-muted-foreground py-3.5'>
+                                      {deal.loan_end_date
+                                        ? formatExactDate(deal.loan_end_date, 'dd MMM yyyy')
+                                        : '—'}
+                                    </TableCell>
+                                  )
+
+                                case 'created_at':
+                                  return (
+                                    <TableCell key={col.id} className='text-xs text-muted-foreground py-3.5'>
+                                      {deal.created_at
+                                        ? formatExactDate(deal.created_at, 'dd MMM yyyy')
+                                        : '—'}
+                                    </TableCell>
+                                  )
+
+                                case 'modified_time':
+                                  return (
+                                    <TableCell key={col.id} className='text-xs text-muted-foreground py-3.5'>
+                                      {deal.modified_time
+                                        ? formatExactDate(deal.modified_time, 'dd MMM yyyy')
+                                        : '—'}
+                                    </TableCell>
+                                  )
+
+                                default:
+                                  return (
+                                    <TableCell key={col.id} className='text-xs text-muted-foreground py-3.5'>
+                                      {(deal as any)[col.id] != null && (deal as any)[col.id] !== ''
+                                        ? String((deal as any)[col.id])
+                                        : '—'}
+                                    </TableCell>
+                                  )
+                              }
+                            })}
+
+                            <TableCell
+                              className='w-[48px] px-3 py-3.5 text-center'
+                              onClick={(e) => e.stopPropagation()}
+                            >
+                              <DropdownMenu>
+                                <DropdownMenuTrigger asChild>
+                                  <Button
+                                    variant='ghost'
+                                    size='icon'
+                                    className='h-7 w-7 rounded-md text-muted-foreground hover:text-foreground cursor-pointer'
+                                  >
+                                    <MoreVertical className='h-4 w-4' />
+                                  </Button>
+                                </DropdownMenuTrigger>
+                                <DropdownMenuContent align='end' className='w-40'>
+                                  <DropdownMenuItem
+                                    onClick={() => handleRowClick(deal.id.toString())}
+                                    className='text-xs cursor-pointer gap-2'
+                                  >
+                                    <ExternalLink className='h-3.5 w-3.5' /> View Details
+                                  </DropdownMenuItem>
+                                </DropdownMenuContent>
+                              </DropdownMenu>
+                            </TableCell>
+                          </TableRow>
+
+                          <TableRow
+                            key={`${deal.id}-tracker`}
+                            className='hover:bg-transparent border-b border-border/40 mt-none'
                             onClick={(e) => e.stopPropagation()}
                           >
-                            <DropdownMenu>
-                              <DropdownMenuTrigger asChild>
-                                <Button
-                                  variant='ghost'
-                                  size='icon'
-                                  className='h-7 w-7 rounded-md text-muted-foreground hover:text-foreground cursor-pointer'
-                                >
-                                  <MoreVertical className='h-4 w-4' />
-                                </Button>
-                              </DropdownMenuTrigger>
-                              <DropdownMenuContent align='end' className='w-40'>
-                                <DropdownMenuItem
-                                  onClick={() => handleRowClick(deal.id.toString())}
-                                  className='text-xs cursor-pointer gap-2'
-                                >
-                                  <ExternalLink className='h-3.5 w-3.5' /> View Details
-                                </DropdownMenuItem>
-                              </DropdownMenuContent>
-                            </DropdownMenu>
-                          </TableCell>
-                        </TableRow>
+                            <TableCell
+                              colSpan={visibleColumns.length + 1}
+                              className='px-6 py-3 bg-muted/20'
+                            >
+                              <TooltipProvider>
+                                <div className='flex items-center gap-2 flex-wrap py-1 min-h-[40px]'>
+                                  {journey.length > 0 && (
+                                    <Tooltip>
+                                      <TooltipTrigger asChild>
+                                        <button
+                                          type='button'
+                                          className='inline-flex items-center justify-center p-1 rounded-full bg-amber-50 text-amber-600 hover:bg-amber-100 border border-amber-200 dark:bg-amber-950/50 dark:text-amber-300 dark:border-amber-800 transition-colors mr-1 cursor-pointer'
+                                          aria-label='Calculated Status grouping'
+                                        >
+                                          <Info className='w-3.5 h-3.5' />
+                                        </button>
+                                      </TooltipTrigger>
+
+                                      <TooltipContent
+                                        side='top'
+                                        className='p-3 max-w-md bg-popover text-popover-foreground border shadow-md space-y-1.5'
+                                      >
+                                        <div className='flex items-center gap-1.5 font-bold text-xs text-foreground border-b pb-1'>
+                                          <Info className='w-3.5 h-3.5 text-amber-500' />
+                                          Calculated Status Grouping
+                                        </div>
+
+                                        <div className='px-2.5 py-1.5 rounded bg-yellow-100 dark:bg-yellow-950/70 border border-yellow-300 dark:border-yellow-700 text-yellow-900 dark:text-yellow-200 font-mono text-xs font-semibold tracking-wide'>
+                                          {computeStageSummary(journey)}
+                                        </div>
+
+                                        <p className='text-[11px] text-muted-foreground leading-tight'>
+                                          Calculated grouping on which Status has taken how many
+                                          days and how many times it got changed to same Status.
+                                        </p>
+                                      </TooltipContent>
+                                    </Tooltip>
+                                  )}
+
+                                  {journey.length === 0 ? (
+                                    <span className='text-xs text-muted-foreground italic'>
+                                      No status history recorded yet
+                                    </span>
+                                  ) : (
+                                    journey.map((step: any, idx: number) => {
+                                      const style =
+                                        STATUS_COLOR_MAP[step.color] || STATUS_COLOR_MAP.blue
+
+                                      return (
+                                        <div key={idx} className='flex items-center gap-2'>
+                                          <Tooltip>
+                                            <TooltipTrigger asChild>
+                                              <div
+                                                className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full border ${style.bg} ${style.border} ${style.text} shadow-2xs font-medium text-xs cursor-pointer hover:scale-105 transition-transform`}
+                                              >
+                                                <span
+                                                  className={`w-2.5 h-2.5 rounded-full ${style.dot} flex-shrink-0`}
+                                                />
+                                                <span className='font-bold text-xs'>
+                                                  {step.name}
+                                                </span>
+                                                <span className='text-[11px] opacity-90 font-mono'>
+                                                  · {step.duration}
+                                                </span>
+                                              </div>
+                                            </TooltipTrigger>
+
+                                            <TooltipContent
+                                              side='top'
+                                              className='text-xs space-y-1 p-2.5'
+                                            >
+                                              <p className='font-bold'>Status: {step.name}</p>
+                                              <div className='text-[11px] space-y-0.5'>
+                                                <p>
+                                                  Duration spent:{' '}
+                                                  <span className='font-semibold text-foreground'>
+                                                    {step.duration}
+                                                  </span>
+                                                </p>
+                                                {step.startDate && (
+                                                  <p>Started: {step.startDate}</p>
+                                                )}
+                                                {step.endDate && (
+                                                  <p>Ended: {step.endDate}</p>
+                                                )}
+                                                {step.updatedBy && (
+                                                  <p>Updated by: {step.updatedBy}</p>
+                                                )}
+                                              </div>
+                                            </TooltipContent>
+                                          </Tooltip>
+
+                                          {idx < journey.length - 1 && (
+                                            <span className='text-muted-foreground/60 text-xs font-bold'>
+                                              →
+                                            </span>
+                                          )}
+                                        </div>
+                                      )
+                                    })
+                                  )}
+                                </div>
+                              </TooltipProvider>
+                            </TableCell>
+                          </TableRow>
+                        </div>
                       )
                     })
                   )}

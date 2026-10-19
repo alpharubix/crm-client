@@ -180,3 +180,49 @@ export async function fetchMessagesByPhone(params: {
     has_more: Boolean(json.has_more),
   };
 }
+
+export interface AccountTemplateSummaryItem {
+  template_name: string;
+  latest_status: 'interested' | 'not_interested' | string;
+  button_text?: string;
+  customer_phone?: string;
+  responded_at?: string;
+  response_count: number;
+}
+
+export interface AccountTemplateResponseHistoryItem {
+  id: number;
+  template_name: string;
+  template_language?: string;
+  response_status: 'interested' | 'not_interested' | string;
+  button_text?: string;
+  customer_phone: string;
+  contact_id?: number;
+  responded_at?: string;
+}
+
+export interface AccountTemplateResponsesResponse {
+  status: string;
+  account_id: number;
+  account_name: string;
+  summary: {
+    total_unique_templates_responded: number;
+    total_interested: number;
+    total_not_interested: number;
+    templates: AccountTemplateSummaryItem[];
+  };
+  history: AccountTemplateResponseHistoryItem[];
+}
+
+export async function fetchAccountTemplateResponses(
+  accountId: number | string
+): Promise<AccountTemplateResponsesResponse> {
+  const res = await fetch(`${BASE_URL}/accounts/${accountId}/responses`, {
+    credentials: 'include',
+  });
+  if (!res.ok) {
+    throw new Error('Failed to fetch template responses for this account');
+  }
+  return res.json();
+}
+

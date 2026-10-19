@@ -1,7 +1,7 @@
-import { MANAGER_USER_IDS } from '@/conf';
+import { MANAGER_USER_IDS } from '@/conf'
 
-import { NavMain } from '@/components/nav-main';
-import { NavUser } from '@/components/nav-user';
+import { NavMain } from '@/components/nav-main'
+import { NavUser } from '@/components/nav-user'
 import {
   Sidebar,
   SidebarContent,
@@ -9,7 +9,7 @@ import {
   SidebarHeader,
   SidebarRail,
   SidebarTrigger,
-} from '@/components/ui/sidebar';
+} from '@/components/ui/sidebar'
 import {
   Building2,
   Briefcase,
@@ -24,9 +24,9 @@ import {
   LifeBuoy,
   GalleryVerticalEnd,
   MessageCircle,
-} from 'lucide-react';
-import { useAuth } from '@/context/auth-context';
-import SailLogo from '@/assets/sail-logo-3-cropped.svg';
+} from 'lucide-react'
+import { useAuth } from '@/context/auth-context'
+import SailLogo from '@/assets/sail-logo-3-cropped.svg'
 
 const data = {
   user: {
@@ -73,6 +73,10 @@ const data = {
         {
           title: 'Live Inbox',
           url: '/whatsapp',
+        },
+        {
+          title: 'Broadcast WhatsApp',
+          url: '/broadcast-whatsapp',
         },
       ],
     },
@@ -197,33 +201,33 @@ const data = {
       ],
     },
   ],
-};
+}
 
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
-  const { user } = useAuth();
+  const { user } = useAuth()
 
-  const currentUserId = user?.user_id ? String(user.user_id) : '';
+  const currentUserId = user?.user_id ? String(user.user_id) : ''
   const rawRole = String(user?.role || '')
     .toLowerCase()
     .trim()
-    .replace(/\s+/g, '_');
+    .replace(/\s+/g, '_')
   const isSuperAdmin =
     ['super_admin', 'superadmin'].includes(rawRole) ||
     rawRole.includes('super_admin') ||
-    rawRole.includes('superadmin');
+    rawRole.includes('superadmin')
   const isAdminOrSuperAdmin =
-    isSuperAdmin || ['admin'].includes(rawRole) || rawRole.includes('admin');
+    isSuperAdmin || ['admin'].includes(rawRole) || rawRole.includes('admin')
 
   // Isolate user identity signatures
-  const isSarada = currentUserId === '3899927000000221552';
-  const isAmbika = currentUserId === '3899927000000527649';
-  const isManager = MANAGER_USER_IDS.includes(currentUserId);
+  const isSarada = currentUserId === '3899927000000221552'
+  const isAmbika = currentUserId === '3899927000000527649'
+  const isManager = MANAGER_USER_IDS.includes(currentUserId)
 
   const navUser = {
     name: user?.user_name || 'User',
     email: user?.email || '',
     avatar: '/avatars/shadcn.jpg',
-  };
+  }
 
   return (
     <Sidebar collapsible='icon' {...props}>
@@ -256,7 +260,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
           items={data.navMain
             .filter((item) => {
               if (isSarada || isAmbika) {
-                return item.title === 'Workspace';
+                return item.title === 'Workspace'
               }
 
               if (
@@ -264,30 +268,30 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                   item.title === 'WhatsApp CRM') &&
                 !isSuperAdmin
               ) {
-                return false;
+                return false
               }
 
-              return true;
+              return true
             })
             .map((item) => {
-              let items = item.items;
+              let items = item.items
               if (isSarada || isAmbika) {
-                items = items?.filter((subItem) => subItem.url === '/hiring');
+                items = items?.filter((subItem) => subItem.url === '/hiring')
               } else {
                 items = items?.filter((subItem) => {
                   if (
                     subItem.url === '/acc-status-journey' &&
                     !isAdminOrSuperAdmin
                   ) {
-                    return false;
+                    return false
                   }
-                  return true;
-                });
+                  return true
+                })
               }
               return {
                 ...item,
                 items,
-              };
+              }
             })}
         />
       </SidebarContent>
@@ -296,5 +300,5 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
       </SidebarFooter>
       <SidebarRail />
     </Sidebar>
-  );
+  )
 }

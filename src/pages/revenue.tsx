@@ -50,6 +50,9 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 
+import { formatExactDate } from '@/utils/date-formatter'
+import { useDateSort, SortableDateHeader } from '@/utils/table-sort'
+
 const DEFAULT_COLUMNS = [
   { id: 'account_name', label: 'Account Name', selected: true },
   { id: 'lender_name', label: 'Lender Name', selected: true },
@@ -58,6 +61,8 @@ const DEFAULT_COLUMNS = [
   { id: 'type_of_revenue', label: 'Type of Revenue', selected: true },
   { id: 'amount', label: 'Amount', selected: true },
   { id: 'gst_amount', label: 'GST Amount', selected: true },
+  { id: 'created_at', label: 'Created At', selected: false },
+  { id: 'updated_at', label: 'Updated At', selected: false },
 ]
 
 const getInitialAvatarColor = (name: string) => {
@@ -94,7 +99,7 @@ export default function RevenuePage() {
     DEFAULT_COLUMNS,
   )
 
-  const visibleColumns = columns.filter((c) => c.selected)
+  const visibleColumns = columns.filter((c) => c.selected).slice(0, 10)
 
   const [appliedFilters, setAppliedFilters] = useState(filters)
 
@@ -135,7 +140,8 @@ export default function RevenuePage() {
     placeholderData: keepPreviousData,
   })
 
-  const revenues = data?.data || []
+  const rawRevenues = data?.data || []
+  const { sortedData: revenues = [], sortConfig, requestSort } = useDateSort(rawRevenues)
   const pageInfo = data?.page_info || { page: 1, total_pages: 1, data_size: 0 }
   const totalCount = pageInfo.data_size || (pageInfo.total_pages ? pageInfo.total_pages * pageSize : revenues.length)
 
@@ -343,7 +349,12 @@ export default function RevenuePage() {
                         key={col.id}
                         className='text-xs font-semibold text-muted-foreground tracking-wide py-3'
                       >
-                        {col.label}
+                        <SortableDateHeader
+                          columnId={col.id}
+                          label={col.label}
+                          sortConfig={sortConfig}
+                          onSort={requestSort}
+                        />
                       </TableHead>
                     ))}
                     <TableHead className='w-[48px] px-3' />
@@ -447,8 +458,28 @@ export default function RevenuePage() {
                                   </TableCell>
                                 )
 
+                              case 'created_at':
+                                return (
+                                  <TableCell key={col.id} className='text-xs text-muted-foreground py-3.5'>
+                                    {rev.created_at ? formatExactDate(rev.created_at, 'dd MMM yyyy') : '—'}
+                                  </TableCell>
+                                )
+
+                              case 'updated_at':
+                                return (
+                                  <TableCell key={col.id} className='text-xs text-muted-foreground py-3.5'>
+                                    {rev.updated_at ? formatExactDate(rev.updated_at, 'dd MMM yyyy') : '—'}
+                                  </TableCell>
+                                )
+
                               default:
-                                return <TableCell key={col.id} />
+                                return (
+                                  <TableCell key={col.id} className='text-xs text-muted-foreground py-3.5'>
+                                    {(rev as any)[col.id] != null && (rev as any)[col.id] !== ''
+                                      ? String((rev as any)[col.id])
+                                      : '—'}
+                                  </TableCell>
+                                )
                             }
                           })}
 
