@@ -94,6 +94,8 @@ export interface BroadcastRecordItem {
   msg_type: string;
   message_text: string;
   template_name?: string;
+  response_intent?: string | null;
+  response_button?: string | null;
   buttons?: Array<{ id?: string; title?: string; text?: string }>;
   status: string;
   status_history?: Array<{
@@ -248,6 +250,8 @@ export default function BroadcastMessagesRecordsTab() {
   const [directionFilter, setDirectionFilter] = useState<string>('all');
   const [msgTypeFilter, setMsgTypeFilter] = useState<string>('all');
   const [statusFilter, setStatusFilter] = useState<string>('all');
+  const [templateFilter, setTemplateFilter] = useState<string>('all');
+  const [responseScope, setResponseScope] = useState<'all' | 'replies_only'>('all');
   const [fromDate, setFromDate] = useState<string>('');
   const [fromTime, setFromTime] = useState<string>('');
   const [toDate, setToDate] = useState<string>('');
@@ -262,6 +266,21 @@ export default function BroadcastMessagesRecordsTab() {
 
   // Image preview state
   const [previewImage, setPreviewImage] = useState<{ url: string; caption?: string } | null>(null);
+
+  // Fetch available broadcast template names
+  const { data: templatesData } = useQuery<{ status: string; data: string[] }>({
+    queryKey: ['broadcast-templates-list'],
+    queryFn: async () => {
+      const res = await fetch(
+        `${ENV.VITE_BACKEND_BASE_URL}/tele-crm/broadcast-templates`,
+        { credentials: 'include' },
+      );
+      if (!res.ok) return { status: 'success', data: [] };
+      return res.json();
+    },
+    staleTime: 5 * 60 * 1000,
+  });
+  const availableTemplates: string[] = templatesData?.data || [];
 
   // Copy helper
   const handleCopyText = (textToCopy: string, id: string, label: string) => {
@@ -285,6 +304,8 @@ export default function BroadcastMessagesRecordsTab() {
         directionFilter,
         msgTypeFilter,
         statusFilter,
+        templateFilter,
+        responseScope,
         fromDate,
         fromTime,
         toDate,
@@ -306,6 +327,10 @@ export default function BroadcastMessagesRecordsTab() {
         }
         if (statusFilter && statusFilter !== 'all') {
           params.append('status', statusFilter);
+        }
+        if (templateFilter && templateFilter !== 'all') {
+          params.append('template_name', templateFilter);
+          params.append('response_scope', responseScope);
         }
         if (fromDate) {
           const fromParam = fromTime
@@ -436,6 +461,8 @@ export default function BroadcastMessagesRecordsTab() {
     setDirectionFilter('all');
     setMsgTypeFilter('all');
     setStatusFilter('all');
+    setTemplateFilter('all');
+    setResponseScope('all');
     setFromDate('');
     setFromTime('');
     setToDate('');
@@ -449,6 +476,7 @@ export default function BroadcastMessagesRecordsTab() {
     directionFilter !== 'all' ||
     msgTypeFilter !== 'all' ||
     statusFilter !== 'all' ||
+    templateFilter !== 'all' ||
     Boolean(fromDate) ||
     Boolean(toDate);
 
@@ -645,6 +673,68 @@ export default function BroadcastMessagesRecordsTab() {
                     </SelectContent>
                   </Select>
                 </div>
+
+                {/* Template Filter (Responded Customers) */}
+                <div className='flex items-center gap-1.5'>
+                  <span className='text-xs text-muted-foreground whitespace-nowrap font-medium'>
+                    Template:
+                  </span>
+                  <Select
+                    value={templateFilter}
+                    onValueChange={(val) => {
+                      setTemplateFilter(val);
+                      setCurrentPage(1);
+                    }}
+                  >
+                    <SelectTrigger className='h-9 text-xs w-[165px] rounded-lg bg-background'>
+                      <SelectValue placeholder='All Templates' />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value='all'>All Templates</SelectItem>
+                      {availableTemplates.map((tName) => (
+                        <SelectItem key={tName} value={tName}>
+                          {tName}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                {/* Response Scope Toggle (visible when template is selected) */}
+                {templateFilter !== 'all' && (
+                  <div className='flex items-center bg-muted/60 p-0.5 rounded-lg border border-purple-500/30 gap-1 text-xs'>
+                    <button
+                      type='button'
+                      onClick={() => {
+                        setResponseScope('all');
+                        setCurrentPage(1);
+                      }}
+                      className={`px-2.5 py-1 rounded-md text-[11px] font-semibold transition-all cursor-pointer ${
+                        responseScope === 'all'
+                          ? 'bg-purple-600 text-white shadow-xs'
+                          : 'text-muted-foreground hover:text-foreground'
+                      }`}
+                      title='Show all conversation messages of customers who responded to this template'
+                    >
+                      All Messages
+                    </button>
+                    <button
+                      type='button'
+                      onClick={() => {
+                        setResponseScope('replies_only');
+                        setCurrentPage(1);
+                      }}
+                      className={`px-2.5 py-1 rounded-md text-[11px] font-semibold transition-all cursor-pointer ${
+                        responseScope === 'replies_only'
+                          ? 'bg-purple-600 text-white shadow-xs'
+                          : 'text-muted-foreground hover:text-foreground'
+                      }`}
+                      title='Show only the customer reply messages received for this template'
+                    >
+                      Replies Only
+                    </button>
+                  </div>
+                )}
 
                 {/* Rows Per Page */}
                 <div className='flex items-center gap-1.5'>
@@ -975,9 +1065,31 @@ export default function BroadcastMessagesRecordsTab() {
                                 {item.customer_name || '—'}
                               </span>
                               {item.template_name && (
-                                <span className='text-[10px] text-purple-600 dark:text-purple-400 truncate flex items-center gap-1'>
-                                  <Sparkles className='h-2.5 w-2.5' />
-                                  {item.template_name}
+                                <span
+                                  className={`text-[10px] truncate flex items-center gap-1 font-medium ${
+                                    item.direction === 'inbound'
+                                      ? 'text-sky-600 dark:text-sky-400'
+                                      : 'text-purple-600 dark:text-purple-400'
+                                  }`}
+                                  title={
+                                    item.direction === 'inbound'
+                                      ? `Responded to template: ${item.template_name}`
+                                      : `Template: ${item.template_name}`
+                                  }
+                                >
+                                  <Sparkles className='h-2.5 w-2.5 shrink-0' />
+                                  <span className='truncate'>{item.template_name}</span>
+                                  {item.response_intent && (
+                                    <span
+                                      className={`ml-1 px-1 py-0.2 rounded text-[9px] uppercase font-bold shrink-0 ${
+                                        item.response_intent.toLowerCase().includes('not')
+                                          ? 'bg-rose-100 text-rose-700 dark:bg-rose-950 dark:text-rose-400'
+                                          : 'bg-emerald-100 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-400'
+                                      }`}
+                                    >
+                                      {item.response_intent}
+                                    </span>
+                                  )}
                                 </span>
                               )}
                             </div>
@@ -1257,10 +1369,24 @@ export default function BroadcastMessagesRecordsTab() {
                   {activeDetailItem.template_name && (
                     <div className='flex flex-col gap-0.5'>
                       <span className='text-muted-foreground font-medium'>
-                        Template Name:
+                        {activeDetailItem.direction === 'inbound'
+                          ? 'Responded Template:'
+                          : 'Template Name:'}
                       </span>
                       <span className='font-mono font-medium text-purple-600 truncate'>
                         {activeDetailItem.template_name}
+                      </span>
+                    </div>
+                  )}
+
+                  {activeDetailItem.response_intent && (
+                    <div className='flex flex-col gap-0.5'>
+                      <span className='text-muted-foreground font-medium'>
+                        Response Intent:
+                      </span>
+                      <span className='font-medium capitalize text-emerald-600 dark:text-emerald-400'>
+                        {activeDetailItem.response_intent}
+                        {activeDetailItem.response_button && ` (${activeDetailItem.response_button})`}
                       </span>
                     </div>
                   )}
