@@ -324,12 +324,14 @@ export default function CreateAccount() {
       }
       return res.json();
     },
-    onSuccess: (response) => {
+    onSuccess: (response: any) => {
       toast.success('Account created successfully!');
-      // Log the response to see its structure
-      console.log('Create response:', response);
-      // Try different paths based on your API response
-      navigate(`/accounts/${response.id || response.data?.id}`);
+      const accountId = response?.id || response?.data?.id || response?.account_id;
+      if (accountId) {
+        navigate(`/accounts/${accountId}`);
+      } else {
+        navigate('/accounts');
+      }
     },
     onError: (err: any) => {
       toast.error(err.message || 'Failed to create account');

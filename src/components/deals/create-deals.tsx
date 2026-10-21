@@ -161,9 +161,14 @@ export default function CreateDeal() {
       }
       return res.json()
     },
-    onSuccess: () => {
+    onSuccess: (data: any) => {
       toast.success('Deal created successfully')
-      navigate('/deals')
+      const dealId = data?.id || data?.data?.id
+      if (dealId) {
+        navigate(`/deals/${dealId}`)
+      } else {
+        navigate('/deals')
+      }
     },
     onError: (err) => {
       toast.error(err.message)
@@ -372,7 +377,7 @@ export default function CreateDeal() {
           <div>
             <FieldRow label='Deal Name'>
               <span className='text-sm text-muted-foreground italic'>
-                Auto-generated on save (e.g. AccountName/ID/D01)
+                Auto-generated on save
               </span>
             </FieldRow>
 

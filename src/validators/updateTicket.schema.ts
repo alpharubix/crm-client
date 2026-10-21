@@ -3,7 +3,7 @@ import { z } from 'zod'
 export const updateTicketSchema = z.object({
   // Required fields (NOT NULL / critical business fields)
   lenderName: z.string().min(1, 'Lender name is required'),
-  loanType: z.string().min(1, 'Type of loan is required'),
+  loanType: z.string().optional(),
   ticketStatus: z.string().min(1, 'Ticket status is required'),
   ticketStage: z.string().min(1, 'Ticket stage is required'),
   lenderLoginType: z.string().min(1, 'Lender login type is required'),

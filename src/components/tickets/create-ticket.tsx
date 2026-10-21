@@ -190,14 +190,18 @@ export default function CreateTicket() {
     if (dealData) {
       const accId = String(dealData.account_id || '')
       const accName = dealData.account_name || ''
+      const dealLoanType = dealData.loan_type || dealData.type_of_loan || ''
       if (!selectedAccountId && accId) {
         setSelectedAccountId(accId)
       }
       if (!accountSearch && accName) {
         setAccountSearch(accName)
       }
+      if (dealLoanType) {
+        setValue('typeOfLoan', dealLoanType)
+      }
     }
-  }, [dealData, selectedAccountId, accountSearch])
+  }, [dealData, selectedAccountId, accountSearch, setValue])
 
   // Note: Account on a ticket is separate from the deal's account.
   // We intentionally do NOT pre-fill the account search from dealData —
@@ -205,10 +209,12 @@ export default function CreateTicket() {
 
   const createMutation = useMutation({
     mutationFn: async (values: CreateTicketFormValues) => {
+      const parentLoanType =
+        dealData?.loan_type || dealData?.type_of_loan || values.typeOfLoan || undefined
       const payload: any = {
         deal_id: dealId,
         lender_name: values.lenderName,
-        type_of_loan: values.typeOfLoan,
+        type_of_loan: parentLoanType,
         ticket_status: values.ticketStatus,
         ticket_stage: values.ticketStage,
         lender_login_type: values.lenderLoginType,
@@ -265,11 +271,16 @@ export default function CreateTicket() {
       }
       return res.json()
     },
-    onSuccess: () => {
+    onSuccess: (data: any) => {
       toast.success('Ticket created successfully')
       queryClient.invalidateQueries({ queryKey: ['deal', dealId] })
       queryClient.invalidateQueries({ queryKey: ['account'] })
-      navigate(-1)
+      const ticketId = data?.id || data?.data?.id
+      if (ticketId) {
+        navigate(`/tickets/${ticketId}`)
+      } else {
+        navigate(-1)
+      }
     },
     onError: (err) => {
       toast.error(err.message)
@@ -285,21 +296,6 @@ export default function CreateTicket() {
       <div className='flex justify-between items-center border p-4 rounded-xl bg-card'>
         <div>
           <h1 className='text-2xl font-bold'>Create Ticket</h1>
-          {/* Display Account Name here */}
-          {isLoadingDeal ? (
-            <Spinner className='h-4 w-4' />
-          ) : (
-            <>
-              <div className='flex flex-col'>
-                <span className='text-sm font-semibold text-primary uppercase'>
-                  Account: {accountName}
-                </span>
-                <span className='text-sm font-medium text-muted-foreground'>
-                  Deal Name: {dealName} #{dealId}
-                </span>
-              </div>
-            </>
-          )}
         </div>
         <div className='flex gap-2'>
           <Button
@@ -378,7 +374,16 @@ export default function CreateTicket() {
                 )}
               </div>
             </FieldRow>
-
+            <FieldRow label='Deal Name'>
+              <span className='text-sm text-muted-foreground italic'>
+                {dealName}
+              </span>
+            </FieldRow>
+            <FieldRow label='Ticket Name'>
+              <span className='text-sm text-muted-foreground italic'>
+                Auto-generated on save
+              </span>
+            </FieldRow>
             <FieldRow
               label='Ticket Login *'
               error={errors.ticketLogin?.message}
@@ -538,15 +543,16 @@ export default function CreateTicket() {
               />
             </FieldRow>
 
-            <FieldRow label='Type of Loan *' error={errors.typeOfLoan?.message}>
-              <SelectField
-                isEdit={true}
-                options={LOAN_TYPES}
-                value={formValues.typeOfLoan ?? ''}
-                onChange={(value) =>
-                  setValue('typeOfLoan', value, { shouldValidate: true })
-                }
-              />
+            <FieldRow label='Deal Type'>
+              <span className='text-sm text-muted-foreground italic'>
+                {dealData?.deal_type || '—'}
+              </span>
+            </FieldRow>
+
+            <FieldRow label='Type of Loan'>
+              <span className='text-sm text-muted-foreground italic'>
+                {dealData?.loan_type || dealData?.type_of_loan || '—'}
+              </span>
             </FieldRow>
 
             <FieldRow
