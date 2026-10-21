@@ -737,6 +737,16 @@ export default function UpdateKanbanTicket({
                   '—'}
               </span>
             </FieldRow>
+            <FieldRow label='Deal Type'>
+              <span className='text-sm font-medium text-muted-foreground'>
+                {dealDetails?.deal_type || dealData?.deal_type || '—'}
+              </span>
+            </FieldRow>
+            <FieldRow label='Type of Loan'>
+              <span className='text-sm font-medium text-muted-foreground'>
+                {dealDetails?.loan_type || dealData?.type_of_loan || '—'}
+              </span>
+            </FieldRow>
 
             <FieldRow label='Modified By'>
               <span className='text-sm font-medium text-muted-foreground'>
@@ -818,33 +828,6 @@ export default function UpdateKanbanTicket({
               />
             </FieldRow>
 
-
-
-            <FieldRow label='Type of Loan *' error={errors.loanType?.message}>
-              <SelectField
-                isEdit={isEdit}
-                options={[
-                  'SCF',
-                  'SCF Renewal',
-                  'SCF Enhancement',
-                  'SCF (Renewal and Enhancement)',
-                  'Open SCF',
-                  'Open SCF Renewal',
-                  'Open SCF Enhancement',
-                  'Open SCF (Renewal and Enhancement)',
-                  'BT-SCF',
-                  'BT-Open SCF',
-                  'Unsecured OD',
-                  'Unsecured Term Loan',
-                  'Secured Loan',
-                  'Secured BT',
-                  'Vehicle Loan',
-                  'CGTMSE'
-                ]}
-                value={formValues.loanType as string}
-                onChange={(value) => setValue('loanType', value, DIRTY_OPTS)}
-              />
-            </FieldRow>
 
             <FieldRow
               label='Ticket Status *'

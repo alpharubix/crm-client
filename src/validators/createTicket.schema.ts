@@ -3,7 +3,7 @@ import { z } from 'zod'
 export const createTicketSchema = z.object({
   accountId: z.string().min(1, 'Account ID is required'),
   lenderName: z.string().min(1, 'Lender name is required'),
-  typeOfLoan: z.string().min(1, 'Type of loan is required'),
+  typeOfLoan: z.string().optional(),
   ticketStatus: z.string().min(1, 'Ticket status is required'),
   ticketStage: z.string().min(1, 'Ticket stage is required'),
   lenderLoginType: z.string().min(1, 'Lender login type is required'),
