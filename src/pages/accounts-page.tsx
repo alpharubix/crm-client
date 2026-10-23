@@ -133,6 +133,8 @@ const SOURCE_OPTIONS: Option[] = [
   { value: 'Vibhava Marketing', label: 'Vibhava Marketing' },
   { value: 'R1X Website', label: 'R1X Website' },
   { value: '5pointcredit', label: '5pointcredit' },
+  { value: 'event', label: 'Event' },
+  { value: 'blank', label: 'Blank' },
 ];
 
 const INDUSTRY_OPTIONS: Option[] = [
