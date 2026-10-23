@@ -9,6 +9,7 @@ export const createTicketSchema = z.object({
   lenderLoginType: z.string().min(1, 'Lender login type is required'),
   lenderLoginDate: z.string().min(1, 'Lender login date is required'),
   ticketLogin: z.string().min(1, 'Ticket login is required'),
+  ticketCallBackDatetime: z.string().min(1, 'Call back date is required'),
   potential: z
     .string()
     .optional()

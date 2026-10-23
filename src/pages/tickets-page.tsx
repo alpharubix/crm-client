@@ -127,6 +127,7 @@ const DEFAULT_COLUMNS = [
     selected: true,
   },
   { id: 'ticket_status', label: 'Ticket Status', selected: true },
+  { id: 'ticket_call_back_datetime', label: 'Call Back Date Time', selected: false },
   { id: 'modified_at', label: 'Modified At', selected: false },
   { id: 'lender_name', label: 'Lender Name', selected: false },
   { id: 'lender_login_type', label: 'Lender Login Type', selected: false },
@@ -857,6 +858,21 @@ export default function TicketsPage() {
                                     </TableCell>
                                   );
 
+                                case 'ticket_call_back_datetime':
+                                  return (
+                                    <TableCell
+                                      key={col.id}
+                                      className='text-xs text-muted-foreground py-3.5 whitespace-nowrap'
+                                    >
+                                      {ticket.ticket_call_back_datetime
+                                        ? formatExactDate(
+                                            ticket.ticket_call_back_datetime,
+                                            'dd MMM yyyy, hh:mm a',
+                                          )
+                                        : '—'}
+                                    </TableCell>
+                                  );
+
                                 case 'modified_at':
                                   return (
                                     <TableCell
@@ -1099,7 +1115,7 @@ export default function TicketsPage() {
                                               <div className='text-[11px] space-y-0.5'>
                                                 <p>
                                                   Duration spent:{' '}
-                                                  <span className='font-semibold text-foreground'>
+                                                  <span className='font-semibold'>
                                                     {step.duration}
                                                   </span>
                                                 </p>

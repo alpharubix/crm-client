@@ -107,6 +107,7 @@ export default function CreateTicket() {
     register,
     handleSubmit,
     setValue,
+    setError,
     watch,
     formState: { errors, isValid, isSubmitting },
   } = useForm<CreateTicketFormValues>({
@@ -115,6 +116,7 @@ export default function CreateTicket() {
     defaultValues: {
       accountId: prefilledData.accountId ? String(prefilledData.accountId) : '',
       partnerName: '',
+      ticketCallBackDatetime: '',
     },
   })
 
@@ -258,6 +260,9 @@ export default function CreateTicket() {
       if (values.partnerName) payload.partner_name = values.partnerName
       if (values.partnerCode) payload.partner_code = values.partnerCode
 
+      payload.ticket_call_back_datetime =
+        values.ticketCallBackDatetime || undefined
+
       const res = await fetch(`${ENV.VITE_BACKEND_BASE_URL}/tickets`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -267,7 +272,11 @@ export default function CreateTicket() {
 
       if (!res.ok) {
         const errData = await res.json().catch(() => ({}))
-        throw new Error(errData.detail || 'Failed to create ticket')
+        const msg =
+          typeof errData.detail === 'object'
+            ? errData.detail.message || errData.detail.msg || JSON.stringify(errData.detail)
+            : errData.detail || errData.message || 'Failed to create ticket'
+        throw new Error(msg)
       }
       return res.json()
     },
@@ -282,8 +291,19 @@ export default function CreateTicket() {
         navigate(-1)
       }
     },
-    onError: (err) => {
-      toast.error(err.message)
+    onError: (err: any) => {
+      const errorMsg = err?.message || 'Failed to create ticket'
+      toast.error(errorMsg)
+      if (
+        errorMsg.toLowerCase().includes('date') ||
+        errorMsg.toLowerCase().includes('past') ||
+        errorMsg.toLowerCase().includes('call_back')
+      ) {
+        setError('ticketCallBackDatetime', {
+          type: 'server',
+          message: errorMsg,
+        })
+      }
     },
   })
 
@@ -405,6 +425,34 @@ export default function CreateTicket() {
                 type='number'
                 step='0.01'
                 className='h-8'
+              />
+            </FieldRow>
+
+            <FieldRow
+              label='Ticket Call Back Date/Time *'
+              error={errors.ticketCallBackDatetime?.message}
+            >
+              <DateField
+                isEdit={true}
+                showTime={true}
+                value={
+                  formValues.ticketCallBackDatetime
+                    ? new Date(formValues.ticketCallBackDatetime)
+                    : undefined
+                }
+                onChange={(date) =>
+                  setValue(
+                    'ticketCallBackDatetime',
+                    date ? date.toISOString() : '',
+                    { shouldValidate: true, shouldDirty: true },
+                  )
+                }
+                disablePast={true}
+                maxDate={
+                  formValues.ticketStatus === 'On Hold'
+                    ? undefined
+                    : new Date(Date.now() + 48 * 60 * 60 * 1000)
+                }
               />
             </FieldRow>
 

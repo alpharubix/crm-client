@@ -1081,7 +1081,7 @@ export default function DealsPage() {
                                               <div className='text-[11px] space-y-0.5'>
                                                 <p>
                                                   Duration spent:{' '}
-                                                  <span className='font-semibold text-foreground'>
+                                                  <span className='font-semibold '>
                                                     {step.duration}
                                                   </span>
                                                 </p>

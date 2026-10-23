@@ -287,6 +287,7 @@ export default function UpdateDeals({
     handleSubmit,
     watch,
     setValue,
+    setError,
     reset,
     formState: { errors, isDirty, dirtyFields },
   } = useForm<UpdateDealFormValues>({
@@ -377,8 +378,19 @@ export default function UpdateDeals({
       reset(variables);
       queryClient.invalidateQueries({ queryKey: ['deal', id] });
     },
-    onError: (err) => {
-      toast.error(err.message || 'Failed to update deal');
+    onError: (err: any) => {
+      const errorMsg = err?.message || 'Failed to update deal';
+      toast.error(errorMsg);
+      if (
+        errorMsg.toLowerCase().includes('date') ||
+        errorMsg.toLowerCase().includes('past') ||
+        errorMsg.toLowerCase().includes('call_back')
+      ) {
+        setError('dealCallBackDatetime', {
+          type: 'server',
+          message: errorMsg,
+        });
+      }
     },
   });
 
@@ -533,7 +545,7 @@ export default function UpdateDeals({
               />
             </FieldRow>
             <FieldRow
-              label='Deal Call Back Date/Time'
+              label='Deal Call Back Date/Time *'
               error={errors.dealCallBackDatetime?.message}
             >
               {isEdit ? (
@@ -556,6 +568,11 @@ export default function UpdateDeals({
                     );
                   }}
                   disablePast={true}
+                  maxDate={
+                    formValues.dealStatus === 'On Hold'
+                      ? undefined
+                      : new Date(Date.now() + 48 * 60 * 60 * 1000)
+                  }
                 />
               ) : (
                 <span>
