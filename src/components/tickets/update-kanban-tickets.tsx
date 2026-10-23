@@ -251,6 +251,8 @@ export default function UpdateKanbanTicket({
     watch,
     setValue,
     setError,
+    clearErrors,
+    trigger,
     reset,
     formState: { errors, isDirty, dirtyFields },
   } = useForm<UpdateTicketFormValues>({
@@ -416,6 +418,18 @@ export default function UpdateKanbanTicket({
   })
 
   const formValues = watch()
+
+  const normalize = (val?: string) => (val || '').trim().toLowerCase()
+  const EXEMPT_TICKET_STATUSES = ['disbursed', 'rejected', 'not interested']
+  const EXEMPT_TICKET_STAGES = ['disbursed', 'rejected', 'not interested']
+
+  const isTicketStatusExempt = EXEMPT_TICKET_STATUSES.includes(
+    normalize(formValues.ticketStatus),
+  )
+  const isTicketStageExempt = EXEMPT_TICKET_STAGES.includes(
+    normalize(formValues.ticketStage),
+  )
+  const isCallBackRequired = !isTicketStatusExempt && !isTicketStageExempt
 
   const onSave: SubmitHandler<UpdateTicketFormValues> = (values) => {
     updateMutation.mutate(values)
@@ -655,7 +669,11 @@ export default function UpdateKanbanTicket({
             </FieldRow>
 
             <FieldRow
-              label='Ticket Call Back Date/Time *'
+              label={
+                isCallBackRequired
+                  ? 'Ticket Call Back Date/Time *'
+                  : 'Ticket Call Back Date/Time'
+              }
               error={errors.ticketCallBackDatetime?.message}
             >
               {isEdit ? (
@@ -901,9 +919,17 @@ export default function UpdateKanbanTicket({
                   'Not Interested',
                 ]}
                 value={formValues.ticketStatus as string}
-                onChange={(value) =>
+                onChange={(value) => {
                   setValue('ticketStatus', value, DIRTY_OPTS)
-                }
+                  const isExempt =
+                    EXEMPT_TICKET_STATUSES.includes(normalize(value)) ||
+                    EXEMPT_TICKET_STAGES.includes(normalize(formValues.ticketStage))
+                  if (isExempt) {
+                    clearErrors('ticketCallBackDatetime')
+                  } else {
+                    trigger('ticketCallBackDatetime')
+                  }
+                }}
               />
             </FieldRow>
 
@@ -937,7 +963,17 @@ export default function UpdateKanbanTicket({
                   'Not Interested',
                 ]}
                 value={formValues.ticketStage as string}
-                onChange={(value) => setValue('ticketStage', value, DIRTY_OPTS)}
+                onChange={(value) => {
+                  setValue('ticketStage', value, DIRTY_OPTS)
+                  const isExempt =
+                    EXEMPT_TICKET_STATUSES.includes(normalize(formValues.ticketStatus)) ||
+                    EXEMPT_TICKET_STAGES.includes(normalize(value))
+                  if (isExempt) {
+                    clearErrors('ticketCallBackDatetime')
+                  } else {
+                    trigger('ticketCallBackDatetime')
+                  }
+                }}
               />
             </FieldRow>
 

@@ -192,7 +192,7 @@ function mapFormToApi(
     rate_of_interest: { value: formData.rateOfInterest, key: 'rateOfInterest' },
     interest_type: { value: formData.interestType, key: 'interestType' },
     deal_call_back_datetime: {
-      value: formData.dealCallBackDatetime,
+      value: formData.dealCallBackDatetime || null,
       key: 'dealCallBackDatetime',
     },
     disbursement_date: {
@@ -288,6 +288,8 @@ export default function UpdateDeals({
     watch,
     setValue,
     setError,
+    clearErrors,
+    trigger,
     reset,
     formState: { errors, isDirty, dirtyFields },
   } = useForm<UpdateDealFormValues>({
@@ -395,6 +397,18 @@ export default function UpdateDeals({
   });
 
   const formValues = watch();
+
+  const normalize = (val?: string) => (val || '').trim().toLowerCase();
+  const EXEMPT_DEAL_STATUSES = ['lender rejected', 'not interested'];
+  const EXEMPT_DEAL_STAGES = ['disbursed', 'rejected', 'not interested'];
+
+  const isDealStatusExempt = EXEMPT_DEAL_STATUSES.includes(
+    normalize(formValues.dealStatus),
+  );
+  const isDealStageExempt = EXEMPT_DEAL_STAGES.includes(
+    normalize(formValues.dealStage),
+  );
+  const isCallBackRequired = !isDealStatusExempt && !isDealStageExempt;
 
   const onSave = (values: UpdateDealFormValues) => {
     updateMutation.mutate(values);
@@ -545,7 +559,11 @@ export default function UpdateDeals({
               />
             </FieldRow>
             <FieldRow
-              label='Deal Call Back Date/Time *'
+              label={
+                isCallBackRequired
+                  ? 'Deal Call Back Date/Time *'
+                  : 'Deal Call Back Date/Time'
+              }
               error={errors.dealCallBackDatetime?.message}
             >
               {isEdit ? (
@@ -731,6 +749,14 @@ export default function UpdateDeals({
                     new Date().toISOString().split('T')[0],
                     { shouldDirty: true },
                   );
+                  const isExempt =
+                    EXEMPT_DEAL_STATUSES.includes(normalize(value)) ||
+                    EXEMPT_DEAL_STAGES.includes(normalize(formValues.dealStage));
+                  if (isExempt) {
+                    clearErrors('dealCallBackDatetime');
+                  } else {
+                    trigger('dealCallBackDatetime');
+                  }
                 }}
               />
             </FieldRow>
@@ -756,12 +782,20 @@ export default function UpdateDeals({
                   'Not Interested',
                 ]}
                 value={formValues.dealStage as string}
-                onChange={(value) =>
+                onChange={(value) => {
                   setValue('dealStage', value, {
                     shouldValidate: true,
                     shouldDirty: true,
-                  })
-                }
+                  });
+                  const isExempt =
+                    EXEMPT_DEAL_STATUSES.includes(normalize(formValues.dealStatus)) ||
+                    EXEMPT_DEAL_STAGES.includes(normalize(value));
+                  if (isExempt) {
+                    clearErrors('dealCallBackDatetime');
+                  } else {
+                    trigger('dealCallBackDatetime');
+                  }
+                }}
               />
             </FieldRow>
             <FieldRow label='Deal Approval'>
