@@ -53,7 +53,7 @@ export function MultiSelect({
           !selectedList.some((item) => item.value === option.value) &&
           (option.label || '').toLowerCase().includes(inputValue.toLowerCase()),
       )
-      .slice(0, 20)
+      .slice(0, 25)
   }, [safeOptions, selectedList, inputValue])
 
   return (
