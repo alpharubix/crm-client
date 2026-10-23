@@ -140,3 +140,34 @@ export type Contact = {
   created_time: string
   modified_time: string
 }
+
+export type Ticket = {
+  id: string
+  deal_id: string
+  account_id?: string
+  ticket_name?: string
+  ticket_login?: string
+  ticket_status?: string
+  ticket_stage?: string
+  ticket_call_back_datetime?: string
+  lender_name?: string
+  lender_login_type?: string
+  lender_login_date?: string
+  targeted_disbursement_date?: string
+  disbursement_date?: string
+  partner_name?: string
+  potential?: number | string
+  approved_amount?: number | string
+  sanction_amount?: number | string
+  disbursed_amount?: number | string
+  processing_fees?: number | string
+  pf_percentage?: number | string
+  insurance_amount?: number | string
+  rate_of_interest?: number | string
+  interest_type?: string
+  tenure?: number | string
+  loan_start_date?: string
+  loan_end_date?: string
+  type_of_loan?: string
+  [key: string]: any
+}

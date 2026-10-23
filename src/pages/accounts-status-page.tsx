@@ -479,7 +479,7 @@ export default function AccountsStatusPage() {
                                                                             Status: {step.name}
                                                                         </p>
                                                                         <div className='text-[11px] space-y-0.5'>
-                                                                            <p>Duration spent: <span className='font-semibold text-foreground'>{step.duration}</span></p>
+                                                                            <p>Duration spent: <span className='font-semibold '>{step.duration}</span></p>
                                                                             {step.startDate && <p>Started: {step.startDate}</p>}
                                                                             {step.endDate && <p>Ended: {step.endDate}</p>}
                                                                             {step.updatedBy && <p>Updated by: {step.updatedBy}</p>}

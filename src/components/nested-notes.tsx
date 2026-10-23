@@ -1,27 +1,27 @@
-import * as React from 'react';
-import { MessageCircle, ChevronDown, ChevronRight, X, Plus } from 'lucide-react';
+import * as React from 'react'
+import { MessageCircle, ChevronDown, ChevronRight, X, Plus } from 'lucide-react'
 
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Button } from '@/components/ui/button';
-import { Textarea } from '@/components/ui/textarea';
-import usersData from '@/utils/users.json';
-import { ENV } from '@/conf';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
+import { Button } from '@/components/ui/button'
+import { Textarea } from '@/components/ui/textarea'
+import usersData from '@/utils/users.json'
+import { ENV } from '@/conf'
 
 type User = {
-  id: string;
-  name: string;
-  avatar?: string;
-  email?: string;
-};
+  id: string
+  name: string
+  avatar?: string
+  email?: string
+}
 
 export type Comment = {
-  id: string;
-  parentId: string | null;
-  author: User;
-  body: string;
-  createdAt: string;
-  replies: Comment[];
-};
+  id: string
+  parentId: string | null
+  author: User
+  body: string
+  createdAt: string
+  replies: Comment[]
+}
 
 const DUMMY_COMMENTS: Comment[] = [
   {
@@ -73,30 +73,30 @@ const DUMMY_COMMENTS: Comment[] = [
     createdAt: new Date(Date.now() - 1000 * 60 * 60 * 24).toISOString(),
     replies: [],
   },
-];
+]
 
 /**
  * Transforms a flat array of MongoDB notes (with `_id` and `notesParentId`)
  * into a nested tree array of `Comment` objects.
  */
 export function buildCommentTree(rawNotes: any[]): Comment[] {
-  if (!rawNotes || !Array.isArray(rawNotes)) return [];
+  if (!rawNotes || !Array.isArray(rawNotes)) return []
 
-  const commentMap = new Map<string, Comment>();
-  const rootComments: Comment[] = [];
+  const commentMap = new Map<string, Comment>()
+  const rootComments: Comment[] = []
 
   // Step 1: Initialize all comments
   rawNotes.forEach((n) => {
-    const commentId = String(n._id || n.id || '');
-    if (!commentId) return;
+    const commentId = String(n._id || n.id || '')
+    if (!commentId) return
 
     const authorName =
       n.Created_By?.name ||
       n.Owner?.first_name ||
       n.Owner?.name ||
-      'Unknown User';
+      'Unknown User'
 
-    const authorId = n.Created_By?.id || n.Owner?.id || 'unknown';
+    const authorId = n.Created_By?.id || n.Owner?.id || 'unknown'
 
     commentMap.set(commentId, {
       id: commentId,
@@ -110,45 +110,47 @@ export function buildCommentTree(rawNotes: any[]): Comment[] {
       body: n.Note_Content || '',
       createdAt: n.Created_Time || new Date().toISOString(),
       replies: [],
-    });
-  });
+    })
+  })
 
   // Helper to parse note date strings accurately
   const parseNoteDate = (dateStr?: string): number => {
-    if (!dateStr) return 0;
-    const timestamp = Date.parse(dateStr);
-    if (!isNaN(timestamp)) return timestamp;
+    if (!dateStr) return 0
+    const timestamp = Date.parse(dateStr)
+    if (!isNaN(timestamp)) return timestamp
     try {
-      const d = new Date(dateStr);
-      if (!isNaN(d.getTime())) return d.getTime();
+      const d = new Date(dateStr)
+      if (!isNaN(d.getTime())) return d.getTime()
     } catch {
       // ignore
     }
-    return 0;
-  };
+    return 0
+  }
 
   // Step 2: Build tree hierarchy
   commentMap.forEach((comment) => {
     if (comment.parentId && commentMap.has(comment.parentId)) {
-      commentMap.get(comment.parentId)!.replies.push(comment);
+      commentMap.get(comment.parentId)!.replies.push(comment)
     } else {
-      rootComments.push(comment);
+      rootComments.push(comment)
     }
-  });
+  })
 
   // Sort root comments: latest one first
-  rootComments.sort((a, b) => parseNoteDate(b.createdAt) - parseNoteDate(a.createdAt));
+  rootComments.sort(
+    (a, b) => parseNoteDate(b.createdAt) - parseNoteDate(a.createdAt),
+  )
 
-  return rootComments;
+  return rootComments
 }
 
 type NestedCommentsProps = {
-  entityId?: string;
-  moduleName?: string;
-  initialComments?: Comment[];
-  notes?: any[];
-  onNoteAdded?: () => void;
-};
+  entityId?: string
+  moduleName?: string
+  initialComments?: Comment[]
+  notes?: any[]
+  onNoteAdded?: () => void
+}
 
 export function NestedComments({
   entityId,
@@ -159,31 +161,31 @@ export function NestedComments({
 }: NestedCommentsProps = {}) {
   const [comments, setComments] = React.useState<Comment[]>(() => {
     if (notes && Array.isArray(notes)) {
-      return buildCommentTree(notes);
+      return buildCommentTree(notes)
     }
-    return initialComments || DUMMY_COMMENTS;
-  });
+    return initialComments || DUMMY_COMMENTS
+  })
 
-  const [isCreatingNote, setIsCreatingNote] = React.useState(false);
-  const [replyingTo, setReplyingTo] = React.useState<string | null>(null);
-  const [collapsed, setCollapsed] = React.useState<Set<string>>(new Set());
+  const [isCreatingNote, setIsCreatingNote] = React.useState(false)
+  const [replyingTo, setReplyingTo] = React.useState<string | null>(null)
+  const [collapsed, setCollapsed] = React.useState<Set<string>>(new Set())
 
   React.useEffect(() => {
     if (notes && Array.isArray(notes)) {
-      setComments(buildCommentTree(notes));
+      setComments(buildCommentTree(notes))
     }
-  }, [notes]);
+  }, [notes])
 
   function toggleCollapsed(commentId: string) {
     setCollapsed((current) => {
-      const next = new Set(current);
+      const next = new Set(current)
       if (next.has(commentId)) {
-        next.delete(commentId);
+        next.delete(commentId)
       } else {
-        next.add(commentId);
+        next.add(commentId)
       }
-      return next;
-    });
+      return next
+    })
   }
 
   async function addNote(parentId: string | null, body: string) {
@@ -199,17 +201,17 @@ export function NestedComments({
         body,
         createdAt: new Date().toISOString(),
         replies: [],
-      };
-
-      if (parentId) {
-        setComments((current) => insertReply(current, parentId, newComment));
-      } else {
-        setComments((current) => [newComment, ...current]);
       }
 
-      setReplyingTo(null);
-      setIsCreatingNote(false);
-      return;
+      if (parentId) {
+        setComments((current) => insertReply(current, parentId, newComment))
+      } else {
+        setComments((current) => [newComment, ...current])
+      }
+
+      setReplyingTo(null)
+      setIsCreatingNote(false)
+      return
     }
 
     try {
@@ -225,18 +227,18 @@ export function NestedComments({
           note: body,
           notesParentId: parentId,
         }),
-      });
+      })
 
       if (res.ok) {
-        const resultData = await res.json();
-        const rawNote = resultData.data;
+        const resultData = await res.json()
+        const rawNote = resultData.data
 
         if (rawNote) {
           const authorName =
             rawNote.Created_By?.name ||
             rawNote.Owner?.first_name ||
             rawNote.Owner?.name ||
-            'You';
+            'You'
 
           const newComment: Comment = {
             id: String(rawNote._id || rawNote.id || crypto.randomUUID()),
@@ -248,31 +250,31 @@ export function NestedComments({
             body: rawNote.Note_Content || body,
             createdAt: rawNote.Created_Time || new Date().toISOString(),
             replies: [],
-          };
+          }
 
           if (parentId) {
-            setComments((current) => insertReply(current, parentId, newComment));
+            setComments((current) => insertReply(current, parentId, newComment))
           } else {
-            setComments((current) => [newComment, ...current]);
+            setComments((current) => [newComment, ...current])
           }
         }
 
         if (onNoteAdded) {
-          onNoteAdded();
+          onNoteAdded()
         }
       }
     } catch (err) {
-      console.error('Failed to create note:', err);
+      console.error('Failed to create note:', err)
     } finally {
-      setReplyingTo(null);
-      setIsCreatingNote(false);
+      setReplyingTo(null)
+      setIsCreatingNote(false)
     }
   }
 
-  const INITIAL_VISIBLE_COUNT = 5;
-  const [visibleCount, setVisibleCount] = React.useState(INITIAL_VISIBLE_COUNT);
+  const INITIAL_VISIBLE_COUNT = 5
+  const [visibleCount, setVisibleCount] = React.useState(INITIAL_VISIBLE_COUNT)
 
-  const visibleComments = comments.slice(0, visibleCount);
+  const visibleComments = comments.slice(0, visibleCount)
 
   return (
     <section className='w-full'>
@@ -310,7 +312,9 @@ export function NestedComments({
       {/* Comments List */}
       <div className='space-y-6'>
         {comments.length === 0 ? (
-          <p className='text-sm text-muted-foreground'>No notes available yet.</p>
+          <p className='text-sm text-muted-foreground'>
+            No notes available yet.
+          </p>
         ) : (
           visibleComments.map((comment) => (
             <CommentItem
@@ -340,34 +344,35 @@ export function NestedComments({
           </Button>
         </div>
       )}
-      {visibleCount > INITIAL_VISIBLE_COUNT && visibleCount >= comments.length && (
-        <div className='mt-6 text-center'>
-          <Button
-            variant='ghost'
-            size='sm'
-            onClick={() => setVisibleCount(INITIAL_VISIBLE_COUNT)}
-          >
-            Show Less
-          </Button>
-        </div>
-      )}
+      {visibleCount > INITIAL_VISIBLE_COUNT &&
+        visibleCount >= comments.length && (
+          <div className='mt-6 text-center'>
+            <Button
+              variant='ghost'
+              size='sm'
+              onClick={() => setVisibleCount(INITIAL_VISIBLE_COUNT)}
+            >
+              Show Less
+            </Button>
+          </div>
+        )}
     </section>
-  );
+  )
 }
 
 type CommentItemProps = {
-  comment: Comment;
-  depth: number;
-  replyingTo: string | null;
-  collapsed: Set<string>;
+  comment: Comment
+  depth: number
+  replyingTo: string | null
+  collapsed: Set<string>
 
-  onReply: (commentId: string) => void;
-  onCancelReply: () => void;
+  onReply: (commentId: string) => void
+  onCancelReply: () => void
 
-  onSubmitReply: (parentId: string, body: string) => void;
+  onSubmitReply: (parentId: string, body: string) => void
 
-  onToggleCollapsed: (commentId: string) => void;
-};
+  onToggleCollapsed: (commentId: string) => void
+}
 
 function CommentItem({
   comment,
@@ -379,9 +384,11 @@ function CommentItem({
   onSubmitReply,
   onToggleCollapsed,
 }: CommentItemProps) {
-  const isReplying = replyingTo === comment.id;
-  const isCollapsed = collapsed.has(comment.id);
-  const hasReplies = comment.replies.length > 0;
+  const isReplying = replyingTo === comment.id
+  const isCollapsed = collapsed.has(comment.id)
+  const hasReplies = comment.replies.length > 0
+
+  console.log('Comments', comment)
 
   return (
     <div className='relative'>
@@ -395,7 +402,7 @@ function CommentItem({
           <div className='flex items-center gap-2'>
             <span className='text-sm font-medium'>{comment.author.name}</span>
             <span className='text-xs text-muted-foreground'>
-              {formatDate(comment.createdAt)}
+              {comment.createdAt}
             </span>
           </div>
 
@@ -467,23 +474,23 @@ function CommentItem({
         </div>
       </div>
     </div>
-  );
+  )
 }
 
 type ReplyComposerProps = {
-  authorName: string;
-  isTopLevel?: boolean;
-  onCancel: () => void;
-  onSubmit: (body: string) => void;
-  placeholder?: string;
-  buttonText?: string;
-};
+  authorName: string
+  isTopLevel?: boolean
+  onCancel: () => void
+  onSubmit: (body: string) => void
+  placeholder?: string
+  buttonText?: string
+}
 
 function renderMentions(text: string) {
   return text.replace(/crm\[user#([^\]]+)\]crm/g, (_, userId) => {
-    const userName = (usersData as Record<string, string>)[userId];
-    return userName ? `@${userName}` : '@Unknown User';
-  });
+    const userName = (usersData as Record<string, string>)[userId]
+    return userName ? `@${userName}` : '@Unknown User'
+  })
 }
 
 function ReplyComposer({
@@ -494,76 +501,76 @@ function ReplyComposer({
   placeholder,
   buttonText = 'Reply',
 }: ReplyComposerProps) {
-  const [value, setValue] = React.useState('');
-  const [mentionQuery, setMentionQuery] = React.useState<string | null>(null);
-  const [mentionStart, setMentionStart] = React.useState(-1);
+  const [value, setValue] = React.useState('')
+  const [mentionQuery, setMentionQuery] = React.useState<string | null>(null)
+  const [mentionStart, setMentionStart] = React.useState(-1)
   const [mentionedUsers, setMentionedUsers] = React.useState<
     { id: string; name: string }[]
-  >([]);
+  >([])
 
-  const textareaRef = React.useRef<HTMLTextAreaElement | null>(null);
+  const textareaRef = React.useRef<HTMLTextAreaElement | null>(null)
 
   const usersList = Object.entries(usersData).map(([id, name]) => ({
     id,
     name: String(name),
-  }));
+  }))
 
   const filteredUsers =
     mentionQuery !== null
       ? usersList.filter((user) =>
           user.name.toLowerCase().includes(mentionQuery.toLowerCase()),
         )
-      : [];
+      : []
 
   function submit() {
-    let finalBody = value.trim();
+    let finalBody = value.trim()
 
-    if (!finalBody) return;
+    if (!finalBody) return
 
     // Convert @User Name → crm[user#id]crm
     mentionedUsers.forEach((user) => {
       const regex = new RegExp(
         `@${user.name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\b`,
         'g',
-      );
+      )
 
-      finalBody = finalBody.replace(regex, `crm[user#${user.id}]crm`);
-    });
+      finalBody = finalBody.replace(regex, `crm[user#${user.id}]crm`)
+    })
 
-    onSubmit(finalBody);
+    onSubmit(finalBody)
 
-    setValue('');
-    setMentionQuery(null);
-    setMentionStart(-1);
-    setMentionedUsers([]);
+    setValue('')
+    setMentionQuery(null)
+    setMentionStart(-1)
+    setMentionedUsers([])
   }
 
   const handleMentionSelect = (user: { id: string; name: string }) => {
-    if (mentionStart === -1) return;
+    if (mentionStart === -1) return
 
-    const before = value.substring(0, mentionStart);
-    const exactEnd = textareaRef.current?.selectionStart ?? value.length;
-    const after = value.substring(exactEnd);
-    const insertText = `@${user.name} `;
+    const before = value.substring(0, mentionStart)
+    const exactEnd = textareaRef.current?.selectionStart ?? value.length
+    const after = value.substring(exactEnd)
+    const insertText = `@${user.name} `
 
-    setValue(before + insertText + after);
+    setValue(before + insertText + after)
 
     setMentionedUsers((prev) => {
       if (!prev.some((mentionedUser) => mentionedUser.id === user.id)) {
-        return [...prev, user];
+        return [...prev, user]
       }
-      return prev;
-    });
+      return prev
+    })
 
-    setMentionQuery(null);
-    setMentionStart(-1);
+    setMentionQuery(null)
+    setMentionStart(-1)
 
     setTimeout(() => {
-      const newCursorPos = before.length + insertText.length;
-      textareaRef.current?.focus();
-      textareaRef.current?.setSelectionRange(newCursorPos, newCursorPos);
-    }, 0);
-  };
+      const newCursorPos = before.length + insertText.length
+      textareaRef.current?.focus()
+      textareaRef.current?.setSelectionRange(newCursorPos, newCursorPos)
+    }, 0)
+  }
 
   return (
     <div className='relative mt-3 rounded-lg border bg-muted/30 p-3 w-full'>
@@ -574,9 +581,7 @@ function ReplyComposer({
           ) : (
             <>
               Replying to{' '}
-              <span className='font-medium text-foreground'>
-                {authorName}
-              </span>
+              <span className='font-medium text-foreground'>{authorName}</span>
             </>
           )}
         </span>
@@ -598,22 +603,22 @@ function ReplyComposer({
           autoFocus
           value={value}
           onChange={(e) => {
-            const val = e.target.value;
-            const cursor = e.target.selectionStart;
+            const val = e.target.value
+            const cursor = e.target.selectionStart
 
-            setValue(val);
+            setValue(val)
 
-            const textBeforeCursor = val.substring(0, cursor);
+            const textBeforeCursor = val.substring(0, cursor)
             const match = textBeforeCursor.match(
               /(?:^|\s)@([a-zA-Z0-9 ]{0,30})$/,
-            );
+            )
 
             if (match) {
-              setMentionQuery(match[1]);
-              setMentionStart(cursor - match[1].length - 1);
+              setMentionQuery(match[1])
+              setMentionStart(cursor - match[1].length - 1)
             } else {
-              setMentionQuery(null);
-              setMentionStart(-1);
+              setMentionQuery(null)
+              setMentionStart(-1)
             }
           }}
           placeholder={placeholder || `Reply to ${authorName}...`}
@@ -647,7 +652,7 @@ function ReplyComposer({
         </Button>
       </div>
     </div>
-  );
+  )
 }
 
 /**
@@ -664,18 +669,18 @@ function insertReply(
       return {
         ...comment,
         replies: [...comment.replies, reply],
-      };
+      }
     }
 
     if (comment.replies.length === 0) {
-      return comment;
+      return comment
     }
 
     return {
       ...comment,
       replies: insertReply(comment.replies, parentId, reply),
-    };
-  });
+    }
+  })
 }
 
 function getInitials(name: string) {
@@ -684,37 +689,37 @@ function getInitials(name: string) {
     .map((part) => part[0])
     .join('')
     .slice(0, 2)
-    .toUpperCase();
+    .toUpperCase()
 }
 
 function formatDate(date: string) {
-  const value = new Date(date);
+  const value = new Date(date)
   if (isNaN(value.getTime())) {
-    return date || 'just now';
+    return date || 'just now'
   }
 
-  const diff = Date.now() - value.getTime();
-  const minutes = Math.floor(diff / 60000);
+  const diff = Date.now() - value.getTime()
+  const minutes = Math.floor(diff / 60000)
 
   if (minutes < 1) {
-    return 'just now';
+    return 'just now'
   }
 
   if (minutes < 60) {
-    return `${minutes}m`;
+    return `${minutes}m`
   }
 
-  const hours = Math.floor(minutes / 60);
+  const hours = Math.floor(minutes / 60)
 
   if (hours < 24) {
-    return `${hours}h`;
+    return `${hours}h`
   }
 
-  const days = Math.floor(hours / 24);
+  const days = Math.floor(hours / 24)
 
   if (days < 7) {
-    return `${days}d`;
+    return `${days}d`
   }
 
-  return value.toLocaleDateString();
+  return value.toLocaleDateString()
 }

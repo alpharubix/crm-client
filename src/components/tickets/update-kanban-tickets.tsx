@@ -54,6 +54,7 @@ function mapTicketToForm(apiData: any): UpdateTicketFormValues {
     lenderLoginType: apiData.lender_login_type || '',
     lenderLoginDate: apiData.lender_login_date || '',
     ticketLogin: apiData.ticket_login || '',
+    ticketCallBackDatetime: apiData.ticket_call_back_datetime || '',
     potential: apiData.potential ? String(apiData.potential) : '',
 
     approvedAmount: apiData.approved_amount
@@ -118,6 +119,10 @@ function mapFormToApi(
       key: 'lenderLoginDate',
     },
     ticket_login: { value: formData.ticketLogin, key: 'ticketLogin' },
+    ticket_call_back_datetime: {
+      value: formData.ticketCallBackDatetime || null,
+      key: 'ticketCallBackDatetime',
+    },
     potential: { value: numOrNull(formData.potential), key: 'potential' },
     approved_amount: {
       value: numOrNull(formData.approvedAmount),
@@ -245,6 +250,7 @@ export default function UpdateKanbanTicket({
     handleSubmit,
     watch,
     setValue,
+    setError,
     reset,
     formState: { errors, isDirty, dirtyFields },
   } = useForm<UpdateTicketFormValues>({
@@ -393,8 +399,19 @@ export default function UpdateKanbanTicket({
       // Re-fetch from server so form resets to the latest saved state
       queryClient.invalidateQueries({ queryKey: ['ticket', id] })
     },
-    onError: (err) => {
-      toast.error(err.message || 'Failed to update ticket')
+    onError: (err: any) => {
+      const errorMsg = err?.message || 'Failed to update ticket'
+      toast.error(errorMsg)
+      if (
+        errorMsg.toLowerCase().includes('date') ||
+        errorMsg.toLowerCase().includes('past') ||
+        errorMsg.toLowerCase().includes('call_back')
+      ) {
+        setError('ticketCallBackDatetime', {
+          type: 'server',
+          message: errorMsg,
+        })
+      }
     },
   })
 
@@ -634,6 +651,45 @@ export default function UpdateKanbanTicket({
                 />
               ) : (
                 <span>{formValues.potential || '—'}</span>
+              )}
+            </FieldRow>
+
+            <FieldRow
+              label='Ticket Call Back Date/Time *'
+              error={errors.ticketCallBackDatetime?.message}
+            >
+              {isEdit ? (
+                <DateField
+                  isEdit={isEdit}
+                  showTime={true}
+                  value={
+                    formValues.ticketCallBackDatetime
+                      ? new Date(formValues.ticketCallBackDatetime)
+                      : undefined
+                  }
+                  onChange={(date) =>
+                    setValue(
+                      'ticketCallBackDatetime',
+                      date ? date.toISOString() : '',
+                      DIRTY_OPTS,
+                    )
+                  }
+                  disablePast={true}
+                  maxDate={
+                    formValues.ticketStatus === 'On Hold'
+                      ? undefined
+                      : new Date(Date.now() + 48 * 60 * 60 * 1000)
+                  }
+                />
+              ) : (
+                <span>
+                  {formValues.ticketCallBackDatetime
+                    ? formatExactDate(
+                        formValues.ticketCallBackDatetime,
+                        'dd MMM yyyy, hh:mm a',
+                      )
+                    : '—'}
+                </span>
               )}
             </FieldRow>
 

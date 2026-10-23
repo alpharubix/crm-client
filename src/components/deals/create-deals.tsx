@@ -68,6 +68,7 @@ export default function CreateDeal() {
     register,
     handleSubmit,
     setValue,
+    setError,
     watch,
     formState: { errors, isSubmitting, isValid },
   } = form
@@ -170,8 +171,19 @@ export default function CreateDeal() {
         navigate('/deals')
       }
     },
-    onError: (err) => {
-      toast.error(err.message)
+    onError: (err: any) => {
+      const errorMsg = err?.message || 'Failed to create deal'
+      toast.error(errorMsg)
+      if (
+        errorMsg.toLowerCase().includes('date') ||
+        errorMsg.toLowerCase().includes('past') ||
+        errorMsg.toLowerCase().includes('call_back')
+      ) {
+        setError('dealCallBackDatetime', {
+          type: 'server',
+          message: errorMsg,
+        })
+      }
     },
   })
 
@@ -279,7 +291,7 @@ export default function CreateDeal() {
             </FieldRow>
 
             <FieldRow
-              label='Deal Call Back Date/Time'
+              label='Deal Call Back Date/Time *'
               error={errors.dealCallBackDatetime?.message}
             >
               <DateField
@@ -298,6 +310,11 @@ export default function CreateDeal() {
                   )
                 }
                 disablePast={true}
+                maxDate={
+                  formValues.dealStatus === 'On Hold'
+                    ? undefined
+                    : new Date(Date.now() + 48 * 60 * 60 * 1000)
+                }
               />
             </FieldRow>
 

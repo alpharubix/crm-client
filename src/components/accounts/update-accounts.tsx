@@ -1320,7 +1320,7 @@ export default function UpdateAccounts() {
                                 className='cursor-pointer hover:bg-muted/50 transition-colors'
                               >
                                 <TableCell>
-                                  {uListLookup(deal.deal_owner_id, usersList)}
+                                  {(users as Record<string, string>)[deal.deal_owner_id || '—']}
                                 </TableCell>
                                 <TableCell className='font-medium'>
                                   {deal.deal_type || '—'}

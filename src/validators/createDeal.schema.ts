@@ -26,7 +26,7 @@ export const createDealSchema = z.object({
   rateOfInterest: z.string().optional(),
   interestType: z.string().optional(),
 
-  dealCallBackDatetime: z.string().optional(),
+  dealCallBackDatetime: z.string().min(1, 'Call back date is required'),
   dealExpectedClosing: z.string().min(1, 'Expected closing date is required'),
   disbursementDate: z.string().optional(),
   lenderLoginDate: z.string().optional(),
