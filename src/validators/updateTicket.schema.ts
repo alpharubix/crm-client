@@ -1,82 +1,109 @@
 import { z } from 'zod'
 
-export const updateTicketSchema = z.object({
-  // Required fields (NOT NULL / critical business fields)
-  lenderName: z.string().min(1, 'Lender name is required'),
-  loanType: z.string().optional(),
-  ticketStatus: z.string().min(1, 'Ticket status is required'),
-  ticketStage: z.string().min(1, 'Ticket stage is required'),
-  lenderLoginType: z.string().min(1, 'Lender login type is required'),
-  lenderLoginDate: z.string().min(1, 'Lender login date is required'),
-  ticketLogin: z.string().min(1, 'Ticket login is required'),
-  ticketCallBackDatetime: z.string().min(1, 'Call back date is required'),
+const normalize = (val?: string) => (val || '').trim().toLowerCase()
 
-  // Optional fields
-  potential: z
-    .string()
-    .optional()
-    .refine((v) => !v || parseFloat(v) <= 9_999_999_999_999, {
-      message: 'Value exceeds maximum allowed amount',
-    }),
-  approvedAmount: z
-    .string()
-    .optional()
-    .refine((v) => !v || parseFloat(v) <= 9_999_999_999_999, {
-      message: 'Value exceeds maximum allowed amount',
-    }),
-  sanctionAmount: z
-    .string()
-    .optional()
-    .refine((v) => !v || parseFloat(v) <= 9_999_999_999_999, {
-      message: 'Value exceeds maximum allowed amount',
-    }),
-  disbursedAmount: z
-    .string()
-    .optional()
-    .refine((v) => !v || parseFloat(v) <= 9_999_999_999_999, {
-      message: 'Value exceeds maximum allowed amount',
-    }),
-  processingFees: z
-    .string()
-    .optional()
-    .refine((v) => !v || parseFloat(v) <= 9_999_999_999_999, {
-      message: 'Value exceeds maximum allowed amount',
-    }),
-  pfPercentage: z
-    .string()
-    .optional()
-    .refine((v) => !v || parseFloat(v) <= 100, {
-      message: 'PF Percentage cannot exceed 100%',
-    }),
-  insuranceAmount: z
-    .string()
-    .optional()
-    .refine((v) => !v || parseFloat(v) <= 9_999_999_999_999, {
-      message: 'Value exceeds maximum allowed amount',
-    }),
-  rateOfInterest: z
-    .string()
-    .optional()
-    .refine((v) => !v || parseFloat(v) <= 999.99, {
-      message: 'Rate of Interest must be less than 1000',
-    }),
-  interestType: z.string().optional(),
-  tenure: z.string().optional(),
-  loanStartDate: z.string().optional(),
-  loanEndDate: z.string().optional(),
-  targetedDisbursementDate: z.string().optional(),
-  disbursementDate: z.string().optional(),
-  loanAccountStatus: z.string().optional(),
-  lenderRejectionReason: z.string().optional(),
-  lenderRejectionStatusExplanation: z.string().optional(),
-  partnerCode: z.string().optional(),
-  customerRejectionReason: z.string().optional(),
-  customerRejectionStatusExplanation: z.string().optional(),
-  createdBy: z.string().optional(),
-  createdAt: z.string().optional(),
-  modifiedBy: z.string().optional(),
-  modifiedAt: z.string().optional(),
-  partnerName: z.string().optional(),
-})
+const EXEMPT_TICKET_STATUSES = ['disbursed', 'rejected', 'not interested']
+const EXEMPT_TICKET_STAGES = ['disbursed', 'rejected', 'not interested']
+
+export const updateTicketSchema = z
+  .object({
+    // Required fields (NOT NULL / critical business fields)
+    lenderName: z.string().min(1, 'Lender name is required'),
+    loanType: z.string().optional(),
+    ticketStatus: z.string().min(1, 'Ticket status is required'),
+    ticketStage: z.string().min(1, 'Ticket stage is required'),
+    lenderLoginType: z.string().min(1, 'Lender login type is required'),
+    lenderLoginDate: z.string().min(1, 'Lender login date is required'),
+    ticketLogin: z.string().min(1, 'Ticket login is required'),
+    ticketCallBackDatetime: z.string().optional(),
+
+    // Optional fields
+    potential: z
+      .string()
+      .optional()
+      .refine((v) => !v || parseFloat(v) <= 9_999_999_999_999, {
+        message: 'Value exceeds maximum allowed amount',
+      }),
+    approvedAmount: z
+      .string()
+      .optional()
+      .refine((v) => !v || parseFloat(v) <= 9_999_999_999_999, {
+        message: 'Value exceeds maximum allowed amount',
+      }),
+    sanctionAmount: z
+      .string()
+      .optional()
+      .refine((v) => !v || parseFloat(v) <= 9_999_999_999_999, {
+        message: 'Value exceeds maximum allowed amount',
+      }),
+    disbursedAmount: z
+      .string()
+      .optional()
+      .refine((v) => !v || parseFloat(v) <= 9_999_999_999_999, {
+        message: 'Value exceeds maximum allowed amount',
+      }),
+    processingFees: z
+      .string()
+      .optional()
+      .refine((v) => !v || parseFloat(v) <= 9_999_999_999_999, {
+        message: 'Value exceeds maximum allowed amount',
+      }),
+    pfPercentage: z
+      .string()
+      .optional()
+      .refine((v) => !v || parseFloat(v) <= 100, {
+        message: 'PF Percentage cannot exceed 100%',
+      }),
+    insuranceAmount: z
+      .string()
+      .optional()
+      .refine((v) => !v || parseFloat(v) <= 9_999_999_999_999, {
+        message: 'Value exceeds maximum allowed amount',
+      }),
+    rateOfInterest: z
+      .string()
+      .optional()
+      .refine((v) => !v || parseFloat(v) <= 999.99, {
+        message: 'Rate of Interest must be less than 1000',
+      }),
+    interestType: z.string().optional(),
+    tenure: z.string().optional(),
+    loanStartDate: z.string().optional(),
+    loanEndDate: z.string().optional(),
+    targetedDisbursementDate: z.string().optional(),
+    disbursementDate: z.string().optional(),
+    loanAccountStatus: z.string().optional(),
+    lenderRejectionReason: z.string().optional(),
+    lenderRejectionStatusExplanation: z.string().optional(),
+    partnerCode: z.string().optional(),
+    customerRejectionReason: z.string().optional(),
+    customerRejectionStatusExplanation: z.string().optional(),
+    createdBy: z.string().optional(),
+    createdAt: z.string().optional(),
+    modifiedBy: z.string().optional(),
+    modifiedAt: z.string().optional(),
+    partnerName: z.string().optional(),
+  })
+  .superRefine((data, ctx) => {
+    const isStatusExempt = EXEMPT_TICKET_STATUSES.includes(
+      normalize(data.ticketStatus),
+    )
+    const isStageExempt = EXEMPT_TICKET_STAGES.includes(
+      normalize(data.ticketStage),
+    )
+
+    if (!isStatusExempt && !isStageExempt) {
+      if (
+        !data.ticketCallBackDatetime ||
+        data.ticketCallBackDatetime.trim() === ''
+      ) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ['ticketCallBackDatetime'],
+          message: 'Call back date is required',
+        })
+      }
+    }
+  })
 
 export type UpdateTicketFormValues = z.infer<typeof updateTicketSchema>
