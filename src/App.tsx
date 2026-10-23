@@ -95,11 +95,13 @@ export default function App() {
             >
               <Route path='/accounts' element={<AccountPage />} />
               <Route path='/account-tasks' element={<AccountTasksPage />} />
-              <Route path='/call-recordings' element={<CallRecordingsPage />} />
-              <Route
-                path='/whatsapp-records'
-                element={<CallRecordingsPage defaultTab='whatsapp' />}
-              />
+              <Route element={<ProtectedLogRoute />}>
+                <Route path='/call-recordings' element={<CallRecordingsPage />} />
+                <Route
+                  path='/whatsapp-records'
+                  element={<CallRecordingsPage defaultTab='whatsapp' />}
+                />
+              </Route>
               <Route
                 path='/broadcast-whatsapp'
                 element={<CallRecordingsPage defaultTab='broadcast' />}

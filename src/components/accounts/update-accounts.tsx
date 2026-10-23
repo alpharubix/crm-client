@@ -1489,10 +1489,9 @@ export default function UpdateAccounts() {
                                   {formatAmount(t.disbursed_amount) || '—'}
                                 </TableCell>
                                 <TableCell>
-                                  {formatExactDate(
-                                    t.targeted_disbursement_date,
-                                    'dd MMM yyyy',
-                                  ) || '—'}
+                                  {t.targeted_disbursement_date
+                                    ? formatExactDate(t.targeted_disbursement_date, 'dd MMM yyyy')
+                                    : '—'}
                                 </TableCell>
                               </TableRow>
                             ))

@@ -280,6 +280,14 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
               } else {
                 items = items?.filter((subItem) => {
                   if (
+                    (subItem.url === '/call-recordings' ||
+                      subItem.url === '/whatsapp-records' ||
+                      subItem.url === '/hiring') &&
+                    !isSuperAdmin
+                  ) {
+                    return false
+                  }
+                  if (
                     subItem.url === '/acc-status-journey' &&
                     !isAdminOrSuperAdmin
                   ) {
