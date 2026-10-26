@@ -292,7 +292,7 @@ export default function HiringKanban() {
   }
 
   return (
-    <div className='w-full h-full p-4 flex flex-col max-w-[1140px] mx-auto'>
+    <div className='w-full h-full p-4 flex flex-col mx-auto'>
       <div className='flex items-center justify-between mb-6'>
         <h1 className='text-2xl font-black text-zinc-900 uppercase tracking-tighter'>
           Hiring Board

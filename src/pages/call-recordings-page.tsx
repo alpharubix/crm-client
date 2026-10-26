@@ -65,6 +65,7 @@ import { format, subDays, startOfWeek, startOfMonth } from 'date-fns';
 import Pagination from '@/components/shared/pagination';
 import telecrmUsers from '@/utils/telecrm_users.json';
 import { ENV } from '@/conf';
+import { formatToIST } from '@/lib/date-utils';
 
 export type PeriodPresetId =
   | 'ALL'
@@ -177,54 +178,54 @@ export function formatActorName(nameOrEmail?: string): string {
 }
 
 // Format timestamp into 12-hour format time & date
-export function formatCreationTimestamp(ts?: string | null): string {
-  if (!ts || ts === '—') return '—';
-  const clean = String(ts).trim();
-  if (!clean) return '—';
+// export function formatCreationTimestamp(ts?: string | null): string {
+//   if (!ts || ts === '—') return '—';
+//   const clean = String(ts).trim();
+//   if (!clean) return '—';
 
-  // Match DD/MM/YYYY HH:mm:ss or DD-MM-YYYY HH:mm:ss
-  const dmyMatch = clean.match(
-    /^(\d{1,2})[/-](\d{1,2})[/-](\d{4})(?:\s+(\d{1,2}):(\d{2})(?::(\d{2}))?)?/,
-  );
-  if (dmyMatch) {
-    const day = dmyMatch[1].padStart(2, '0');
-    const month = dmyMatch[2].padStart(2, '0');
-    const year = dmyMatch[3];
-    const rawHour = dmyMatch[4];
-    const mins = dmyMatch[5];
-    const secs = dmyMatch[6];
+//   // Match DD/MM/YYYY HH:mm:ss or DD-MM-YYYY HH:mm:ss
+//   const dmyMatch = clean.match(
+//     /^(\d{1,2})[/-](\d{1,2})[/-](\d{4})(?:\s+(\d{1,2}):(\d{2})(?::(\d{2}))?)?/,
+//   );
+//   if (dmyMatch) {
+//     const day = dmyMatch[1].padStart(2, '0');
+//     const month = dmyMatch[2].padStart(2, '0');
+//     const year = dmyMatch[3];
+//     const rawHour = dmyMatch[4];
+//     const mins = dmyMatch[5];
+//     const secs = dmyMatch[6];
 
-    if (rawHour !== undefined && mins !== undefined) {
-      const h24 = parseInt(rawHour, 10);
-      const period = h24 >= 12 ? 'PM' : 'AM';
-      const h12 = h24 % 12 === 0 ? 12 : h24 % 12;
-      const h12Str = String(h12).padStart(2, '0');
-      const timeStr =
-        secs !== undefined
-          ? `${h12Str}:${mins.padStart(2, '0')}:${secs.padStart(2, '0')} ${period}`
-          : `${h12Str}:${mins.padStart(2, '0')} ${period}`;
-      return `${day}/${month}/${year}, ${timeStr}`;
-    }
-    return `${day}/${month}/${year}`;
-  }
+//     if (rawHour !== undefined && mins !== undefined) {
+//       const h24 = parseInt(rawHour, 10);
+//       const period = h24 >= 12 ? 'PM' : 'AM';
+//       const h12 = h24 % 12 === 0 ? 12 : h24 % 12;
+//       const h12Str = String(h12).padStart(2, '0');
+//       const timeStr =
+//         secs !== undefined
+//           ? `${h12Str}:${mins.padStart(2, '0')}:${secs.padStart(2, '0')} ${period}`
+//           : `${h12Str}:${mins.padStart(2, '0')} ${period}`;
+//       return `${day}/${month}/${year}, ${timeStr}`;
+//     }
+//     return `${day}/${month}/${year}`;
+//   }
 
-  // Fallback for ISO format or standard date string
-  const parsed = new Date(clean);
-  if (!isNaN(parsed.getTime())) {
-    const day = String(parsed.getDate()).padStart(2, '0');
-    const month = String(parsed.getMonth() + 1).padStart(2, '0');
-    const year = parsed.getFullYear();
-    const h24 = parsed.getHours();
-    const period = h24 >= 12 ? 'PM' : 'AM';
-    const h12 = h24 % 12 === 0 ? 12 : h24 % 12;
-    const h12Str = String(h12).padStart(2, '0');
-    const mins = String(parsed.getMinutes()).padStart(2, '0');
-    const secs = String(parsed.getSeconds()).padStart(2, '0');
-    return `${day}/${month}/${year}, ${h12Str}:${mins}:${secs} ${period}`;
-  }
+//   // Fallback for ISO format or standard date string
+//   const parsed = new Date(clean);
+//   if (!isNaN(parsed.getTime())) {
+//     const day = String(parsed.getDate()).padStart(2, '0');
+//     const month = String(parsed.getMonth() + 1).padStart(2, '0');
+//     const year = parsed.getFullYear();
+//     const h24 = parsed.getHours();
+//     const period = h24 >= 12 ? 'PM' : 'AM';
+//     const h12 = h24 % 12 === 0 ? 12 : h24 % 12;
+//     const h12Str = String(h12).padStart(2, '0');
+//     const mins = String(parsed.getMinutes()).padStart(2, '0');
+//     const secs = String(parsed.getSeconds()).padStart(2, '0');
+//     return `${day}/${month}/${year}, ${h12Str}:${mins}:${secs} ${period}`;
+//   }
 
-  return clean;
-}
+//   return clean;
+// }
 
 export default function CallRecordingsPage({
   defaultTab,
@@ -566,7 +567,7 @@ export default function CallRecordingsPage({
 
   return (
     <TooltipProvider>
-      <div className='flex flex-col h-full w-full bg-muted/20 overflow-hidden'>
+      <div className='flex flex-col h-screen max-h-screen w-full bg-muted/20 overflow-hidden'>
         {/* Top Navigation Tabs */}
         <div className='bg-background border-b border-border/60 px-6 pt-2 pb-0 flex items-center justify-between shrink-0 shadow-2xs'>
           <div className='flex items-center gap-1 sm:gap-2'>
@@ -627,15 +628,15 @@ export default function CallRecordingsPage({
         </div>
 
         {currentTab === 'broadcast' ? (
-          <div className='flex-1 flex flex-col overflow-hidden'>
+          <div className='flex-1 min-h-0 flex flex-col overflow-hidden'>
             <BroadcastMessagesRecordsTab />
           </div>
         ) : currentTab === 'whatsapp' ? (
-          <div className='flex-1 flex flex-col overflow-hidden'>
+          <div className='flex-1 min-h-0 flex flex-col overflow-hidden'>
             <WhatsAppRecordsTab />
           </div>
         ) : (
-          <div className='flex-1 flex flex-col overflow-hidden'>
+          <div className='flex-1 min-h-0 flex flex-col overflow-hidden'>
             {/* Top Header */}
         <div className='bg-background border-b border-border/60 px-6 py-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4 shrink-0 shadow-2xs'>
           <div className='flex items-center gap-3'>
@@ -706,7 +707,7 @@ export default function CallRecordingsPage({
         </div>
 
         {/* Toolbar & Filters */}
-        <div className='flex-1 flex flex-col overflow-hidden p-4 sm:p-6 gap-3.5'>
+        <div className='flex-1 min-h-0 flex flex-col overflow-hidden p-4 sm:p-6 gap-3.5'>
           <div className='bg-background rounded-xl border border-border/60 p-3 flex flex-col gap-3 shadow-2xs shrink-0'>
             {/* Top Row: Search Input & Dropdowns & Reset */}
             <div className='flex flex-wrap items-center justify-between gap-3'>
@@ -991,8 +992,8 @@ export default function CallRecordingsPage({
           </div>
 
           {/* Table Container */}
-          <div className='flex-1 bg-background rounded-xl border border-border/60 shadow-2xs overflow-hidden flex flex-col'>
-            <div className='flex-1 overflow-auto'>
+          <div className='flex-1 min-h-0 bg-background rounded-xl border border-border/60 shadow-2xs overflow-hidden flex flex-col'>
+            <div className='flex-1 min-h-0 overflow-auto'>
               <Table>
                 <TableHeader className='bg-muted/40 sticky top-0 z-10 border-b border-border/60 shadow-xs'>
                   <TableRow className='hover:bg-transparent'>
@@ -1282,7 +1283,7 @@ export default function CallRecordingsPage({
                           <TableCell>
                             <div className='flex flex-col'>
                               <span className='text-xs font-medium text-foreground whitespace-nowrap'>
-                                {formatCreationTimestamp(item.creation_timestamp)}
+                                {formatToIST(item.creation_timestamp)}
                               </span>
                               {item.relative_time && (
                                 <span className='text-[10px] text-muted-foreground'>
@@ -1382,7 +1383,7 @@ export default function CallRecordingsPage({
                   <div className='flex justify-between'>
                     <span className='text-muted-foreground'>Timestamp:</span>
                     <span className='font-medium text-foreground'>
-                      {formatCreationTimestamp(activeAudioItem.creation_timestamp)}
+                      {formatToIST(activeAudioItem.creation_timestamp)}
                     </span>
                   </div>
                 </div>

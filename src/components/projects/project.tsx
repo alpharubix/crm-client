@@ -134,7 +134,7 @@ export default function Project() {
   }
 
   return (
-    <div className='w-full h-full p-4 flex flex-col max-w-[1240px] mx-auto'>
+    <div className='w-full h-full p-4 flex flex-col mx-auto'>
       <div className='flex flex-col flex-1 min-h-0'>
         {/* TOP MODULE SELECTOR BAR */}
         <div className='flex flex-wrap items-center justify-between gap-4 mb-4 shrink-0'>

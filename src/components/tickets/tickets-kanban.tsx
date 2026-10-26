@@ -170,7 +170,7 @@ export default function TicketsKanban() {
   }
 
   return (
-    <div className='w-full h-full p-4 flex flex-col max-w-[1400px] mx-auto'>
+    <div className='w-full h-full p-4 flex flex-col mx-auto'>
       <div className='flex flex-col flex-1 min-h-0'>
         <div className='flex items-center justify-between mb-4 shrink-0'>
           <h1 className='text-xl font-bold tracking-tight'>Tickets Kanban</h1>

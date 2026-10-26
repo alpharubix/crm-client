@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Search, Filter, RefreshCw, ChevronDown, Check, CheckCheck } from 'lucide-react';
 import { WhatsAppMenuDropdown } from './whatsapp-menu-dropdown';
-import { parseUTCDate } from '@/lib/date-utils';
+import { formatToIST, formatWhatsAppTime, parseUTCDate } from '@/lib/date-utils';
 
 interface ConversationListProps {
   conversations: WhatsAppConversation[];
@@ -55,34 +55,6 @@ export const ConversationList: React.FC<ConversationListProps> = ({
     }
     return true;
   });
-
-  const formatTime = (isoString?: string | null) => {
-    if (!isoString) return '';
-    try {
-      const date = parseUTCDate(isoString);
-      if (!date) return '';
-      const now = new Date();
-      const isToday =
-        date.toLocaleDateString('en-IN', { timeZone: 'Asia/Kolkata' }) ===
-        now.toLocaleDateString('en-IN', { timeZone: 'Asia/Kolkata' });
-      if (isToday) {
-        return date.toLocaleTimeString('en-IN', {
-          timeZone: 'Asia/Kolkata',
-          hour: 'numeric',
-          minute: '2-digit',
-          hour12: true,
-        }).toLowerCase();
-      }
-      return date.toLocaleDateString('en-IN', {
-        timeZone: 'Asia/Kolkata',
-        day: '2-digit',
-        month: '2-digit',
-        year: 'numeric',
-      });
-    } catch {
-      return '';
-    }
-  };
 
   return (
     <div className="w-80 md:w-96 border-r border-slate-200 bg-white flex flex-col h-full select-none">
@@ -197,8 +169,8 @@ export const ConversationList: React.FC<ConversationListProps> = ({
                   >
                     {displayName}
                   </span>
-                  <span className="text-[10px] text-slate-400 font-mono flex-shrink-0">
-                    {formatTime(conv.last_message_at)}
+                  <span className="text-[10px] text-black font-semibold flex-shrink-0">
+                    {formatWhatsAppTime(conv.last_message_at)}
                   </span>
                 </div>
 

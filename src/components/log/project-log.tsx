@@ -140,7 +140,7 @@ export default function ProjectLogs() {
   }
 
   return (
-    <div className='flex flex-1 flex-col gap-4 p-4 max-w-[1240px] mx-auto w-full'>
+    <div className='flex flex-1 flex-col gap-4 p-4 mx-auto w-full'>
       <div className='flex items-center justify-between space-y-2'>
         <div>
           <h2 className='text-2xl font-bold tracking-tight flex items-center gap-2'>
@@ -160,7 +160,7 @@ export default function ProjectLogs() {
                 <TableHead className='w-[160px]'>User</TableHead>
                 <TableHead className='w-[100px]'>Action</TableHead>
                 <TableHead className='w-[100px]'>Entity</TableHead>
-                <TableHead className='w-[220px]'>Context / Item</TableHead>
+                <TableHead className='w-[520px]'>Context / Item</TableHead>
                 <TableHead>Changes / Payload</TableHead>
                 <TableHead className='text-right w-[180px]'>Timestamp</TableHead>
               </TableRow>

@@ -151,25 +151,25 @@ const data = {
         },
       ],
     },
-    {
-      title: 'Data Repository',
-      url: '#',
-      icon: Database,
-      items: [
-        {
-          title: 'Invoicing Master',
-          url: '/invoicing-master',
-        },
-        {
-          title: 'Distributor Master',
-          url: '/distributer-master',
-        },
-        {
-          title: 'Limit Reports',
-          url: '/limit-reports',
-        },
-      ],
-    },
+    // {
+    //   title: 'Data Repository',
+    //   url: '#',
+    //   icon: Database,
+    //   items: [
+    //     {
+    //       title: 'Invoicing Master',
+    //       url: '/invoicing-master',
+    //     },
+    //     {
+    //       title: 'Distributor Master',
+    //       url: '/distributer-master',
+    //     },
+    //     {
+    //       title: 'Limit Reports',
+    //       url: '/limit-reports',
+    //     },
+    //   ],
+    // },
     {
       title: 'Tools & Logs',
       url: '#',

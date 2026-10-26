@@ -1,6 +1,6 @@
-import { useState, useMemo } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { useQuery, keepPreviousData } from '@tanstack/react-query';
+import { useState, useMemo } from 'react'
+import { useNavigate } from 'react-router-dom'
+import { useQuery, keepPreviousData } from '@tanstack/react-query'
 import {
   MessageSquare,
   Send,
@@ -20,19 +20,19 @@ import {
   Eye,
   FileText,
   Phone,
-} from 'lucide-react';
-import { toast } from 'sonner';
+} from 'lucide-react'
+import { toast } from 'sonner'
 
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { Badge } from '@/components/ui/badge'
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from '@/components/ui/select';
+} from '@/components/ui/select'
 import {
   Table,
   TableBody,
@@ -40,25 +40,27 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from '@/components/ui/table';
-import { Skeleton } from '@/components/ui/skeleton';
+} from '@/components/ui/table'
+import { Skeleton } from '@/components/ui/skeleton'
 import {
   Tooltip,
   TooltipContent,
   TooltipProvider,
   TooltipTrigger,
-} from '@/components/ui/tooltip';
+} from '@/components/ui/tooltip'
 import {
   Dialog,
   DialogContent,
   DialogHeader,
   DialogTitle,
-} from '@/components/ui/dialog';
-import { DatePicker } from '@/components/ui/date-picker';
-import { format, subDays, startOfWeek, startOfMonth } from 'date-fns';
-import Pagination from '@/components/shared/pagination';
-import telecrmUsers from '@/utils/telecrm_users.json';
-import { ENV } from '@/conf';
+} from '@/components/ui/dialog'
+import { DatePicker } from '@/components/ui/date-picker'
+import { format, subDays, startOfWeek, startOfMonth } from 'date-fns'
+import Pagination from '@/components/shared/pagination'
+import telecrmUsers from '@/utils/telecrm_users.json'
+import { ENV } from '@/conf'
+import { formatToIST } from '@/lib/date-utils'
+// import { formatCreationTimestamp } from '@/pages/call-recordings-page'
 
 export type PeriodPresetId =
   | 'ALL'
@@ -67,7 +69,7 @@ export type PeriodPresetId =
   | 'THIS_WEEK'
   | 'THIS_MONTH'
   | 'LAST_30_DAYS'
-  | 'CUSTOM';
+  | 'CUSTOM'
 
 export const PERIOD_PRESETS: { id: PeriodPresetId; label: string }[] = [
   { id: 'ALL', label: 'All Time' },
@@ -76,196 +78,196 @@ export const PERIOD_PRESETS: { id: PeriodPresetId; label: string }[] = [
   { id: 'THIS_WEEK', label: 'This Week' },
   { id: 'THIS_MONTH', label: 'This Month' },
   { id: 'LAST_30_DAYS', label: 'Last 30 Days' },
-];
+]
 
 export interface WhatsAppRecordItem {
-  id: string;
-  account_id: number | string | null;
-  account_name: string | null;
-  telecrm_name: string;
-  lead_name: string;
-  lead_id: string;
-  telecrm_url: string | null;
-  lead_phone: string;
-  type: string;
-  normalized_type: 'outgoing' | 'incoming';
-  messageText: string;
-  msgType: string;
-  wa_msg_type: string;
-  wa_msg_txt: string;
-  created_on: string;
-  creation_timestamp: string;
-  created_at?: string;
-  relative_time?: string;
-  assignee_phone_number: string;
-  assignee_email: string;
-  lead_assignee: string;
-  actor_employee_email?: string;
-  my_name?: string;
-  status?: string;
-  url?: string;
+  id: string
+  account_id: number | string | null
+  account_name: string | null
+  telecrm_name: string
+  lead_name: string
+  lead_id: string
+  telecrm_url: string | null
+  lead_phone: string
+  type: string
+  normalized_type: 'outgoing' | 'incoming'
+  messageText: string
+  msgType: string
+  wa_msg_type: string
+  wa_msg_txt: string
+  created_on: string
+  creation_timestamp: string
+  created_at?: string
+  relative_time?: string
+  assignee_phone_number: string
+  assignee_email: string
+  lead_assignee: string
+  actor_employee_email?: string
+  my_name?: string
+  status?: string
+  url?: string
 }
 
 export interface WhatsAppRecordsResponse {
-  status: string;
-  data: WhatsAppRecordItem[];
+  status: string
+  data: WhatsAppRecordItem[]
   pagination: {
-    total: number;
-    page: number;
-    limit: number;
-    total_pages: number;
-  };
+    total: number
+    page: number
+    limit: number
+    total_pages: number
+  }
 }
 
 // Format phone for clean display (+91 XXXXX XXXXX)
 function formatPhone(phoneStr?: string): string {
-  if (!phoneStr) return '—';
-  const clean = String(phoneStr).trim();
+  if (!phoneStr) return '—'
+  const clean = String(phoneStr).trim()
   if (clean.length === 12 && clean.startsWith('91')) {
-    return `+91 ${clean.slice(2, 7)} ${clean.slice(7)}`;
+    return `+91 ${clean.slice(2, 7)} ${clean.slice(7)}`
   }
   if (clean.length === 10) {
-    return `${clean.slice(0, 5)} ${clean.slice(5)}`;
+    return `${clean.slice(0, 5)} ${clean.slice(5)}`
   }
-  return clean;
+  return clean
 }
 
 // User avatar initials
 function getInitials(nameOrEmail?: string): string {
-  if (!nameOrEmail) return '?';
-  const clean = nameOrEmail.split('@')[0].replace(/[._-]/g, ' ').trim();
-  const parts = clean.split(' ').filter(Boolean);
+  if (!nameOrEmail) return '?'
+  const clean = nameOrEmail.split('@')[0].replace(/[._-]/g, ' ').trim()
+  const parts = clean.split(' ').filter(Boolean)
   if (parts.length >= 2) {
-    return (parts[0][0] + parts[1][0]).toUpperCase();
+    return (parts[0][0] + parts[1][0]).toUpperCase()
   }
-  return clean.slice(0, 2).toUpperCase();
+  return clean.slice(0, 2).toUpperCase()
 }
 
 // Map for fast user lookup from telecrm_users.json
 const callerMap = new Map<string, string>(
   telecrmUsers.map((u) => [u.email.toLowerCase(), u.name]),
-);
+)
 
 // Format actor / assignee display name
 function formatActorName(nameOrEmail?: string): string {
-  if (!nameOrEmail) return '—';
-  const str = String(nameOrEmail).trim();
-  if (!str || str === '—') return '—';
+  if (!nameOrEmail) return '—'
+  const str = String(nameOrEmail).trim()
+  if (!str || str === '—') return '—'
 
-  const lower = str.toLowerCase();
+  const lower = str.toLowerCase()
   if (callerMap.has(lower)) {
-    return callerMap.get(lower)!;
+    return callerMap.get(lower)!
   }
 
   // Get username part before '@' if email
-  const username = str.includes('@') ? str.split('@')[0] : str;
+  const username = str.includes('@') ? str.split('@')[0] : str
   // Get first name before the dot '.'
-  const firstName = username.split('.')[0].trim();
-  if (!firstName) return str;
+  const firstName = username.split('.')[0].trim()
+  if (!firstName) return str
 
   // Capitalize first letter
-  return firstName.charAt(0).toUpperCase() + firstName.slice(1);
+  return firstName.charAt(0).toUpperCase() + firstName.slice(1)
 }
 
 // Format timestamp into 12-hour format time & date
-function formatCreationTimestamp(ts?: string | null): string {
-  if (!ts || ts === '—') return '—';
-  const clean = String(ts).trim();
-  if (!clean) return '—';
+// function formatCreationTimestamp(ts?: string | null): string {
+//   if (!ts || ts === '—') return '—';
+//   const clean = String(ts).trim();
+//   if (!clean) return '—';
 
-  // Match DD/MM/YYYY HH:mm:ss or DD-MM-YYYY HH:mm:ss
-  const dmyMatch = clean.match(
-    /^(\d{1,2})[/-](\d{1,2})[/-](\d{4})(?:\s+(\d{1,2}):(\d{2})(?::(\d{2}))?)?/,
-  );
-  if (dmyMatch) {
-    const day = dmyMatch[1].padStart(2, '0');
-    const month = dmyMatch[2].padStart(2, '0');
-    const year = dmyMatch[3];
-    const rawHour = dmyMatch[4];
-    const mins = dmyMatch[5];
-    const secs = dmyMatch[6];
+//   // Match DD/MM/YYYY HH:mm:ss or DD-MM-YYYY HH:mm:ss
+//   const dmyMatch = clean.match(
+//     /^(\d{1,2})[/-](\d{1,2})[/-](\d{4})(?:\s+(\d{1,2}):(\d{2})(?::(\d{2}))?)?/,
+//   );
+//   if (dmyMatch) {
+//     const day = dmyMatch[1].padStart(2, '0');
+//     const month = dmyMatch[2].padStart(2, '0');
+//     const year = dmyMatch[3];
+//     const rawHour = dmyMatch[4];
+//     const mins = dmyMatch[5];
+//     const secs = dmyMatch[6];
 
-    if (rawHour !== undefined && mins !== undefined) {
-      const h24 = parseInt(rawHour, 10);
-      const period = h24 >= 12 ? 'PM' : 'AM';
-      const h12 = h24 % 12 === 0 ? 12 : h24 % 12;
-      const h12Str = String(h12).padStart(2, '0');
-      const timeStr =
-        secs !== undefined
-          ? `${h12Str}:${mins.padStart(2, '0')}:${secs.padStart(2, '0')} ${period}`
-          : `${h12Str}:${mins.padStart(2, '0')} ${period}`;
-      return `${day}/${month}/${year}, ${timeStr}`;
-    }
-    return `${day}/${month}/${year}`;
-  }
+//     if (rawHour !== undefined && mins !== undefined) {
+//       const h24 = parseInt(rawHour, 10);
+//       const period = h24 >= 12 ? 'PM' : 'AM';
+//       const h12 = h24 % 12 === 0 ? 12 : h24 % 12;
+//       const h12Str = String(h12).padStart(2, '0');
+//       const timeStr =
+//         secs !== undefined
+//           ? `${h12Str}:${mins.padStart(2, '0')}:${secs.padStart(2, '0')} ${period}`
+//           : `${h12Str}:${mins.padStart(2, '0')} ${period}`;
+//       return `${day}/${month}/${year}, ${timeStr}`;
+//     }
+//     return `${day}/${month}/${year}`;
+//   }
 
-  // Match YYYY-MM-DD HH:mm:ss
-  const ymdMatch = clean.match(
-    /^(\d{4})[/-](\d{1,2})[/-](\d{1,2})(?:\s+(\d{1,2}):(\d{2})(?::(\d{2}))?)?/,
-  );
-  if (ymdMatch) {
-    const year = ymdMatch[1];
-    const month = ymdMatch[2].padStart(2, '0');
-    const day = ymdMatch[3].padStart(2, '0');
-    const rawHour = ymdMatch[4];
-    const mins = ymdMatch[5];
-    const secs = ymdMatch[6];
+//   // Match YYYY-MM-DD HH:mm:ss
+//   const ymdMatch = clean.match(
+//     /^(\d{4})[/-](\d{1,2})[/-](\d{1,2})(?:\s+(\d{1,2}):(\d{2})(?::(\d{2}))?)?/,
+//   );
+//   if (ymdMatch) {
+//     const year = ymdMatch[1];
+//     const month = ymdMatch[2].padStart(2, '0');
+//     const day = ymdMatch[3].padStart(2, '0');
+//     const rawHour = ymdMatch[4];
+//     const mins = ymdMatch[5];
+//     const secs = ymdMatch[6];
 
-    if (rawHour !== undefined && mins !== undefined) {
-      const h24 = parseInt(rawHour, 10);
-      const period = h24 >= 12 ? 'PM' : 'AM';
-      const h12 = h24 % 12 === 0 ? 12 : h24 % 12;
-      const h12Str = String(h12).padStart(2, '0');
-      const timeStr =
-        secs !== undefined
-          ? `${h12Str}:${mins.padStart(2, '0')}:${secs.padStart(2, '0')} ${period}`
-          : `${h12Str}:${mins.padStart(2, '0')} ${period}`;
-      return `${day}/${month}/${year}, ${timeStr}`;
-    }
-    return `${day}/${month}/${year}`;
-  }
+//     if (rawHour !== undefined && mins !== undefined) {
+//       const h24 = parseInt(rawHour, 10);
+//       const period = h24 >= 12 ? 'PM' : 'AM';
+//       const h12 = h24 % 12 === 0 ? 12 : h24 % 12;
+//       const h12Str = String(h12).padStart(2, '0');
+//       const timeStr =
+//         secs !== undefined
+//           ? `${h12Str}:${mins.padStart(2, '0')}:${secs.padStart(2, '0')} ${period}`
+//           : `${h12Str}:${mins.padStart(2, '0')} ${period}`;
+//       return `${day}/${month}/${year}, ${timeStr}`;
+//     }
+//     return `${day}/${month}/${year}`;
+//   }
 
-  // Fallback for ISO format or standard date string
-  const parsed = new Date(clean);
-  if (!isNaN(parsed.getTime())) {
-    const day = String(parsed.getDate()).padStart(2, '0');
-    const month = String(parsed.getMonth() + 1).padStart(2, '0');
-    const year = parsed.getFullYear();
-    const h24 = parsed.getHours();
-    const period = h24 >= 12 ? 'PM' : 'AM';
-    const h12 = h24 % 12 === 0 ? 12 : h24 % 12;
-    const h12Str = String(h12).padStart(2, '0');
-    const mins = String(parsed.getMinutes()).padStart(2, '0');
-    const secs = String(parsed.getSeconds()).padStart(2, '0');
-    return `${day}/${month}/${year}, ${h12Str}:${mins}:${secs} ${period}`;
-  }
+//   // Fallback for ISO format or standard date string
+//   const parsed = new Date(clean);
+//   if (!isNaN(parsed.getTime())) {
+//     const day = String(parsed.getDate()).padStart(2, '0');
+//     const month = String(parsed.getMonth() + 1).padStart(2, '0');
+//     const year = parsed.getFullYear();
+//     const h24 = parsed.getHours();
+//     const period = h24 >= 12 ? 'PM' : 'AM';
+//     const h12 = h24 % 12 === 0 ? 12 : h24 % 12;
+//     const h12Str = String(h12).padStart(2, '0');
+//     const mins = String(parsed.getMinutes()).padStart(2, '0');
+//     const secs = String(parsed.getSeconds()).padStart(2, '0');
+//     return `${day}/${month}/${year}, ${h12Str}:${mins}:${secs} ${period}`;
+//   }
 
-  return clean;
-}
+//   return clean;
+// }
 
 export default function WhatsAppRecordsTab() {
-  const navigate = useNavigate();
+  const navigate = useNavigate()
 
   // Query & pagination state
-  const [currentPage, setCurrentPage] = useState<number>(1);
-  const [pageSize, setPageSize] = useState<number>(20);
-  const [searchInput, setSearchInput] = useState<string>('');
-  const [appliedSearch, setAppliedSearch] = useState<string>('');
-  const [typeFilter, setTypeFilter] = useState<string>('all');
-  const [msgTypeFilter, setMsgTypeFilter] = useState<string>('all');
-  const [userFilter, setUserFilter] = useState<string>('all');
-  const [fromDate, setFromDate] = useState<string>('');
-  const [fromTime, setFromTime] = useState<string>('');
-  const [toDate, setToDate] = useState<string>('');
-  const [toTime, setToTime] = useState<string>('');
-  const [activePreset, setActivePreset] = useState<PeriodPresetId>('ALL');
+  const [currentPage, setCurrentPage] = useState<number>(1)
+  const [pageSize, setPageSize] = useState<number>(20)
+  const [searchInput, setSearchInput] = useState<string>('')
+  const [appliedSearch, setAppliedSearch] = useState<string>('')
+  const [typeFilter, setTypeFilter] = useState<string>('all')
+  const [msgTypeFilter, setMsgTypeFilter] = useState<string>('all')
+  const [userFilter, setUserFilter] = useState<string>('all')
+  const [fromDate, setFromDate] = useState<string>('')
+  const [fromTime, setFromTime] = useState<string>('')
+  const [toDate, setToDate] = useState<string>('')
+  const [toTime, setToTime] = useState<string>('')
+  const [activePreset, setActivePreset] = useState<PeriodPresetId>('ALL')
 
   // Copy feedback state
-  const [copiedId, setCopiedId] = useState<string | null>(null);
+  const [copiedId, setCopiedId] = useState<string | null>(null)
 
   // Active message detail modal
   const [activeDetailItem, setActiveDetailItem] =
-    useState<WhatsAppRecordItem | null>(null);
+    useState<WhatsAppRecordItem | null>(null)
 
   // Fetch WhatsApp records with pagination & filters
   const { data, isLoading, isFetching, isError, error, refetch } =
@@ -287,232 +289,236 @@ export default function WhatsAppRecordsTab() {
         const params = new URLSearchParams({
           page: String(currentPage),
           limit: String(pageSize),
-        });
+        })
         if (appliedSearch.trim()) {
-          params.append('search', appliedSearch.trim());
+          params.append('search', appliedSearch.trim())
         }
         if (typeFilter && typeFilter !== 'all') {
-          params.append('type', typeFilter);
+          params.append('type', typeFilter)
         }
         if (msgTypeFilter && msgTypeFilter !== 'all') {
-          params.append('msg_type', msgTypeFilter);
+          params.append('msg_type', msgTypeFilter)
         }
         if (userFilter && userFilter !== 'all') {
-          params.append('user', userFilter);
+          params.append('user', userFilter)
         }
         if (fromDate) {
           const fromParam = fromTime
             ? `${fromDate} ${fromTime}${fromTime.length === 5 ? ':00' : ''}`
-            : `${fromDate} 00:00:00`;
-          params.append('from_date', fromParam);
+            : `${fromDate} 00:00:00`
+          params.append('from_date', fromParam)
         }
         if (toDate) {
           const toParam = toTime
             ? `${toDate} ${toTime}${toTime.length === 5 ? ':59' : ''}`
-            : `${toDate} 23:59:59`;
-          params.append('to_date', toParam);
+            : `${toDate} 23:59:59`
+          params.append('to_date', toParam)
         }
 
         const res = await fetch(
           `${ENV.VITE_BACKEND_BASE_URL}/tele-crm/whatsapp-records?${params.toString()}`,
           { credentials: 'include' },
-        );
+        )
 
         if (!res.ok) {
-          throw new Error(`Failed to load WhatsApp records (${res.status})`);
+          throw new Error(`Failed to load WhatsApp records (${res.status})`)
         }
-        return res.json();
+        return res.json()
       },
       placeholderData: keepPreviousData,
-    });
+    })
 
-  const records = data?.data || [];
+  const records = data?.data || []
   const pagination = data?.pagination || {
     total: 0,
     page: 1,
     limit: pageSize,
     total_pages: 1,
-  };
+  }
 
   // User options for filter loaded from telecrm_users.json + returned data
   const availableUsers = useMemo(() => {
     const list = telecrmUsers.map((u) => ({
       name: u.name,
       email: u.email,
-    }));
-    const existingEmails = new Set(list.map((u) => u.email.toLowerCase()));
+    }))
+    const existingEmails = new Set(list.map((u) => u.email.toLowerCase()))
 
     records.forEach((r) => {
-      const email = (r.assignee_email || r.actor_employee_email || '').trim().toLowerCase();
+      const email = (r.assignee_email || r.actor_employee_email || '')
+        .trim()
+        .toLowerCase()
       if (email && !existingEmails.has(email)) {
-        existingEmails.add(email);
+        existingEmails.add(email)
         list.push({
           name: formatActorName(email),
           email,
-        });
+        })
       }
-    });
-    return list.sort((a, b) => a.name.localeCompare(b.name));
-  }, [records]);
+    })
+    return list.sort((a, b) => a.name.localeCompare(b.name))
+  }, [records])
 
   // Client-side safety filter for user if active
   const displayedRecords = useMemo(() => {
     if (userFilter && userFilter !== 'all') {
-      const filterLower = userFilter.toLowerCase().trim();
+      const filterLower = userFilter.toLowerCase().trim()
       const filterPrefix = filterLower.includes('@')
         ? filterLower.split('@')[0]
-        : filterLower;
+        : filterLower
       return records.filter((r) => {
-        const email = (r.assignee_email || r.actor_employee_email || '').toLowerCase().trim();
-        const assignee = (r.lead_assignee || '').toLowerCase().trim();
-        const phone = (r.assignee_phone_number || '').trim();
+        const email = (r.assignee_email || r.actor_employee_email || '')
+          .toLowerCase()
+          .trim()
+        const assignee = (r.lead_assignee || '').toLowerCase().trim()
+        const phone = (r.assignee_phone_number || '').trim()
         return (
           email === filterLower ||
           email.startsWith(filterPrefix) ||
           assignee.includes(filterPrefix) ||
           (phone && filterLower.includes(phone.slice(-10)))
-        );
-      });
+        )
+      })
     }
-    return records;
-  }, [records, userFilter]);
+    return records
+  }, [records, userFilter])
 
   // Search handler
   const handleSearchSubmit = (e?: React.FormEvent) => {
-    if (e) e.preventDefault();
-    setCurrentPage(1);
-    setAppliedSearch(searchInput.trim());
-  };
+    if (e) e.preventDefault()
+    setCurrentPage(1)
+    setAppliedSearch(searchInput.trim())
+  }
 
   // Clear search
   const handleClearSearch = () => {
-    setSearchInput('');
-    setAppliedSearch('');
-    setCurrentPage(1);
-  };
+    setSearchInput('')
+    setAppliedSearch('')
+    setCurrentPage(1)
+  }
 
   // Period presets
   const applyPreset = (presetId: PeriodPresetId) => {
-    setActivePreset(presetId);
-    setCurrentPage(1);
-    const now = new Date();
-    const todayStr = format(now, 'yyyy-MM-dd');
+    setActivePreset(presetId)
+    setCurrentPage(1)
+    const now = new Date()
+    const todayStr = format(now, 'yyyy-MM-dd')
 
     switch (presetId) {
       case 'ALL':
-        setFromDate('');
-        setFromTime('');
-        setToDate('');
-        setToTime('');
-        break;
+        setFromDate('')
+        setFromTime('')
+        setToDate('')
+        setToTime('')
+        break
       case 'TODAY':
-        setFromDate(todayStr);
-        setFromTime('00:00');
-        setToDate(todayStr);
-        setToTime('23:59');
-        break;
+        setFromDate(todayStr)
+        setFromTime('00:00')
+        setToDate(todayStr)
+        setToTime('23:59')
+        break
       case 'YESTERDAY': {
-        const yesterday = subDays(now, 1);
-        const yStr = format(yesterday, 'yyyy-MM-dd');
-        setFromDate(yStr);
-        setFromTime('00:00');
-        setToDate(yStr);
-        setToTime('23:59');
-        break;
+        const yesterday = subDays(now, 1)
+        const yStr = format(yesterday, 'yyyy-MM-dd')
+        setFromDate(yStr)
+        setFromTime('00:00')
+        setToDate(yStr)
+        setToTime('23:59')
+        break
       }
       case 'THIS_WEEK': {
-        const weekStart = startOfWeek(now, { weekStartsOn: 1 });
-        setFromDate(format(weekStart, 'yyyy-MM-dd'));
-        setFromTime('00:00');
-        setToDate(todayStr);
-        setToTime('23:59');
-        break;
+        const weekStart = startOfWeek(now, { weekStartsOn: 1 })
+        setFromDate(format(weekStart, 'yyyy-MM-dd'))
+        setFromTime('00:00')
+        setToDate(todayStr)
+        setToTime('23:59')
+        break
       }
       case 'THIS_MONTH': {
-        const monthStart = startOfMonth(now);
-        setFromDate(format(monthStart, 'yyyy-MM-dd'));
-        setFromTime('00:00');
-        setToDate(todayStr);
-        setToTime('23:59');
-        break;
+        const monthStart = startOfMonth(now)
+        setFromDate(format(monthStart, 'yyyy-MM-dd'))
+        setFromTime('00:00')
+        setToDate(todayStr)
+        setToTime('23:59')
+        break
       }
       case 'LAST_30_DAYS': {
-        const thirtyDaysAgo = subDays(now, 30);
-        setFromDate(format(thirtyDaysAgo, 'yyyy-MM-dd'));
-        setFromTime('00:00');
-        setToDate(todayStr);
-        setToTime('23:59');
-        break;
+        const thirtyDaysAgo = subDays(now, 30)
+        setFromDate(format(thirtyDaysAgo, 'yyyy-MM-dd'))
+        setFromTime('00:00')
+        setToDate(todayStr)
+        setToTime('23:59')
+        break
       }
       default:
-        break;
+        break
     }
-  };
+  }
 
   const handleFromDateChange = (val: string) => {
-    setFromDate(val);
-    setActivePreset('CUSTOM');
-    setCurrentPage(1);
-  };
+    setFromDate(val)
+    setActivePreset('CUSTOM')
+    setCurrentPage(1)
+  }
 
   const handleToDateChange = (val: string) => {
-    setToDate(val);
-    setActivePreset('CUSTOM');
-    setCurrentPage(1);
-  };
+    setToDate(val)
+    setActivePreset('CUSTOM')
+    setCurrentPage(1)
+  }
 
   const handleClearPeriod = () => {
-    setFromDate('');
-    setFromTime('');
-    setToDate('');
-    setToTime('');
-    setActivePreset('ALL');
-    setCurrentPage(1);
-  };
+    setFromDate('')
+    setFromTime('')
+    setToDate('')
+    setToTime('')
+    setActivePreset('ALL')
+    setCurrentPage(1)
+  }
 
   // Reset all filters
   const handleResetAllFilters = () => {
-    setSearchInput('');
-    setAppliedSearch('');
-    setTypeFilter('all');
-    setMsgTypeFilter('all');
-    setUserFilter('all');
-    setFromDate('');
-    setFromTime('');
-    setToDate('');
-    setToTime('');
-    setActivePreset('ALL');
-    setCurrentPage(1);
-  };
+    setSearchInput('')
+    setAppliedSearch('')
+    setTypeFilter('all')
+    setMsgTypeFilter('all')
+    setUserFilter('all')
+    setFromDate('')
+    setFromTime('')
+    setToDate('')
+    setToTime('')
+    setActivePreset('ALL')
+    setCurrentPage(1)
+  }
 
   const hasActiveFilters = Boolean(
     appliedSearch.trim() ||
-      searchInput.trim() ||
-      typeFilter !== 'all' ||
-      msgTypeFilter !== 'all' ||
-      userFilter !== 'all' ||
-      fromDate ||
-      toDate ||
-      fromTime ||
-      toTime,
-  );
+    searchInput.trim() ||
+    typeFilter !== 'all' ||
+    msgTypeFilter !== 'all' ||
+    userFilter !== 'all' ||
+    fromDate ||
+    toDate ||
+    fromTime ||
+    toTime,
+  )
 
   // Copy handler
   const handleCopyText = (text: string, id: string, label = 'Text') => {
-    navigator.clipboard.writeText(text);
-    setCopiedId(id);
-    toast.success(`Copied ${label}`);
+    navigator.clipboard.writeText(text)
+    setCopiedId(id)
+    toast.success(`Copied ${label}`)
     setTimeout(() => {
-      setCopiedId((curr) => (curr === id ? null : curr));
-    }, 2000);
-  };
+      setCopiedId((curr) => (curr === id ? null : curr))
+    }, 2000)
+  }
 
   // Count metrics for current view
   const matchedAccountsCount = useMemo(() => {
     return displayedRecords.filter((r) =>
       Boolean(r.account_id && r.account_name),
-    ).length;
-  }, [displayedRecords]);
+    ).length
+  }, [displayedRecords])
 
   return (
     <TooltipProvider>
@@ -536,7 +542,8 @@ export default function WhatsAppRecordsTab() {
                 </Badge>
               </div>
               <p className='text-xs text-muted-foreground mt-0.5'>
-                Centralized WhatsApp messages and conversation logs archive mapped with system accounts and TeleCRM
+                Centralized WhatsApp messages and conversation logs archive
+                mapped with system accounts and TeleCRM
               </p>
             </div>
           </div>
@@ -592,7 +599,7 @@ export default function WhatsAppRecordsTab() {
         </div>
 
         {/* Toolbar & Filters */}
-        <div className='flex-1 flex flex-col overflow-hidden p-4 sm:p-6 gap-3.5'>
+        <div className='flex-1 min-h-0 flex flex-col overflow-hidden p-4 sm:p-6 gap-3.5'>
           <div className='bg-background rounded-xl border border-border/60 p-3 flex flex-col gap-3 shadow-2xs shrink-0'>
             {/* Top Row: Search Input & Dropdowns & Reset */}
             <div className='flex flex-wrap items-center justify-between gap-3'>
@@ -639,8 +646,8 @@ export default function WhatsAppRecordsTab() {
                     <Select
                       value={userFilter}
                       onValueChange={(val) => {
-                        setUserFilter(val);
-                        setCurrentPage(1);
+                        setUserFilter(val)
+                        setCurrentPage(1)
                       }}
                     >
                       <SelectTrigger className='h-9 text-xs w-[140px] rounded-lg bg-background'>
@@ -661,8 +668,8 @@ export default function WhatsAppRecordsTab() {
                         size='icon'
                         type='button'
                         onClick={() => {
-                          setUserFilter('all');
-                          setCurrentPage(1);
+                          setUserFilter('all')
+                          setCurrentPage(1)
                         }}
                         title='Clear user filter'
                         className='h-8 w-8 text-muted-foreground hover:text-foreground cursor-pointer rounded-md'
@@ -681,8 +688,8 @@ export default function WhatsAppRecordsTab() {
                   <Select
                     value={typeFilter}
                     onValueChange={(val) => {
-                      setTypeFilter(val);
-                      setCurrentPage(1);
+                      setTypeFilter(val)
+                      setCurrentPage(1)
                     }}
                   >
                     <SelectTrigger className='h-9 text-xs w-[145px] rounded-lg bg-background'>
@@ -690,8 +697,12 @@ export default function WhatsAppRecordsTab() {
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value='all'>All Types</SelectItem>
-                      <SelectItem value='outgoing'>Outgoing (OUTGOING_WHATSAPP_MSG)</SelectItem>
-                      <SelectItem value='incoming'>Incoming (INCOMING_WHATSAPP_MSG)</SelectItem>
+                      <SelectItem value='outgoing'>
+                        Outgoing (OUTGOING_WHATSAPP_MSG)
+                      </SelectItem>
+                      <SelectItem value='incoming'>
+                        Incoming (INCOMING_WHATSAPP_MSG)
+                      </SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
@@ -704,8 +715,8 @@ export default function WhatsAppRecordsTab() {
                   <Select
                     value={msgTypeFilter}
                     onValueChange={(val) => {
-                      setMsgTypeFilter(val);
-                      setCurrentPage(1);
+                      setMsgTypeFilter(val)
+                      setCurrentPage(1)
                     }}
                   >
                     <SelectTrigger className='h-9 text-xs w-[120px] rounded-lg bg-background'>
@@ -727,8 +738,8 @@ export default function WhatsAppRecordsTab() {
                   <Select
                     value={String(pageSize)}
                     onValueChange={(val) => {
-                      setPageSize(Number(val));
-                      setCurrentPage(1);
+                      setPageSize(Number(val))
+                      setCurrentPage(1)
                     }}
                   >
                     <SelectTrigger className='h-9 text-xs w-[90px] rounded-lg bg-background'>
@@ -786,12 +797,12 @@ export default function WhatsAppRecordsTab() {
                       type='time'
                       value={fromTime}
                       onChange={(e) => {
-                        setFromTime(e.target.value);
+                        setFromTime(e.target.value)
                         if (!fromDate) {
-                          setFromDate(format(new Date(), 'yyyy-MM-dd'));
+                          setFromDate(format(new Date(), 'yyyy-MM-dd'))
                         }
-                        setActivePreset('CUSTOM');
-                        setCurrentPage(1);
+                        setActivePreset('CUSTOM')
+                        setCurrentPage(1)
                       }}
                       className='bg-transparent text-xs text-foreground outline-none w-18 cursor-pointer font-medium'
                       title='From Time (HH:mm)'
@@ -800,9 +811,9 @@ export default function WhatsAppRecordsTab() {
                       <button
                         type='button'
                         onClick={() => {
-                          setFromTime('');
-                          setActivePreset('CUSTOM');
-                          setCurrentPage(1);
+                          setFromTime('')
+                          setActivePreset('CUSTOM')
+                          setCurrentPage(1)
                         }}
                         className='text-muted-foreground hover:text-foreground p-0.5 cursor-pointer'
                         title='Clear time'
@@ -832,12 +843,12 @@ export default function WhatsAppRecordsTab() {
                       type='time'
                       value={toTime}
                       onChange={(e) => {
-                        setToTime(e.target.value);
+                        setToTime(e.target.value)
                         if (!toDate) {
-                          setToDate(format(new Date(), 'yyyy-MM-dd'));
+                          setToDate(format(new Date(), 'yyyy-MM-dd'))
                         }
-                        setActivePreset('CUSTOM');
-                        setCurrentPage(1);
+                        setActivePreset('CUSTOM')
+                        setCurrentPage(1)
                       }}
                       className='bg-transparent text-xs text-foreground outline-none w-18 cursor-pointer font-medium'
                       title='To Time (HH:mm)'
@@ -846,9 +857,9 @@ export default function WhatsAppRecordsTab() {
                       <button
                         type='button'
                         onClick={() => {
-                          setToTime('');
-                          setActivePreset('CUSTOM');
-                          setCurrentPage(1);
+                          setToTime('')
+                          setActivePreset('CUSTOM')
+                          setCurrentPage(1)
                         }}
                         className='text-muted-foreground hover:text-foreground p-0.5 cursor-pointer'
                         title='Clear time'
@@ -878,7 +889,7 @@ export default function WhatsAppRecordsTab() {
                     activePreset === preset.id &&
                     (preset.id === 'ALL'
                       ? !fromDate && !toDate
-                      : Boolean(fromDate || toDate));
+                      : Boolean(fromDate || toDate))
                   return (
                     <button
                       key={preset.id}
@@ -892,15 +903,15 @@ export default function WhatsAppRecordsTab() {
                     >
                       {preset.label}
                     </button>
-                  );
+                  )
                 })}
               </div>
             </div>
           </div>
 
           {/* Table Container */}
-          <div className='flex-1 bg-background rounded-xl border border-border/60 shadow-2xs overflow-hidden flex flex-col'>
-            <div className='flex-1 overflow-auto'>
+          <div className='flex-1 min-h-0 bg-background rounded-xl border border-border/60 shadow-2xs overflow-hidden flex flex-col'>
+            <div className='flex-1 min-h-0 overflow-auto'>
               <Table>
                 <TableHeader className='bg-muted/40 sticky top-0 z-10 border-b border-border/60 shadow-xs'>
                   <TableRow className='hover:bg-transparent'>
@@ -914,11 +925,13 @@ export default function WhatsAppRecordsTab() {
                     <TableHead className='min-w-[140px]'>Lead Phone</TableHead>
                     <TableHead className='min-w-[150px]'>Type</TableHead>
                     <TableHead className='min-w-[240px]'>Message</TableHead>
-                    <TableHead className='min-w-[90px] text-center'>Msg Type</TableHead>
-                    <TableHead className='min-w-[160px]'>Assignee / Phone</TableHead>
-                    <TableHead className='min-w-[170px]'>
-                      Created On
+                    <TableHead className='min-w-[90px] text-center'>
+                      Msg Type
                     </TableHead>
+                    <TableHead className='min-w-[160px]'>
+                      Assignee / Phone
+                    </TableHead>
+                    <TableHead className='min-w-[170px]'>Created On</TableHead>
                     <TableHead className='w-[60px] text-center'>View</TableHead>
                   </TableRow>
                 </TableHeader>
@@ -1017,25 +1030,28 @@ export default function WhatsAppRecordsTab() {
                     // Data Rows
                     displayedRecords.map((item, index) => {
                       const rowNumber =
-                        (pagination.page - 1) * pagination.limit + index + 1;
+                        (pagination.page - 1) * pagination.limit + index + 1
                       const hasAccount = Boolean(
                         item.account_name && item.account_id,
-                      );
-                      const isPhoneCopied = copiedId === `phone-${item.id}`;
-                      const isAssigneePhoneCopied = copiedId === `assignee-${item.id}`;
+                      )
+                      const isPhoneCopied = copiedId === `phone-${item.id}`
+                      const isAssigneePhoneCopied =
+                        copiedId === `assignee-${item.id}`
 
-                      const typeLower = (item.normalized_type || item.type || '').toLowerCase();
+                      const typeLower = (
+                        item.normalized_type ||
+                        item.type ||
+                        ''
+                      ).toLowerCase()
                       const isOutgoing =
-                        typeLower.includes('out') ||
-                        typeLower.includes('sent');
+                        typeLower.includes('out') || typeLower.includes('sent')
                       const isIncoming =
-                        typeLower.includes('in') ||
-                        typeLower.includes('rec');
+                        typeLower.includes('in') || typeLower.includes('rec')
 
                       const displayMessage =
-                        item.messageText || item.wa_msg_txt || '—';
+                        item.messageText || item.wa_msg_txt || '—'
                       const displayMsgType =
-                        item.msgType || item.wa_msg_type || 'TEXT';
+                        item.msgType || item.wa_msg_type || 'TEXT'
 
                       return (
                         <TableRow
@@ -1085,7 +1101,9 @@ export default function WhatsAppRecordsTab() {
                                   title={`Open TeleCRM Lead: ${item.telecrm_name || item.lead_name || 'TeleCRM Lead'}`}
                                 >
                                   <span className='truncate'>
-                                    {item.telecrm_name || item.lead_name || 'TeleCRM Lead'}
+                                    {item.telecrm_name ||
+                                      item.lead_name ||
+                                      'TeleCRM Lead'}
                                   </span>
                                   <ExternalLink className='h-3 w-3 shrink-0 opacity-70 group-hover:opacity-100' />
                                 </a>
@@ -1273,11 +1291,7 @@ export default function WhatsAppRecordsTab() {
                           <TableCell>
                             <div className='flex flex-col'>
                               <span className='text-xs font-medium text-foreground whitespace-nowrap'>
-                                {formatCreationTimestamp(
-                                  item.created_on ||
-                                    item.creation_timestamp ||
-                                    item.created_at,
-                                )}
+                                {formatToIST(item.creation_timestamp)}
                               </span>
                               {item.relative_time && (
                                 <span className='text-[10px] text-muted-foreground'>
@@ -1302,7 +1316,7 @@ export default function WhatsAppRecordsTab() {
                             </Button>
                           </TableCell>
                         </TableRow>
-                      );
+                      )
                     })
                   )}
                 </TableBody>
@@ -1367,8 +1381,8 @@ export default function WhatsAppRecordsTab() {
                         <button
                           type='button'
                           onClick={() => {
-                            navigate(`/accounts/${activeDetailItem.account_id}`);
-                            setActiveDetailItem(null);
+                            navigate(`/accounts/${activeDetailItem.account_id}`)
+                            setActiveDetailItem(null)
                           }}
                           className='inline-flex items-center gap-1 text-emerald-600 dark:text-emerald-400 hover:underline cursor-pointer text-left'
                         >
@@ -1435,7 +1449,9 @@ export default function WhatsAppRecordsTab() {
                       Lead ID:
                     </span>
                     <div className='flex items-center gap-1 font-mono text-muted-foreground'>
-                      <span className='truncate'>{activeDetailItem.lead_id || '—'}</span>
+                      <span className='truncate'>
+                        {activeDetailItem.lead_id || '—'}
+                      </span>
                       {activeDetailItem.lead_id && (
                         <button
                           type='button'
@@ -1468,7 +1484,9 @@ export default function WhatsAppRecordsTab() {
                       Msg Type (msgType / wa_msg_type):
                     </span>
                     <span className='font-mono font-medium text-foreground'>
-                      {activeDetailItem.msgType || activeDetailItem.wa_msg_type || 'TEXT'}
+                      {activeDetailItem.msgType ||
+                        activeDetailItem.wa_msg_type ||
+                        'TEXT'}
                     </span>
                   </div>
 
@@ -1477,7 +1495,9 @@ export default function WhatsAppRecordsTab() {
                       Assignee Phone:
                     </span>
                     <div className='flex items-center gap-1 font-mono font-medium text-foreground'>
-                      <span>{formatPhone(activeDetailItem.assignee_phone_number)}</span>
+                      <span>
+                        {formatPhone(activeDetailItem.assignee_phone_number)}
+                      </span>
                       {activeDetailItem.assignee_phone_number && (
                         <button
                           type='button'
@@ -1514,7 +1534,7 @@ export default function WhatsAppRecordsTab() {
                     </span>
                     <span className='font-medium text-foreground'>
                       {activeDetailItem.created_on
-                        ? formatCreationTimestamp(activeDetailItem.created_on)
+                        ? formatToIST(activeDetailItem.created_on)
                         : '—'}
                     </span>
                   </div>
@@ -1524,7 +1544,7 @@ export default function WhatsAppRecordsTab() {
                       Creation Timestamp:
                     </span>
                     <span className='font-medium text-foreground'>
-                      {formatCreationTimestamp(
+                      {formatToIST(
                         activeDetailItem.creation_timestamp ||
                           activeDetailItem.created_at,
                       )}
@@ -1539,7 +1559,8 @@ export default function WhatsAppRecordsTab() {
                       <FileText className='h-3.5 w-3.5 text-emerald-600' />
                       Message Content (messageText):
                     </span>
-                    {(activeDetailItem.messageText || activeDetailItem.wa_msg_txt) && (
+                    {(activeDetailItem.messageText ||
+                      activeDetailItem.wa_msg_txt) && (
                       <Button
                         variant='ghost'
                         size='sm'
@@ -1566,7 +1587,8 @@ export default function WhatsAppRecordsTab() {
 
                 {/* Secondary wa_msg_txt if distinct from messageText */}
                 {activeDetailItem.wa_msg_txt &&
-                  activeDetailItem.wa_msg_txt !== activeDetailItem.messageText && (
+                  activeDetailItem.wa_msg_txt !==
+                    activeDetailItem.messageText && (
                     <div className='flex flex-col gap-1.5'>
                       <div className='flex items-center justify-between'>
                         <span className='text-xs font-semibold text-foreground flex items-center gap-1.5'>
@@ -1597,14 +1619,17 @@ export default function WhatsAppRecordsTab() {
                 {/* Media Link if present */}
                 {activeDetailItem.url && (
                   <div className='flex items-center justify-between bg-muted/40 p-3 rounded-xl border border-border/60 text-xs'>
-                    <span className='text-muted-foreground'>Media / Action URL:</span>
+                    <span className='text-muted-foreground'>
+                      Media / Action URL:
+                    </span>
                     <a
                       href={activeDetailItem.url}
                       target='_blank'
                       rel='noopener noreferrer'
                       className='inline-flex items-center gap-1 text-emerald-600 hover:underline font-medium'
                     >
-                      Open Attachment / Link <ExternalLink className='h-3 w-3' />
+                      Open Attachment / Link{' '}
+                      <ExternalLink className='h-3 w-3' />
                     </a>
                   </div>
                 )}
@@ -1614,5 +1639,5 @@ export default function WhatsAppRecordsTab() {
         )}
       </div>
     </TooltipProvider>
-  );
+  )
 }

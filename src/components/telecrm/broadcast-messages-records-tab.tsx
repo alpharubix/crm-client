@@ -61,6 +61,7 @@ import Pagination from '@/components/shared/pagination';
 import { ImagePreviewModal } from '@/components/whatsapp/image-preview-modal';
 import { WhatsAppAudioPlayer } from '@/components/whatsapp/whatsapp-audio-player';
 import { ENV } from '@/conf';
+import { formatToIST } from '@/lib/date-utils';
 
 export type PeriodPresetId =
   | 'ALL'
@@ -138,28 +139,28 @@ function formatPhone(phoneStr?: string): string {
 }
 
 // Format timestamp into 12-hour format time & date
-function formatCreationTimestamp(ts?: string | null): string {
-  if (!ts || ts === '—') return '—';
-  const clean = String(ts).trim();
-  if (!clean) return '—';
+// function formatCreationTimestamp(ts?: string | null): string {
+//   if (!ts || ts === '—') return '—';
+//   const clean = String(ts).trim();
+//   if (!clean) return '—';
 
-  // Fallback for ISO format or standard date string
-  const parsed = new Date(clean);
-  if (!isNaN(parsed.getTime())) {
-    const day = String(parsed.getDate()).padStart(2, '0');
-    const month = String(parsed.getMonth() + 1).padStart(2, '0');
-    const year = parsed.getFullYear();
-    const h24 = parsed.getHours();
-    const period = h24 >= 12 ? 'PM' : 'AM';
-    const h12 = h24 % 12 === 0 ? 12 : h24 % 12;
-    const h12Str = String(h12).padStart(2, '0');
-    const mins = String(parsed.getMinutes()).padStart(2, '0');
-    const secs = String(parsed.getSeconds()).padStart(2, '0');
-    return `${day}/${month}/${year}, ${h12Str}:${mins}:${secs} ${period}`;
-  }
+//   // Fallback for ISO format or standard date string
+//   const parsed = new Date(clean);
+//   if (!isNaN(parsed.getTime())) {
+//     const day = String(parsed.getDate()).padStart(2, '0');
+//     const month = String(parsed.getMonth() + 1).padStart(2, '0');
+//     const year = parsed.getFullYear();
+//     const h24 = parsed.getHours();
+//     const period = h24 >= 12 ? 'PM' : 'AM';
+//     const h12 = h24 % 12 === 0 ? 12 : h24 % 12;
+//     const h12Str = String(h12).padStart(2, '0');
+//     const mins = String(parsed.getMinutes()).padStart(2, '0');
+//     const secs = String(parsed.getSeconds()).padStart(2, '0');
+//     return `${day}/${month}/${year}, ${h12Str}:${mins}:${secs} ${period}`;
+//   }
 
-  return clean;
-}
+//   return clean;
+// }
 
 // Render status badge with icon and appropriate colors
 function renderStatusBadge(status?: string) {
@@ -573,7 +574,7 @@ export default function BroadcastMessagesRecordsTab() {
         </div>
 
         {/* Toolbar & Filters */}
-        <div className='flex-1 flex flex-col overflow-hidden p-4 sm:p-6 gap-3.5'>
+        <div className='flex-1 min-h-0 flex flex-col overflow-hidden p-4 sm:p-6 gap-3.5'>
           <div className='bg-background rounded-xl border border-border/60 p-3 flex flex-col gap-3 shadow-2xs shrink-0'>
             {/* Top Row: Search Input & Dropdowns & Reset */}
             <div className='flex flex-wrap items-center justify-between gap-3'>
@@ -951,8 +952,8 @@ export default function BroadcastMessagesRecordsTab() {
           </div>
 
           {/* Table Container */}
-          <div className='flex-1 bg-background rounded-xl border border-border/60 shadow-2xs overflow-hidden flex flex-col'>
-            <div className='flex-1 overflow-auto'>
+          <div className='flex-1 min-h-0 bg-background rounded-xl border border-border/60 shadow-2xs overflow-hidden flex flex-col'>
+            <div className='flex-1 min-h-0 overflow-auto'>
               <Table>
                 <TableHeader className='bg-muted/40 sticky top-0 z-10 border-b border-border/60 shadow-xs'>
                   <TableRow className='hover:bg-transparent'>
@@ -1259,7 +1260,7 @@ export default function BroadcastMessagesRecordsTab() {
                           <TableCell>
                             <div className='flex flex-col'>
                               <span className='text-xs font-medium text-foreground whitespace-nowrap'>
-                                {formatCreationTimestamp(item.timestamp || item.created_at)}
+                                {formatToIST(item.timestamp)}
                               </span>
                               {item.relative_time && (
                                 <span className='text-[10px] text-muted-foreground'>
@@ -1481,7 +1482,7 @@ export default function BroadcastMessagesRecordsTab() {
                       Timestamp:
                     </span>
                     <span className='font-medium text-foreground'>
-                      {formatCreationTimestamp(activeDetailItem.timestamp || activeDetailItem.created_at)}
+                      {formatToIST(activeDetailItem.timestamp || activeDetailItem.created_at)}
                     </span>
                   </div>
                 </div>
@@ -1601,7 +1602,7 @@ export default function BroadcastMessagesRecordsTab() {
                             {sh.status}
                           </span>
                           <span className='text-muted-foreground'>
-                            {formatCreationTimestamp(sh.timestamp)}
+                            {formatToIST(sh.timestamp)}
                           </span>
                         </div>
                       ))}
