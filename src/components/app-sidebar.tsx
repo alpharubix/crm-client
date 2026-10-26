@@ -221,6 +221,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   // Isolate user identity signatures
   const isSarada = currentUserId === '3899927000000221552'
   const isAmbika = currentUserId === '3899927000000527649'
+  const isNamritha = currentUserId === '3899927000000318361'
   const isManager = MANAGER_USER_IDS.includes(currentUserId)
 
   const navUser = {
@@ -281,8 +282,14 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                 items = items?.filter((subItem) => {
                   if (
                     (subItem.url === '/call-recordings' ||
-                      subItem.url === '/whatsapp-records' ||
-                      subItem.url === '/hiring') &&
+                      subItem.url === '/whatsapp-records') &&
+                    !isSuperAdmin
+                  ) {
+                    return false
+                  }
+                  if (
+                    subItem.url === '/hiring' &&
+                    !isNamritha &&
                     !isSuperAdmin
                   ) {
                     return false
