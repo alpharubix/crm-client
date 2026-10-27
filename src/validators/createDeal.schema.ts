@@ -17,7 +17,7 @@ export const createDealSchema = z.object({
   disbursedAmount: z.string().optional(),
   sanctionAmount: z.string().optional(),
   approvedAmount: z.string().optional(),
-  amountRequired: z.string().min(1, 'Amount is required'),
+  amountRequired: z.string().min(2, 'Min 2 digits required for amount'),
   processingFees: z.string().optional(),
   dealStatusClosing: z.string().optional(),
   mmCharges: z.string().optional(),

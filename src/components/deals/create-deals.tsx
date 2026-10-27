@@ -61,6 +61,7 @@ export default function CreateDeal() {
       mmCharges: '',
       customerRejectionReason: '',
       customerRejectionStatusExplanation: '',
+      dealExpectedClosing: '',
     },
   })
 
@@ -74,6 +75,8 @@ export default function CreateDeal() {
   } = form
 
   const formValues = watch()
+  // console.log("formValues", formValues);
+  
   const [lenderSearch, setLenderSearch] = useState('')
   const [lenderOpen, setLenderOpen] = useState(false)
 
@@ -156,8 +159,10 @@ export default function CreateDeal() {
 
       if (!res.ok) {
         const errorData = await res.json().catch(() => ({}))
+        // console.log("errorData", errorData);
+        
         throw new Error(
-          errorData.detail || errorData.message || 'Failed to create deal',
+          errorData?.detail?.message || 'Failed to create deal',
         )
       }
       return res.json()
@@ -201,7 +206,7 @@ export default function CreateDeal() {
           </Button>
           <Button
             onClick={handleSubmit(onSubmit)}
-            disabled={!isValid || isSubmitting || createMutation.isPending}
+            disabled={isSubmitting || createMutation.isPending}
           >
             {createMutation.isPending ? (
               <Spinner className='mr-2 h-4 w-4' />
@@ -375,7 +380,10 @@ export default function CreateDeal() {
                 }
                 onChange={(date) => {
                   if (!date) {
-                    setValue('dealExpectedClosing', '')
+                    setValue('dealExpectedClosing', '', {
+                      shouldDirty: true,
+                      shouldValidate: true,
+                    })
                     return
                   }
 
@@ -385,6 +393,7 @@ export default function CreateDeal() {
 
                   setValue('dealExpectedClosing', `${year}-${month}-${day}`, {
                     shouldDirty: true,
+                    shouldValidate: true,
                   })
                 }}
               />

@@ -369,7 +369,7 @@ export default function UpdateDeals({
       if (!res.ok) {
         const errData = await res.json().catch(() => ({}));
         throw new Error(
-          errData.detail || errData.message || 'Failed to update deal',
+          errData?.detail?.message || 'Failed to update deal',
         );
       }
       return res.json();
@@ -713,6 +713,7 @@ export default function UpdateDeals({
 
                   setValue('dealExpectedClosing', `${year}-${month}-${day}`, {
                     shouldDirty: true,
+                    shouldValidate: true,
                   });
                 }}
               />
