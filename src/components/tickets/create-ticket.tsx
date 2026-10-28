@@ -565,6 +565,7 @@ export default function CreateTicket() {
                   'Recur Club Technologies Private Ltd',
                   'Rupeeboss Financial Services Pvt Ltd',
                   'MONK ADVISORS PRIVATE LIMITED',
+                  "ANDROMEDA",
                   'NA',
                 ]}
                 value={formValues.partnerName ?? ''}

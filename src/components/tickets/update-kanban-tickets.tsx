@@ -879,6 +879,7 @@ export default function UpdateKanbanTicket({
                   'Recur Club Technologies Private Ltd',
                   'Rupeeboss Financial Services Pvt Ltd',
                   'MONK ADVISORS PRIVATE LIMITED',
+                  "ANDROMEDA",
                   'NA',
                 ]}
                 value={formValues.partnerName as string}
