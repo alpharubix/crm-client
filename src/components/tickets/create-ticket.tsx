@@ -566,6 +566,7 @@ export default function CreateTicket() {
                   'Rupeeboss Financial Services Pvt Ltd',
                   'MONK ADVISORS PRIVATE LIMITED',
                   "ANDROMEDA",
+                  "Niyogin Fintech Limited",
                   'NA',
                 ]}
                 value={formValues.partnerName ?? ''}

@@ -880,6 +880,7 @@ export default function UpdateKanbanTicket({
                   'Rupeeboss Financial Services Pvt Ltd',
                   'MONK ADVISORS PRIVATE LIMITED',
                   "ANDROMEDA",
+                  "Niyogin Fintech Limited",
                   'NA',
                 ]}
                 value={formValues.partnerName as string}
