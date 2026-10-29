@@ -563,10 +563,10 @@ export default function CreateTicket() {
                   'Rupifi Private Ltd',
                   'FlexiLoans Technologies Private Ltd',
                   'Recur Club Technologies Private Ltd',
-                  'Rupeeboss Financial Services Pvt Ltd',
-                  'MONK ADVISORS PRIVATE LIMITED',
-                  "ANDROMEDA",
-                  "Niyogin Fintech Limited",
+                  'Rupeeboss Financial Services Private Ltd',
+                  'Monk Advisors Private Ltd',
+                  'Andromeda',
+                  'Niyogin Fintech Ltd',
                   'NA',
                 ]}
                 value={formValues.partnerName ?? ''}
