@@ -55,10 +55,13 @@ import {
   Megaphone,
 } from 'lucide-react';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
-import { formatAmount } from '@/utils/number-formatter';
 import UpdateDeals from '@/components/deals/update-deals';
 import UpdateContacts from '@/components/contacts/update-contacts';
 import UpdateKanbanTicket from '@/components/tickets/update-kanban-tickets';
+import { ArchiveConfirmModal } from '@/components/shared/archive-confirm-modal';
+import { RestoreConfirmModal } from '@/components/shared/restore-confirm-modal';
+import { ArchivedBanner } from '@/components/shared/archived-banner';
+import { Archive, RotateCcw } from 'lucide-react';
 import AccountTasksTab from '@/components/accounts/account-tasks-tab';
 import { CitySelector } from '../shared/city-selector';
 import { StateSelector } from '../shared/state-selector';

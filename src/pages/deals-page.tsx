@@ -41,8 +41,9 @@ import LENDER_NAMES from '@/utils/lenders.json'
 import { MultiSelect, type Option } from '@/components/ui/multi-select'
 import { useManageColumns } from '@/hooks/use-manage-columns'
 import { ManageColumnsDialog } from '@/components/shared/manage-columns'
-import { formatAmount } from '@/utils/number-formatter'
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
+import { ArchivedModuleTable } from '@/components/shared/archived-module-table'
+import { useAuth } from '@/context/auth-context'
 import {
   Sheet,
   SheetContent,
@@ -445,12 +446,45 @@ export default function DealsPage() {
     }
   }
 
+  const { user } = useAuth()
+  const rawRole = String(user?.role || '').toLowerCase().trim().replace(/\s+/g, '_')
+  const isSuperAdmin = rawRole === 'super_admin' || rawRole === 'superadmin'
+  const [activeTab, setActiveTab] = useState<'active' | 'archived'>('active')
+
   return (
     <div className='flex flex-col h-screen overflow-hidden bg-slate-50/50 dark:bg-background'>
       {/* ── Top Header Bar ── */}
       <div className='bg-background border-b border-border/60 px-6 py-4 flex flex-col md:flex-row md:items-center justify-between gap-4 shrink-0 shadow-2xs'>
         <div>
-          <h1 className='text-2xl font-bold text-foreground tracking-tight'>Deals</h1>
+          <div className='flex items-center gap-3'>
+            <h1 className='text-2xl font-bold text-foreground tracking-tight'>Deals</h1>
+            {isSuperAdmin && (
+              <div className='flex items-center bg-muted/60 p-1 rounded-lg border border-border/50 text-xs font-medium'>
+                <button
+                  type='button'
+                  onClick={() => setActiveTab('active')}
+                  className={`px-3 py-1 rounded-md transition-all cursor-pointer ${
+                    activeTab === 'active'
+                      ? 'bg-background text-foreground shadow-2xs font-semibold'
+                      : 'text-muted-foreground hover:text-foreground'
+                  }`}
+                >
+                  Active
+                </button>
+                <button
+                  type='button'
+                  onClick={() => setActiveTab('archived')}
+                  className={`px-3 py-1 rounded-md transition-all cursor-pointer ${
+                    activeTab === 'archived'
+                      ? 'bg-background text-foreground shadow-2xs font-semibold'
+                      : 'text-muted-foreground hover:text-foreground'
+                  }`}
+                >
+                  Archived
+                </button>
+              </div>
+            )}
+          </div>
           <p className='text-xs text-muted-foreground mt-0.5'>
             Manage and track all loan & credit deals in your pipeline.
           </p>
@@ -504,6 +538,17 @@ export default function DealsPage() {
       </div>
 
       {/* ── Toolbar & Content Container ── */}
+      {activeTab === 'archived' ? (
+        <div className='flex-1 flex flex-col overflow-hidden p-6'>
+          <div className='bg-background rounded-xl border border-border/60 flex-1 overflow-hidden shadow-2xs'>
+            <ArchivedModuleTable
+              module='deals'
+              moduleLabel='Deal'
+              detailUrlPrefix='/deals'
+            />
+          </div>
+        </div>
+      ) : (
       <div className='flex-1 flex flex-col overflow-hidden p-6 gap-4'>
         {/* Quick Filter Control Toolbar */}
         <div className='bg-background rounded-xl border border-border/60 p-3 flex flex-wrap items-center justify-between gap-3 shadow-2xs shrink-0'>
@@ -1253,6 +1298,8 @@ export default function DealsPage() {
           </SheetFooter>
         </SheetContent>
       </Sheet>
+      </div>
+      )}
     </div>
   )
 }
