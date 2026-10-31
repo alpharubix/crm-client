@@ -153,6 +153,7 @@ export default function CreateAccount() {
       accountStage: 'Initial Pitch',
       sourceDate: undefined,
       sourceDescription: '',
+      phoneStatus: [],
     },
   });
 
@@ -204,6 +205,7 @@ export default function CreateAccount() {
       preferred_languages: formData.preferredLanguages,
       is_priority_account: formData.priorityAccount,
       profile_type: formData.profileType,
+      phone_status: formData.phoneStatus,
 
       // Business Details
       business_details: {
@@ -592,6 +594,29 @@ export default function CreateAccount() {
                   onChange={(v) =>
                     setValue('businessStatus', v, { shouldValidate: true })
                   }
+                />
+              </FieldRow>
+
+              <FieldRow label='Phone Status'>
+                <MultiSelectField
+                  value={data.phoneStatus || []}
+                  options={['Valid', 'Duplicate', 'Invalid', 'Missing']}
+                  onChange={(v) =>
+                    setValue(
+                      'phoneStatus',
+                      v.map((opt: string) => {
+                        const map: Record<string, string> = {
+                          Valid: 'valid_phone',
+                          Duplicate: 'duplicate_phone',
+                          Invalid: 'invalid_phone',
+                          Missing: 'missing_phone',
+                        };
+                        return map[opt] || opt;
+                      }),
+                      { shouldValidate: true }
+                    )
+                  }
+                  placeholder='Select phone statuses...'
                 />
               </FieldRow>
 

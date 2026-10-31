@@ -125,7 +125,12 @@ export type UpdateAccountFormValues = {
   suppliers?: string
   industry?: string
   description?: string
+
+  // Phone Status
+  phoneStatus?: string[]
 }
+
+export type PhoneStatus = 'valid_phone' | 'duplicate_phone' | 'invalid_phone' | 'missing_phone'
 
 export type Contact = {
   id: string

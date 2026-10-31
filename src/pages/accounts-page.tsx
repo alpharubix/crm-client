@@ -167,6 +167,13 @@ const SOURCE_TYPE_OPTIONS: Option[] = [
   { value: 'Other', label: 'Other' },
 ];
 
+export const PHONE_STATUS_OPTIONS: Option[] = [
+  { value: 'valid_phone', label: 'Valid' },
+  { value: 'duplicate_phone', label: 'Duplicate' },
+  { value: 'invalid_phone', label: 'Invalid' },
+  { value: 'missing_phone', label: 'Missing' },
+];
+
 const ACCOUNT_STAGE_OPTIONS: Option[] = [
   { value: 'Initial Pitch', label: 'Initial Pitch' },
   { value: 'Product Offering', label: 'Product Offering' },
@@ -196,6 +203,7 @@ const DEFAULT_COLUMNS = [
   { id: 'type_of_business', label: 'Type of Business', selected: true },
   { id: 'industry', label: 'Industry', selected: true },
   { id: 'phone', label: 'Phone', selected: true },
+  { id: 'phone_status', label: 'Phone Status', selected: false },
   { id: 'city', label: 'City', selected: true },
   { id: 'state', label: 'State', selected: true },
   { id: 'modified_time', label: 'Modified At', selected: true },
@@ -287,6 +295,7 @@ export default function AccountsPage() {
     accountStage: [] as Option[],
     businessStatus: [] as Option[],
     typeOfBusiness: [] as Option[],
+    phoneStatus: [] as Option[],
     wabaInterested: 'all',
     isPriorityAccount: 'all',
     createdFromDate:
@@ -433,6 +442,14 @@ export default function AccountsPage() {
       loadedFilters.email = emailParam;
     }
 
+    const phoneStatusParams = searchParams.getAll('phone_status');
+    if (phoneStatusParams.length > 0) {
+      loadedFilters.phoneStatus = phoneStatusParams.map((val) => {
+        const matched = PHONE_STATUS_OPTIONS.find((o) => o.value === val);
+        return { value: val, label: matched ? matched.label : val };
+      });
+    }
+
     if (Object.keys(loadedFilters).length > 0) {
       setFilters((prev) => ({ ...prev, ...loadedFilters }));
       setAppliedFilters((prev) => ({ ...prev, ...loadedFilters }));
@@ -524,6 +541,14 @@ export default function AccountsPage() {
       ) {
         appliedFilters.businessStatus.forEach((o: Option) =>
           params.append('business_status', o.value),
+        );
+      }
+      if (
+        appliedFilters.phoneStatus &&
+        appliedFilters.phoneStatus.length > 0
+      ) {
+        appliedFilters.phoneStatus.forEach((o: Option) =>
+          params.append('phone_status', o.value),
         );
       }
       if (
@@ -737,6 +762,9 @@ export default function AccountsPage() {
     }
     if (searchFilters.businessStatus && searchFilters.businessStatus.length > 0) {
       searchFilters.businessStatus.forEach((o: Option) => params.append('business_status', o.value));
+    }
+    if (searchFilters.phoneStatus && searchFilters.phoneStatus.length > 0) {
+      searchFilters.phoneStatus.forEach((o: Option) => params.append('phone_status', o.value));
     }
     if (searchFilters.cbUsers && searchFilters.cbUsers.length > 0) {
       searchFilters.cbUsers.forEach((o: Option) => params.append('cb_users', o.value));
@@ -1482,6 +1510,33 @@ export default function AccountsPage() {
                                   </TableCell>
                                 );
 
+                              case 'phone_status':
+                                return (
+                                  <TableCell
+                                    key={col.id}
+                                    className='text-xs py-3.5'
+                                  >
+                                    {acc.phone_status && acc.phone_status.length > 0 ? (
+                                      <div className='flex flex-wrap gap-1'>
+                                        {acc.phone_status.map((status: string) => {
+                                          const opt = PHONE_STATUS_OPTIONS.find(o => o.value === status);
+                                          return (
+                                            <Badge
+                                              key={status}
+                                              variant='outline'
+                                              className='text-[10px] px-1.5 py-0.5'
+                                            >
+                                              {opt?.label || status}
+                                            </Badge>
+                                          );
+                                        })}
+                                      </div>
+                                    ) : (
+                                      '—'
+                                    )}
+                                  </TableCell>
+                                );
+
                               case 'assignment_date':
                                 return (
                                   <TableCell
@@ -2056,6 +2111,19 @@ export default function AccountsPage() {
                 value={filters.businessStatus}
                 onChange={(val) => handleFilterChange('businessStatus', val)}
                 placeholder='Select Business Status...'
+              />
+            </div>
+
+            {/* Phone Status */}
+            <div className='space-y-1.5'>
+              <Label className='text-xs font-semibold text-foreground'>
+                Phone Status
+              </Label>
+              <MultiSelect
+                options={PHONE_STATUS_OPTIONS}
+                value={filters.phoneStatus}
+                onChange={(val) => handleFilterChange('phoneStatus', val)}
+                placeholder='Select Phone Status...'
               />
             </div>
 

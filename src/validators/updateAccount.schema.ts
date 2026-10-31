@@ -33,6 +33,7 @@ export const updateAccountSchema = z.object({
   accountOwnerId: z.string().min(1, 'Account owner is required'),
   priorityAccount: z.string().optional(),
   partnerName: z.string().optional(),
+  phoneStatus: z.array(z.string()).optional(),
   // ================= Customer Basic Details =================
   profileType: z.string().min(1, 'Profile type is required'),
   firstName: z.string().min(1, 'First name is required'),
