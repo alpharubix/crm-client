@@ -79,20 +79,21 @@ export const USERS_MAP: Record<string, string> = {
   '3899927000005965002': 'Subhasini TS',
   '3899927000000503894': 'Saran D',
   '3899927000000135140': 'Prathamesh Prakash',
+  '3899927000000350987': 'Anushree GN',
+  "3899927000000527649": "Ambika K",
 }
 
 // Users who always have full approver-level access on every project,
 // regardless of who is stored as the project's approver_id.
 export const SUPER_APPROVER_IDS: string[] = [
   '3899927000000201013', // Anslem Prathap
-  '3899927000005965002', // Subhasini TS
 ]
 
 // HR Team User ID Registry constants
 export const HR_USER_IDS = [
   '3899927000000318361', // Namrata
   '3899927000000221552', // Sarada
-  '3899927000000527649', // Ambika
+  // '3899927000000527649', // Ambika
 ]
 
 // Manager Registry mapped directly from your MANAGER_EXECUTIVES_MAP keys

@@ -220,7 +220,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
 
   // Isolate user identity signatures
   const isSarada = currentUserId === '3899927000000221552'
-  const isAmbika = currentUserId === '3899927000000527649'
+  // const isAmbika = currentUserId === '3899927000000527649'
   const isNamritha = currentUserId === '3899927000000318361'
   const isManager = MANAGER_USER_IDS.includes(currentUserId)
 
@@ -260,7 +260,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
         <NavMain
           items={data.navMain
             .filter((item) => {
-              if (isSarada || isAmbika) {
+              if (isSarada) {
                 return item.title === 'Workspace'
               }
 
@@ -276,7 +276,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
             })
             .map((item) => {
               let items = item.items
-              if (isSarada || isAmbika) {
+              if (isSarada) {
                 items = items?.filter((subItem) => subItem.url === '/hiring')
               } else {
                 items = items?.filter((subItem) => {

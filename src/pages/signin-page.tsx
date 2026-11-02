@@ -59,7 +59,7 @@ export default function SignInPage({
 
     toast.success('Login successful')
 
-    const isHrRestrict = user && (user.user_id === '3899927000000221552' || user.user_id === '3899927000000527649')
+    const isHrRestrict = user && (user.user_id === '3899927000000221552')
     navigate(isHrRestrict ? '/hiring' : '/accounts')
   }
 
