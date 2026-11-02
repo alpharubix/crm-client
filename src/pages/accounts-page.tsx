@@ -31,6 +31,7 @@ import {
 import { toast } from 'sonner';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Badge } from '@/components/ui/badge';
+import { DuplicateAccountsBadge } from '@/components/accounts/duplicate-accounts-badge';
 
 import { Spinner } from '@/components/ui/spinner';
 import { formatExactDate } from '@/utils/date-formatter';
@@ -168,10 +169,14 @@ const SOURCE_TYPE_OPTIONS: Option[] = [
 ];
 
 export const PHONE_STATUS_OPTIONS: Option[] = [
-  { value: 'valid_phone', label: 'Valid' },
-  { value: 'duplicate_phone', label: 'Duplicate' },
-  { value: 'invalid_phone', label: 'Invalid' },
-  { value: 'missing_phone', label: 'Missing' },
+  { value: 'valid_phone', label: 'Valid Phone' },
+  { value: 'duplicate_phone', label: 'Duplicate Phone' },
+  { value: 'duplicate_phone_email', label: 'Same Phone & Email' },
+  { value: 'duplicate_phone_different_email', label: 'Same Phone, Diff Email' },
+  { value: 'duplicate_email_different_phone', label: 'Same Email, Diff Phone' },
+  { value: 'invalid_phone', label: 'Invalid Phone' },
+  { value: 'missing_phone', label: 'Missing Phone' },
+  { value: 'missing_phone_email', label: 'Missing Phone & Email' },
 ];
 
 const ACCOUNT_STAGE_OPTIONS: Option[] = [
@@ -1521,13 +1526,13 @@ export default function AccountsPage() {
                                         {acc.phone_status.map((status: string) => {
                                           const opt = PHONE_STATUS_OPTIONS.find(o => o.value === status);
                                           return (
-                                            <Badge
+                                            <DuplicateAccountsBadge
                                               key={status}
-                                              variant='outline'
-                                              className='text-[10px] px-1.5 py-0.5'
-                                            >
-                                              {opt?.label || status}
-                                            </Badge>
+                                              accountId={acc.id}
+                                              status={status}
+                                              label={opt?.label || status}
+                                              onNavigateAccount={(targetId) => handleRowClick(targetId)}
+                                            />
                                           );
                                         })}
                                       </div>
@@ -2117,13 +2122,13 @@ export default function AccountsPage() {
             {/* Phone Status */}
             <div className='space-y-1.5'>
               <Label className='text-xs font-semibold text-foreground'>
-                Phone Status
+                Phone / Email Status
               </Label>
               <MultiSelect
                 options={PHONE_STATUS_OPTIONS}
                 value={filters.phoneStatus}
                 onChange={(val) => handleFilterChange('phoneStatus', val)}
-                placeholder='Select Phone Status...'
+                placeholder='Select Phone / Email Status...'
               />
             </div>
 
