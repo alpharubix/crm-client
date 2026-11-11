@@ -47,6 +47,7 @@ import type { GstReportApiResponse } from '@/types/gst-report';
 import { useNavigate, useParams } from 'react-router-dom';
 import { ENV } from '@/conf';
 import { Spinner } from '@/components/ui/spinner';
+import { formatCreationTimestamp } from '@/utils/date-formatter';
 
 interface GstReportTabProps {
   accountId?: string | number;
@@ -327,7 +328,7 @@ export default function GstReportTab({
             <span className='inline-flex items-center gap-1.5'>
               <span className='text-muted-foreground'>Generated At:</span>
               <span className='font-medium text-foreground'>
-                {reportPayload.report.generated_at}
+                {formatCreationTimestamp(reportPayload.report.generated_at)}
               </span>
             </span>
           </div>

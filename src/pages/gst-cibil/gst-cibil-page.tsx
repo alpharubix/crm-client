@@ -12,12 +12,12 @@ import {
 } from '@/components/ui/table'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
-import type { GstReportData, GstReportContent } from '@/types/gst-report'
 import { Spinner } from '@/components/ui/spinner'
 import tabularjs from 'tabularjs'
 import { toast } from 'sonner'
 import { Input } from '@/components/ui/input'
 import { ENV } from '@/conf'
+import { formatCreationTimestamp } from '@/utils/date-formatter'
 
 // Type for the GST/Cibil list item
 
@@ -27,7 +27,9 @@ interface GstCibilListItem {
   contact_number: string
   name: string
   reference_id: string
-  entity_status?: string
+  report_status?: string
+  request_stage?:string
+  entity_status?:string
   bureau_rating?: string
   last_updated: string
 }
@@ -274,7 +276,9 @@ export default function GstCibilPage() {
       <Card className='shadow-sm'>
         <CardHeader className='flex flex-row items-center justify-between border-b px-6 py-4'>
           <div className='flex items-center gap-3'>
-            <CardTitle className='text-lg font-semibold'>Reports List</CardTitle>
+            <CardTitle className='text-lg font-semibold'>
+              Reports List
+            </CardTitle>
             <Button
               variant='outline'
               size='sm'
@@ -327,7 +331,16 @@ export default function GstCibilPage() {
                   </TableHead>
 
                   <TableHead className='px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider'>
-                    Status
+                    Report Status
+                  </TableHead>
+
+                  <TableHead className='px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider'>
+                    Request Stage
+                  </TableHead>
+
+
+                  <TableHead className='px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider'>
+                    GST Status
                   </TableHead>
 
                   <TableHead className='px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider'>
@@ -366,6 +379,27 @@ export default function GstCibilPage() {
                     <TableCell className='px-6 py-4'>
                       <Badge
                         className={`${getStatusBadgeStyle(
+                          item.report_status,
+                        )} border rounded-full px-3 py-0.5 text-xs font-medium`}
+                      >
+                        {item.report_status || 'N/A'}
+                      </Badge>
+                    </TableCell>
+
+
+                    <TableCell className='px-6 py-4'>
+                      <Badge
+                        className={`${getStatusBadgeStyle(
+                          item.request_stage,
+                        )} border rounded-full px-3 py-0.5 text-xs font-medium`}
+                      >
+                        {item.request_stage || 'N/A'}
+                      </Badge>
+                    </TableCell>
+
+                    <TableCell className='px-6 py-4'>
+                      <Badge
+                        className={`${getStatusBadgeStyle(
                           item.entity_status,
                         )} border rounded-full px-3 py-0.5 text-xs font-medium`}
                       >
@@ -378,7 +412,7 @@ export default function GstCibilPage() {
                     </TableCell>
 
                     <TableCell className='px-6 py-4 text-sm'>
-                      {item.last_updated}
+                      {formatCreationTimestamp(item.last_updated)}
                     </TableCell>
 
                     <TableCell className='px-6 py-4 text-right text-green-700 '>
