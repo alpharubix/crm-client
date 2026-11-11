@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect, useCallback } from 'react';
 import { toast } from 'sonner';
 import {
   Building2,
@@ -25,6 +25,7 @@ import {
   Filter,
   DollarSign,
   Info,
+  ArrowLeft,
 } from 'lucide-react';
 
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -43,6 +44,9 @@ import { Separator } from '@/components/ui/separator';
 import { formatAmount } from '@/utils/number-formatter';
 import { DUMMY_GST_REPORT_DATA } from './gst-report-mock-data';
 import type { GstReportApiResponse } from '@/types/gst-report';
+import { useNavigate, useParams } from 'react-router-dom';
+import { ENV } from '@/conf';
+import { Spinner } from '@/components/ui/spinner';
 
 interface GstReportTabProps {
   accountId?: string | number;
@@ -53,11 +57,59 @@ interface GstReportTabProps {
 export default function GstReportTab({
   accountId,
   gstin,
-  reportData,
+  reportData: initialReportData,
 }: GstReportTabProps) {
-  // Use passed data or fall back to dummy data
-  const data = reportData || DUMMY_GST_REPORT_DATA;
-  const reportPayload = data.data.report;
+  const { ref_id } = useParams<{ ref_id?: string }>();
+  const navigate = useNavigate();
+
+  const [apiData, setApiData] = useState<GstReportApiResponse | null>(initialReportData || null);
+  const [isLoading, setIsLoading] = useState<boolean>(Boolean(ref_id && !initialReportData));
+  const [error, setError] = useState<string | null>(null);
+  const [isRefreshing, setIsRefreshing] = useState(false);
+
+  const fetchReportDetails = useCallback(async (isRefresh = false) => {
+    if (!ref_id) return;
+
+    try {
+      if (isRefresh) {
+        setIsRefreshing(true);
+      } else {
+        setIsLoading(true);
+      }
+      setError(null);
+
+      const backendUrl = ENV.VITE_BACKEND_BASE_URL || '';
+      const res = await fetch(`${backendUrl}/gst-cibil-reports/${ref_id}`, {
+        credentials: 'include',
+      });
+
+      if (!res.ok) {
+        throw new Error(`Failed to load report (status: ${res.status})`);
+      }
+
+      const result = await res.json();
+      setApiData(result);
+      if (isRefresh) {
+        toast.success('GST Report synchronized with latest data');
+      }
+    } catch (err: any) {
+      console.error('Error fetching GST report details:', err);
+      setError(err?.message || 'Failed to fetch report');
+      toast.error('Failed to load report details');
+    } finally {
+      setIsLoading(false);
+      setIsRefreshing(false);
+    }
+  }, [ref_id]);
+
+  useEffect(() => {
+    if (ref_id && !initialReportData) {
+      fetchReportDetails(false);
+    }
+  }, [ref_id, initialReportData, fetchReportDetails]);
+
+  const data = apiData || initialReportData || DUMMY_GST_REPORT_DATA;
+  const reportPayload = data?.data?.report || DUMMY_GST_REPORT_DATA.data.report;
   const { entity, proprietor, identity, gst_filings, registrations, bureau, facilities } =
     reportPayload;
 
@@ -65,7 +117,6 @@ export default function GstReportTab({
   const [facilitySearch, setFacilitySearch] = useState('');
   const [facilityTypeFilter, setFacilityTypeFilter] = useState('ALL');
   const [filingFyFilter, setFilingFyFilter] = useState('ALL');
-  const [isRefreshing, setIsRefreshing] = useState(false);
 
   // Copy helper with feedback
   const handleCopy = (text: string, label: string, key: string) => {
@@ -79,11 +130,15 @@ export default function GstReportTab({
   };
 
   const handleRefresh = () => {
-    setIsRefreshing(true);
-    setTimeout(() => {
-      setIsRefreshing(false);
-      toast.success('GST Report synchronized with latest data');
-    }, 700);
+    if (ref_id) {
+      fetchReportDetails(true);
+    } else {
+      setIsRefreshing(true);
+      setTimeout(() => {
+        setIsRefreshing(false);
+        toast.success('GST Report synchronized with latest data');
+      }, 700);
+    }
   };
 
   // Indian Rupee formatting helpers
@@ -175,13 +230,38 @@ export default function GstReportTab({
     };
   }, [gst_filings]);
 
+  if (isLoading) {
+    return (
+      <div className='flex items-center justify-center h-[60vh]'>
+        <Spinner className='h-8 w-8' />
+      </div>
+    );
+  }
+
+  if (error && !apiData) {
+    return (
+      <div className='flex items-center justify-center h-[60vh] flex-col gap-3'>
+        <p className='text-red-600 font-medium'>{error}</p>
+        <div className='flex gap-2'>
+          <Button variant='outline' onClick={() => navigate(-1)}>
+            <ArrowLeft className='h-4 w-4 mr-2' /> Go Back
+          </Button>
+          <Button onClick={() => fetchReportDetails(false)}>Retry</Button>
+        </div>
+      </div>
+    );
+  }
+
   return (
-    <div className='space-y-6 animate-in fade-in-50 duration-200'>
+    <div className='space-y-6 animate-in fade-in-50 duration-200 p-4'>
       {/* ================= Top Banner & Header ================= */}
       <div className='flex flex-col gap-4 p-5 rounded-2xl bg-linear-to-r from-emerald-500/10 via-teal-500/5 to-transparent border border-emerald-500/20 shadow-xs'>
         <div className='flex flex-wrap items-start justify-between gap-4'>
           <div className='space-y-1.5'>
             <div className='flex items-center gap-2.5 flex-wrap'>
+              <div className='h-9 w-9 rounded-xl cursor-pointer hover:bg-emerald-600/15 text-emerald-600 dark:text-emerald-400 flex items-center justify-center font-bold' onClick={() => navigate(-1)}>
+                <ArrowLeft className='h-5 w-5' />
+              </div>
               <div className='h-9 w-9 rounded-xl bg-emerald-600/15 text-emerald-600 dark:text-emerald-400 flex items-center justify-center font-bold'>
                 <FileSpreadsheet className='h-5 w-5' />
               </div>

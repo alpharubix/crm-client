@@ -61,7 +61,6 @@ import UpdateDeals from '@/components/deals/update-deals';
 import UpdateContacts from '@/components/contacts/update-contacts';
 import UpdateKanbanTicket from '@/components/tickets/update-kanban-tickets';
 import AccountTasksTab from '@/components/accounts/account-tasks-tab';
-import GstReportTab from '@/components/accounts/gst-report-tab';
 import { CitySelector } from '../shared/city-selector';
 import { StateSelector } from '../shared/state-selector';
 import { PincodeSelector } from '../shared/pincode-selector';
@@ -1636,14 +1635,6 @@ export default function UpdateAccounts() {
                 <AccountTasksTab
                   accountId={id || ''}
                   accountName={data.accountName || ''}
-                />
-              </TabsContent>
-
-              {/* ===== GST REPORT TAB ===== */}
-              <TabsContent value='gst-report' className='space-y-4 m-0'>
-                <GstReportTab
-                  accountId={id || ''}
-                  gstin={accountData?.gstin || (accountData as any)?.gst_number}
                 />
               </TabsContent>
 
