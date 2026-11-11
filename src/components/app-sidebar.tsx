@@ -66,6 +66,17 @@ const data = {
       ],
     },
     {
+      title: 'Cibil Leads',
+      url: '#',
+      icon: Building2,
+      items: [
+        {
+          title: 'GST & Cibil Reports',
+          url: '/gst-cibil-report',
+        },
+      ],
+    },
+    {
       title: 'WhatsApp CRM',
       url: '#',
       icon: MessageCircle,
@@ -266,7 +277,8 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
 
               if (
                 (item.title === 'Tools & Logs' ||
-                  item.title === 'WhatsApp CRM') &&
+                  item.title === 'WhatsApp CRM' ||
+                  item.title === 'Cibil Leads') &&
                 !isSuperAdmin
               ) {
                 return false

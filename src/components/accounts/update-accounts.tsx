@@ -53,6 +53,7 @@ import {
   LayoutDashboard,
   CheckSquare,
   Megaphone,
+  ReceiptText,
 } from 'lucide-react';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { formatAmount } from '@/utils/number-formatter';
@@ -1181,6 +1182,14 @@ export default function UpdateAccounts() {
                 >
                   <CheckSquare className='h-4 w-4 text-blue-600' />
                   <span>Account Tasks</span>
+                </TabsTrigger>
+
+                <TabsTrigger
+                  value='gst-report'
+                  className='data-[state=active]:bg-background data-[state=active]:shadow-sm border border-transparent data-[state=active]:border-border rounded-lg px-4 py-2 flex items-center gap-2 text-sm font-medium transition-all'
+                >
+                  <ReceiptText className='h-4 w-4 text-emerald-600' />
+                  <span>GST Report</span>
                 </TabsTrigger>
               </TabsList>
             </div>

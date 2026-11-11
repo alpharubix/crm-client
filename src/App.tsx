@@ -21,6 +21,7 @@ import ViewReport from './pages/cibil/ViewReport';
 import LimitsReportPage from './pages/limitsreport';
 import InvoicingMasterPage from './pages/invoicing-master';
 import DistributorMasterPage from './pages/distributor-master';
+import GstReportTab from './components/accounts/gst-report-tab';
 
 // Lazy loaded pages and heavy route components
 const AccountPage = lazy(() => import('./pages/accounts-page'));
@@ -57,6 +58,7 @@ const UpdateTicketsKanban = lazy(
 const CreateAccount = lazy(
   () => import('./components/accounts/create-account'),
 );
+const GstAndCibil = lazy(() => import('./pages/gst-cibil/gst-cibil-page'))
 
 const Revenue = lazy(() => import('./pages/revenue'));
 const CreateRevenue = lazy(() => import('./components/revenue/create-revenue'));
@@ -125,6 +127,8 @@ export default function App() {
                 element={<GstReportPage />}
               />
               <Route path='/accounts/create' element={<CreateAccount />} />
+              <Route path='/gst-cibil-report' element={<GstAndCibil />} />
+              <Route path='/gst-cibil-report/:ref_id' element={<GstReportTab />} />
               <Route path='/contacts' element={<ContactPage />} />
               <Route path='/contacts/:id' element={<UpdateContacts />} />
               <Route path='/contacts-create' element={<CreateContact />} />
