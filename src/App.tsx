@@ -57,6 +57,7 @@ const UpdateTicketsKanban = lazy(
 const CreateAccount = lazy(
   () => import('./components/accounts/create-account'),
 );
+const GstAndCibil = lazy(() => import('./pages/gst-cibil/gst-cibil-page'))
 
 const Revenue = lazy(() => import('./pages/revenue'));
 const CreateRevenue = lazy(() => import('./components/revenue/create-revenue'));
@@ -125,6 +126,7 @@ export default function App() {
                 element={<GstReportPage />}
               />
               <Route path='/accounts/create' element={<CreateAccount />} />
+              <Route path='/gst-cibil-report' element={<GstAndCibil />} />
               <Route path='/contacts' element={<ContactPage />} />
               <Route path='/contacts/:id' element={<UpdateContacts />} />
               <Route path='/contacts-create' element={<CreateContact />} />

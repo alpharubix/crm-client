@@ -66,6 +66,17 @@ const data = {
       ],
     },
     {
+      title: 'Cibil Leads',
+      url: '#',
+      icon: Building2,
+      items: [
+        {
+          title: 'GST & Cibil Reports',
+          url: '/gst-cibil-report',
+        },
+      ],
+    },
+    {
       title: 'WhatsApp CRM',
       url: '#',
       icon: MessageCircle,
