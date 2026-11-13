@@ -61,6 +61,7 @@ import UpdateDeals from '@/components/deals/update-deals';
 import UpdateContacts from '@/components/contacts/update-contacts';
 import UpdateKanbanTicket from '@/components/tickets/update-kanban-tickets';
 import AccountTasksTab from '@/components/accounts/account-tasks-tab';
+import AccountGstCibilTab from '@/components/accounts/account-gst-cibil-tab';
 import { CitySelector } from '../shared/city-selector';
 import { StateSelector } from '../shared/state-selector';
 import { PincodeSelector } from '../shared/pincode-selector';
@@ -741,6 +742,7 @@ export default function UpdateAccounts() {
   const [selectedTicketId, setSelectedTicketId] = useState<
     string | number | null
   >(null);
+  const [gstReportsCount, setGstReportsCount] = useState<number>(0);
 
   const sortedNotes = [...notes].sort((a: any, b: any) => {
     return (
@@ -1185,7 +1187,12 @@ export default function UpdateAccounts() {
                   className='data-[state=active]:bg-background data-[state=active]:shadow-sm border border-transparent data-[state=active]:border-border rounded-lg px-4 py-2 flex items-center gap-2 text-sm font-medium transition-all'
                 >
                   <ReceiptText className='h-4 w-4 text-emerald-600' />
-                  <span>GST Report</span>
+                  <span>GST & Cibil Report</span>
+                  {gstReportsCount > 0 && (
+                    <span className='ml-1 px-1.5 py-0.5 text-xs font-semibold rounded-full bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300'>
+                      {gstReportsCount}
+                    </span>
+                  )}
                 </TabsTrigger>
               </TabsList>
             </div>
@@ -1635,6 +1642,15 @@ export default function UpdateAccounts() {
                 <AccountTasksTab
                   accountId={id || ''}
                   accountName={data.accountName || ''}
+                />
+              </TabsContent>
+
+              {/* ===== GST & CIBIL REPORT TAB ===== */}
+              <TabsContent value='gst-report' className='space-y-4 m-0'>
+                <AccountGstCibilTab
+                  accountId={id}
+                  accountPhone={accountData?.phone}
+                  onCountChange={setGstReportsCount}
                 />
               </TabsContent>
 

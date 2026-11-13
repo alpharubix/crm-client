@@ -114,6 +114,9 @@ export default function GstReportTab({
   const { entity, proprietor, identity, gst_filings, registrations, bureau, facilities } =
     reportPayload;
 
+  const linkedAccountId = (data as any)?.data?.account_id || accountId;
+  const linkedAccountName = (data as any)?.data?.account_name;
+
   const [copiedKey, setCopiedKey] = useState<string | null>(null);
   const [facilitySearch, setFacilitySearch] = useState('');
   const [facilityTypeFilter, setFacilityTypeFilter] = useState('ALL');
@@ -293,6 +296,19 @@ export default function GstReportTab({
 
           {/* Quick Actions */}
           <div className='flex items-center gap-2 flex-wrap'>
+            {linkedAccountName && linkedAccountName !== 'No Account' && linkedAccountId && (
+              <Button
+                variant='outline'
+                size='sm'
+                className='h-8 text-xs gap-1.5 border-blue-200 text-blue-700 bg-blue-50/70 hover:bg-blue-100 hover:text-blue-800'
+                onClick={() => navigate(`/accounts/${linkedAccountId}`)}
+                title='View linked Account'
+              >
+                <Building2 className='h-3.5 w-3.5 text-blue-600' />
+                <span>Account: <strong className='font-semibold'>{linkedAccountName}</strong></span>
+              </Button>
+            )}
+
             <Button
               variant='outline'
               size='sm'
@@ -330,6 +346,23 @@ export default function GstReportTab({
               <span className='font-medium text-foreground'>
                 {formatCreationTimestamp(reportPayload.report.generated_at)}
               </span>
+            </span>
+
+            <span>•</span>
+            <span className='inline-flex items-center gap-1.5'>
+              <Building2 className='h-3.5 w-3.5 text-muted-foreground' />
+              <span className='text-muted-foreground'>Account:</span>
+              {linkedAccountName && linkedAccountName !== 'No Account' && linkedAccountId ? (
+                <button
+                  type='button'
+                  className='font-semibold text-blue-600 hover:text-blue-700 hover:underline cursor-pointer'
+                  onClick={() => navigate(`/accounts/${linkedAccountId}`)}
+                >
+                  {linkedAccountName}
+                </button>
+              ) : (
+                <span className='font-normal text-muted-foreground'>No Account</span>
+              )}
             </span>
           </div>
 

@@ -11,6 +11,9 @@ import {
   AlertCircle,
   Clock,
   ExternalLink,
+  Building2,
+  Copy,
+  Check,
 } from 'lucide-react'
 import {
   Table,
@@ -42,6 +45,8 @@ interface GstCibilListItem {
   entity_status?: string
   bureau_rating?: string
   last_updated: string
+  account_id?: number | string | null
+  account_name?: string | null
 }
 
 interface LifecycleEvent {
@@ -118,6 +123,23 @@ export default function GstCibilPage() {
   const [isUploading, setIsUploading] = useState(false)
   const inputRef = useRef<HTMLInputElement>(null)
   const [singleGstinput, setSingleGstInput] = useState('')
+  const [copiedId, setCopiedId] = useState<string | null>(null)
+
+  const handleCopy = (
+    text: string,
+    label: string,
+    key: string,
+    e: React.MouseEvent,
+  ) => {
+    e.stopPropagation()
+    if (!text || text === 'N/A' || text === '—') return
+    navigator.clipboard.writeText(text)
+    setCopiedId(key)
+    toast.success(`${label} copied to clipboard`)
+    setTimeout(() => {
+      setCopiedId((prev) => (prev === key ? null : prev))
+    }, 1800)
+  }
 
   const BaseURl =
     'https://gst-cibil-report-generator-backend-972437264901.asia-east1.run.app'
@@ -421,9 +443,6 @@ export default function GstCibilPage() {
             <CardHeader className='border-b px-6 py-4'>
               <CardTitle className='text-lg font-semibold flex items-center justify-between'>
                 <span>Generated Reports</span>
-                <span className='text-xs font-normal text-muted-foreground'>
-                  Source: leads_gst_cibil_report.reports
-                </span>
               </CardTitle>
             </CardHeader>
 
@@ -455,13 +474,10 @@ export default function GstCibilPage() {
                         Name
                       </TableHead>
                       <TableHead className='px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider'>
+                        Account
+                      </TableHead>
+                      <TableHead className='px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider'>
                         Contact
-                      </TableHead>
-                      <TableHead className='px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider'>
-                        Report Status
-                      </TableHead>
-                      <TableHead className='px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider'>
-                        Request Stage
                       </TableHead>
                       <TableHead className='px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider'>
                         GST Status
@@ -486,31 +502,78 @@ export default function GstCibilPage() {
                         onClick={() => handleRowClick(item.reference_id)}
                       >
                         <TableCell className='px-6 py-4 font-medium font-mono text-sm'>
-                          {item.gstin}
+                          <div className='flex items-center gap-1.5'>
+                            <span>{item.gstin}</span>
+                            {item.gstin && item.gstin !== 'N/A' && (
+                              <button
+                                type='button'
+                                className='inline-flex items-center justify-center p-1 rounded-md text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors cursor-pointer'
+                                onClick={(e) =>
+                                  handleCopy(
+                                    item.gstin,
+                                    'GSTIN',
+                                    `${item.id}-gstin`,
+                                    e,
+                                  )
+                                }
+                                title='Copy GSTIN'
+                              >
+                                {copiedId === `${item.id}-gstin` ? (
+                                  <Check className='h-3.5 w-3.5 text-emerald-600' />
+                                ) : (
+                                  <Copy className='h-3.5 w-3.5' />
+                                )}
+                              </button>
+                            )}
+                          </div>
                         </TableCell>
                         <TableCell className='px-6 py-4 text-sm font-medium text-slate-800'>
                           {item.name}
                         </TableCell>
                         <TableCell className='px-6 py-4 text-sm'>
-                          {item.contact_number}
+                          {item.account_name && item.account_name !== 'No Account' && item.account_id ? (
+                            <div
+                              className='inline-flex items-center gap-1.5 font-medium text-blue-700 hover:text-blue-800 hover:underline cursor-pointer'
+                              onClick={(e) => {
+                                e.stopPropagation()
+                                if (item.account_id) navigate(`/accounts/${item.account_id}`)
+                              }}
+                              title='Click to view account'
+                            >
+                              <Building2 className='h-3.5 w-3.5 text-blue-600 shrink-0' />
+                              <span className='truncate max-w-[180px]'>{item.account_name}</span>
+                            </div>
+                          ) : (
+                            <Badge variant='outline' className='text-slate-500 font-normal bg-slate-50 text-xs border-slate-200'>
+                              No Account
+                            </Badge>
+                          )}
                         </TableCell>
-                        <TableCell className='px-6 py-4'>
-                          <Badge
-                            className={`${getStatusBadgeStyle(
-                              item.report_status,
-                            )} border rounded-full px-3 py-0.5 text-xs font-medium`}
-                          >
-                            {item.report_status || 'N/A'}
-                          </Badge>
-                        </TableCell>
-                        <TableCell className='px-6 py-4'>
-                          <Badge
-                            className={`${getStatusBadgeStyle(
-                              item.request_stage,
-                            )} border rounded-full px-3 py-0.5 text-xs font-medium`}
-                          >
-                            {item.request_stage || 'N/A'}
-                          </Badge>
+                        <TableCell className='px-6 py-4 text-sm'>
+                          <div className='flex items-center gap-1.5'>
+                            <span>{item.contact_number}</span>
+                            {item.contact_number && item.contact_number !== 'N/A' && (
+                              <button
+                                type='button'
+                                className='inline-flex items-center justify-center p-1 rounded-md text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors cursor-pointer'
+                                onClick={(e) =>
+                                  handleCopy(
+                                    item.contact_number,
+                                    'Phone number',
+                                    `${item.id}-phone`,
+                                    e,
+                                  )
+                                }
+                                title='Copy Phone Number'
+                              >
+                                {copiedId === `${item.id}-phone` ? (
+                                  <Check className='h-3.5 w-3.5 text-emerald-600' />
+                                ) : (
+                                  <Copy className='h-3.5 w-3.5' />
+                                )}
+                              </button>
+                            )}
+                          </div>
                         </TableCell>
                         <TableCell className='px-6 py-4'>
                           <Badge
@@ -527,18 +590,35 @@ export default function GstCibilPage() {
                         <TableCell className='px-6 py-4 text-sm text-slate-500'>
                           {formatCreationTimestamp(item.last_updated)}
                         </TableCell>
-                        <TableCell className='px-6 py-4 text-right text-emerald-700 font-medium'>
-                          <Button
-                            variant='ghost'
-                            size='sm'
-                            className='text-emerald-700 hover:text-emerald-800 hover:bg-emerald-50'
-                            onClick={(e) => {
-                              e.stopPropagation()
-                              handleRowClick(item.reference_id)
-                            }}
-                          >
-                            View Details
-                          </Button>
+                        <TableCell className='px-6 py-4 text-right'>
+                          <div className='flex items-center justify-end gap-2'>
+                            {item.account_id && item.account_name && item.account_name !== 'No Account' && (
+                              <Button
+                                variant='outline'
+                                size='sm'
+                                className='h-8 text-xs border-blue-200 text-blue-600 hover:text-blue-700 hover:bg-blue-50'
+                                onClick={(e) => {
+                                  e.stopPropagation()
+                                  navigate(`/accounts/${item.account_id}`)
+                                }}
+                                title='View Account'
+                              >
+                                <Building2 className='h-3.5 w-3.5 mr-1' />
+                                View Account
+                              </Button>
+                            )}
+                            <Button
+                              variant='ghost'
+                              size='sm'
+                              className='h-8 text-xs text-emerald-700 hover:text-emerald-800 hover:bg-emerald-50'
+                              onClick={(e) => {
+                                e.stopPropagation()
+                                handleRowClick(item.reference_id)
+                              }}
+                            >
+                              View Details
+                            </Button>
+                          </div>
                         </TableCell>
                       </TableRow>
                     ))}
@@ -555,9 +635,6 @@ export default function GstCibilPage() {
             <CardHeader className='border-b px-6 py-4'>
               <CardTitle className='text-lg font-semibold flex items-center justify-between'>
                 <span>GST Reference Tracker</span>
-                <span className='text-xs font-normal text-muted-foreground'>
-                  Source: leads_gst_cibil_report.gst_reference_tracker
-                </span>
               </CardTitle>
             </CardHeader>
 
@@ -592,16 +669,10 @@ export default function GstCibilPage() {
                         Report Status
                       </TableHead>
                       <TableHead className='px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider'>
-                        Request Stage
-                      </TableHead>
-                      <TableHead className='px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider'>
                         Created At
                       </TableHead>
                       <TableHead className='px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider'>
                         Last Error / Note
-                      </TableHead>
-                      <TableHead className='px-6 py-3 text-right text-xs font-medium text-slate-500 uppercase tracking-wider'>
-                        Actions
                       </TableHead>
                     </TableRow>
                   </TableHeader>
@@ -610,8 +681,7 @@ export default function GstCibilPage() {
                     {trackerData.map((item) => (
                       <TableRow
                         key={item.id}
-                        className='cursor-pointer transition-colors hover:bg-slate-50/70'
-                        onClick={() => handleRowClick(item.reference_id)}
+                        className=' transition-colors hover:bg-slate-50/70'
                       >
                         <TableCell className='px-6 py-4 font-mono font-medium text-sm'>
                           {item.gstin}
@@ -628,15 +698,6 @@ export default function GstCibilPage() {
                             {item.report_status || 'PENDING'}
                           </Badge>
                         </TableCell>
-                        <TableCell className='px-6 py-4'>
-                          <Badge
-                            className={`${getStatusBadgeStyle(
-                              item.request_stage,
-                            )} border rounded-full px-3 py-0.5 text-xs font-medium`}
-                          >
-                            {item.request_stage || 'PENDING'}
-                          </Badge>
-                        </TableCell>
                         <TableCell className='px-6 py-4 text-xs text-slate-500'>
                           {item.created_at
                             ? formatCreationTimestamp(item.created_at)
@@ -650,25 +711,6 @@ export default function GstCibilPage() {
                           ) : (
                             <span className='text-slate-400'>—</span>
                           )}
-                        </TableCell>
-                        <TableCell className='px-6 py-4 text-right'>
-                          <div
-                            className='flex items-center justify-end gap-1.5'
-                            onClick={(e) => e.stopPropagation()}
-                          >
-                            {item.source_url?.pdf_url && (
-                              <Button
-                                variant='ghost'
-                                size='sm'
-                                className='h-8 px-2 text-xs text-blue-600 hover:text-blue-700'
-                                onClick={() => window.open(item.source_url?.pdf_url, '_blank')}
-                                title='View PDF Report'
-                              >
-                                <ExternalLink className='h-3.5 w-3.5 mr-1' />
-                                PDF
-                              </Button>
-                            )}
-                          </div>
                         </TableCell>
                       </TableRow>
                     ))}
