@@ -43,7 +43,7 @@ export const updateAccountSchema = z.object({
   phone: z
     .string()
     .min(1, 'Phone number is required')
-    .regex(/^\+?[0-9\s-]{10,15}$/, 'Invalid phone number'),
+    .regex(/^\d{10}$/, 'Phone number must be exactly 10 digits'),
 
   email: z
     .string()
@@ -82,10 +82,19 @@ export const updateAccountSchema = z.object({
   businessRegistrationType: z.string().optional(),
   suppliers: z.string().optional(),
   description: z.string().optional(),
-  typeOfBusiness: z.string().optional(),
-  industry: z.string().optional(),
-  gstn: z.string().optional(),
-  pan: z.string().optional(),
+  typeOfBusiness: z.string().min(1, 'Type of Business is required'),
+  industry: z.string().min(1, 'Division is required'),
+  gstn: z
+    .string()
+    .min(1, 'GSTN is required')
+    .regex(
+      /^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[1-9A-Z]{1}Z[0-9A-Z]{1}$/i,
+      'Invalid GST format (e.g. 22AAAAA0000A1Z5)',
+    ),
+  pan: z
+    .string()
+    .min(1, 'PAN is required')
+    .regex(/^[A-Z]{5}[0-9]{4}[A-Z]{1}$/i, 'Invalid PAN format (e.g. ABCDE1234F)'),
   parentAccount: z.string().optional(),
 
   // ================= Address - Business Premise =================
@@ -120,7 +129,7 @@ export const updateAccountSchema = z.object({
   coApplicantName: z.string().optional(),
   coApplicantPhone: z
     .string()
-    .regex(/^\+?[0-9\s-]{10,15}$/, 'Invalid phone number')
+    .regex(/^\d{10}$/, 'Phone number must be exactly 10 digits')
     .optional()
     .or(z.literal('')),
   coApplicantRelationship: z.string().optional(),
@@ -146,7 +155,7 @@ export const updateAccountSchema = z.object({
   ref1Name: z.string().optional(),
   ref1Phone: z
     .string()
-    .regex(/^\+?[0-9\s-]{10,15}$/, 'Invalid phone number')
+    .regex(/^\d{10}$/, 'Phone number must be exactly 10 digits')
     .optional()
     .or(z.literal('')),
   ref1Email: z
@@ -160,7 +169,7 @@ export const updateAccountSchema = z.object({
   ref2Name: z.string().optional(),
   ref2Phone: z
     .string()
-    .regex(/^\+?[0-9\s-]{10,15}$/, 'Invalid phone number')
+    .regex(/^\d{10}$/, 'Phone number must be exactly 10 digits')
     .optional()
     .or(z.literal('')),
   ref2Email: z

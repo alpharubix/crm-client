@@ -2042,7 +2042,7 @@ export default function UpdateAccounts() {
                 <CardContent className='p-0 grid grid-cols-1 md:grid-cols-2'>
                   <div className='md:border-r'>
                     <FieldRow
-                      label='Business Vintage (No of Years)'
+                      label='Business Vintage (with Anchor)'
                       error={errors.businessVintage?.message}
                     >
                       {isEdit ? (
@@ -2093,7 +2093,7 @@ export default function UpdateAccounts() {
                         <span>{display(data.description)}</span>
                       )}
                     </FieldRow>
-                    <FieldRow label='GSTN'>
+                    <FieldRow label='GSTN *' error={errors.gstn?.message}>
                       {isEdit ? (
                         <Input {...register('gstn')} className='h-8' />
                       ) : (
@@ -2103,7 +2103,7 @@ export default function UpdateAccounts() {
                   </div>
 
                   <div>
-                    <FieldRow label='Type of Business'>
+                    <FieldRow label='Type of Business *' error={errors.typeOfBusiness?.message}>
                       <Controller
                         control={control}
                         name='typeOfBusiness'
@@ -2129,7 +2129,7 @@ export default function UpdateAccounts() {
                       />
                     </FieldRow>
 
-                    <FieldRow label='Industry'>
+                    <FieldRow label='Division *' error={errors.industry?.message}>
                       <Controller
                         control={control}
                         name='industry'
@@ -2156,7 +2156,7 @@ export default function UpdateAccounts() {
                       />
                     </FieldRow>
 
-                    <FieldRow label='PAN'>
+                    <FieldRow label='PAN *' error={errors.pan?.message}>
                       {isEdit ? (
                         <Input {...register('pan')} className='h-8' />
                       ) : (
