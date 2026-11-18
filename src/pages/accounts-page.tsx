@@ -2088,13 +2088,13 @@ export default function AccountsPage() {
             {/* Industry */}
             <div className='space-y-1.5'>
               <Label className='text-xs font-semibold text-foreground'>
-                Industry
+                Division
               </Label>
               <MultiSelect
                 options={INDUSTRY_OPTIONS}
                 value={filters.industry}
                 onChange={(val) => handleFilterChange('industry', val)}
-                placeholder='Select Industry...'
+                placeholder='Select Division...'
               />
             </div>
 

@@ -17,7 +17,16 @@ import {
   Filter,
   X,
   Search,
+  Download,
+  FileDown,
 } from 'lucide-react'
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu'
+import { exportToCSV, exportToExcel } from '@/utils/importExport'
 import {
   Table,
   TableBody,
@@ -290,6 +299,11 @@ export default function GstCibilPage() {
     }).length
 
     const uniqueTrackerCount = trackerData.length - duplicateTrackerCount
+    const failedTrackerCount = trackerData.filter((item) => {
+      const s = (item.report_status || '').toUpperCase()
+      const st = (item.request_stage || '').toUpperCase()
+      return s.includes('FAIL') || st.includes('ERROR') || st.includes('FAIL') || Boolean(item.error_message)
+    }).length
 
     return {
       totalReports,
@@ -300,6 +314,7 @@ export default function GstCibilPage() {
       uniqueReportsCount,
       duplicateTrackerCount,
       uniqueTrackerCount,
+      failedTrackerCount,
     }
   }, [data, trackerData, reportsGstinCounts, trackerGstinCounts])
 
@@ -541,6 +556,54 @@ export default function GstCibilPage() {
     setTimeout(() => {
       setCopiedId((prev) => (prev === key ? null : prev))
     }, 1800)
+  }
+
+  const isFailedTrackerItem = (item: GstTrackerItem) => {
+    const s = (item.report_status || '').toUpperCase()
+    const st = (item.request_stage || '').toUpperCase()
+    return s.includes('FAIL') || st.includes('ERROR') || st.includes('FAIL') || Boolean(item.error_message)
+  }
+
+  const exportFailedTrackerReports = (format: 'csv' | 'xlsx', onlyFiltered = false) => {
+    const sourceList = onlyFiltered ? filteredTracker : trackerData
+    const failedList = sourceList.filter(isFailedTrackerItem)
+
+    if (failedList.length === 0) {
+      toast.info(
+        onlyFiltered
+          ? 'No failed reports found in the current filtered results.'
+          : 'No failed reports found in the tracker.'
+      )
+      return
+    }
+
+    const rows = failedList.map((item, index) => ({
+      'S.No': index + 1,
+      'GSTIN': item.gstin || '',
+      'Reference ID': item.reference_id || '',
+      'Report Status': item.report_status || 'PENDING',
+      'Request Stage': item.request_stage || 'PENDING',
+      'Retry Count': item.retry_count ?? 0,
+      'Created At': item.created_at ? formatCreationTimestamp(item.created_at) : '',
+      'Updated At': item.updated_at ? formatCreationTimestamp(item.updated_at) : '',
+      'Completed At': item.completed_at ? formatCreationTimestamp(item.completed_at) : '',
+      'Failure Reason / Error': item.error_message || 'Upstream Error / Processing Failed',
+    }))
+
+    const dateStr = new Date().toISOString().slice(0, 10)
+    const baseFilename = `gst_failed_reports_${dateStr}`
+
+    try {
+      if (format === 'csv') {
+        exportToCSV(rows, baseFilename)
+      } else {
+        exportToExcel(rows, baseFilename, 'Failed Reports')
+      }
+      toast.success(`Exported ${failedList.length} failed report(s) as ${format.toUpperCase()}`)
+    } catch (err: any) {
+      console.error('Failed to export reports:', err)
+      toast.error('Failed to generate export file')
+    }
   }
 
   const BaseURl =
@@ -1577,6 +1640,77 @@ export default function GstCibilPage() {
                 </div>
 
                 <div className='flex items-center gap-2'>
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button
+                        variant='outline'
+                        size='sm'
+                        className='h-8 text-xs gap-1.5 border-rose-200 text-rose-700 hover:bg-rose-50 hover:text-rose-800'
+                        disabled={isLoadingTracker || trackerData.length === 0}
+                      >
+                        <FileDown className='h-3.5 w-3.5' />
+                        <span>Export Failed</span>
+                        {reportsStats.failedTrackerCount > 0 && (
+                          <Badge
+                            variant='outline'
+                            className='ml-0.5 px-1.5 py-0 h-4 text-[10px] bg-rose-100 text-rose-700 border-rose-300 rounded-full font-medium'
+                          >
+                            {reportsStats.failedTrackerCount}
+                          </Badge>
+                        )}
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align='end' className='w-56 text-xs'>
+                      <DropdownMenuItem
+                        className='cursor-pointer flex items-center justify-between text-xs py-2'
+                        onClick={() => exportFailedTrackerReports('csv', false)}
+                      >
+                        <span className='flex items-center gap-2'>
+                          <Download className='h-3.5 w-3.5 text-slate-500' />
+                          Export All Failed (CSV)
+                        </span>
+                        <span className='text-[10px] text-slate-400 font-mono'>
+                          {reportsStats.failedTrackerCount}
+                        </span>
+                      </DropdownMenuItem>
+                      <DropdownMenuItem
+                        className='cursor-pointer flex items-center justify-between text-xs py-2'
+                        onClick={() => exportFailedTrackerReports('xlsx', false)}
+                      >
+                        <span className='flex items-center gap-2'>
+                          <Download className='h-3.5 w-3.5 text-slate-500' />
+                          Export All Failed (Excel)
+                        </span>
+                        <span className='text-[10px] text-slate-400 font-mono'>
+                          {reportsStats.failedTrackerCount}
+                        </span>
+                      </DropdownMenuItem>
+                      {activeTrackerFilterCount > 0 && (
+                        <>
+                          <div className='my-1 border-t border-slate-100' />
+                          <DropdownMenuItem
+                            className='cursor-pointer flex items-center justify-between text-xs py-2 text-rose-600 focus:text-rose-700'
+                            onClick={() => exportFailedTrackerReports('csv', true)}
+                          >
+                            <span className='flex items-center gap-2'>
+                              <Filter className='h-3.5 w-3.5' />
+                              Export Filtered Failed (CSV)
+                            </span>
+                          </DropdownMenuItem>
+                          <DropdownMenuItem
+                            className='cursor-pointer flex items-center justify-between text-xs py-2 text-rose-600 focus:text-rose-700'
+                            onClick={() => exportFailedTrackerReports('xlsx', true)}
+                          >
+                            <span className='flex items-center gap-2'>
+                              <Filter className='h-3.5 w-3.5' />
+                              Export Filtered Failed (Excel)
+                            </span>
+                          </DropdownMenuItem>
+                        </>
+                      )}
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+
                   <Button
                     variant={showTrackerFilters ? 'secondary' : 'outline'}
                     size='sm'

@@ -809,7 +809,7 @@ export default function GstReportTab({
             </div>
 
             {/* Quick Aggregate Stats */}
-            <div className='flex items-center gap-2 flex-wrap'>
+            {/* <div className='flex items-center gap-2 flex-wrap'>
               <div className='px-2.5 py-1 rounded-lg bg-background border border-border text-xs flex items-center gap-1.5'>
                 <span className='text-muted-foreground'>Sanctioned:</span>
                 <span className='font-bold text-foreground'>
@@ -828,7 +828,7 @@ export default function GstReportTab({
                   <span>Write-Off: {formatShortLakhsCrores(bureau.write_off)}</span>
                 </div>
               )}
-            </div>
+            </div> */}
           </div>
         </CardHeader>
 
