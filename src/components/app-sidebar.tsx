@@ -277,8 +277,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
 
               if (
                 (item.title === 'Tools & Logs' ||
-                  item.title === 'WhatsApp CRM' ||
-                  item.title === 'Cibil Leads') &&
+                  item.title === 'WhatsApp CRM') &&
                 !isSuperAdmin
               ) {
                 return false
