@@ -616,12 +616,6 @@ export default function CreateAccount() {
                       'phoneStatus',
                       v.map((opt: string) => {
                         const map: Record<string, string> = {
-                          Valid: 'valid_phone',
-                          Duplicate: 'duplicate_phone',
-                          Invalid: 'invalid_phone',
-                          Missing: 'missing_phone',
-                        }
-                        return map[opt] || opt
                           'Valid Phone': 'valid_phone',
                           'Duplicate Phone': 'duplicate_phone',
                           'Same Phone & Email': 'duplicate_phone_email',
@@ -630,6 +624,10 @@ export default function CreateAccount() {
                           'Invalid Phone': 'invalid_phone',
                           'Missing Phone': 'missing_phone',
                           'Missing Phone & Email': 'missing_phone_email',
+                          Valid: 'valid_phone',
+                          Duplicate: 'duplicate_phone',
+                          Invalid: 'invalid_phone',
+                          Missing: 'missing_phone',
                         };
                         return map[opt] || opt;
                       }),
