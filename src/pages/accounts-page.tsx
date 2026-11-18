@@ -39,6 +39,8 @@ import UploadCsv from '@/components/accounts/csv-upload';
 import { DatePicker } from '@/components/ui/date-picker';
 
 import users from '@/utils/users.json';
+import CITIES from '@/utils/cities.json';
+import STATES from '@/utils/states.json';
 import { useAuth } from '@/context/auth-context';
 import type { Option } from '@/components/ui/multi-select';
 import { useManageColumns } from '@/hooks/use-manage-columns';
@@ -200,6 +202,16 @@ const BUSINESS_STATUS_OPTIONS: Option[] = [
   { value: 'NA', label: 'NA' },
 ];
 
+const CITY_OPTIONS: Option[] = (CITIES as string[]).map((c) => ({
+  value: c,
+  label: c,
+}));
+
+const STATE_OPTIONS: Option[] = (STATES as string[]).map((s) => ({
+  value: s,
+  label: s,
+}));
+
 const DEFAULT_COLUMNS = [
   { id: 'account_name', label: 'Account Name', selected: true },
   { id: 'account_owner', label: 'Account Owner', selected: true },
@@ -293,8 +305,8 @@ export default function AccountsPage() {
     industry: [] as Option[],
     phone: searchParams.get('phone') || '',
     email: searchParams.get('email') || '',
-    city: searchParams.get('city') || '',
-    state: searchParams.get('state') || '',
+    city: [] as Option[],
+    state: [] as Option[],
     accountOwnerId: [] as Option[],
     sourceType: [] as Option[],
     accountStage: [] as Option[],
@@ -455,6 +467,32 @@ export default function AccountsPage() {
       });
     }
 
+    const cityParams = searchParams.getAll('city');
+    if (cityParams.length > 0) {
+      loadedFilters.city = cityParams.map((val) => ({ value: val, label: val }));
+    } else {
+      const singleCity = searchParams.get('city');
+      if (singleCity) {
+        loadedFilters.city = singleCity
+          .split(',')
+          .map((v) => ({ value: v.trim(), label: v.trim() }))
+          .filter((v) => v.value.length > 0);
+      }
+    }
+
+    const stateParams = searchParams.getAll('state');
+    if (stateParams.length > 0) {
+      loadedFilters.state = stateParams.map((val) => ({ value: val, label: val }));
+    } else {
+      const singleState = searchParams.get('state');
+      if (singleState) {
+        loadedFilters.state = singleState
+          .split(',')
+          .map((v) => ({ value: v.trim(), label: v.trim() }))
+          .filter((v) => v.value.length > 0);
+      }
+    }
+
     if (Object.keys(loadedFilters).length > 0) {
       setFilters((prev) => ({ ...prev, ...loadedFilters }));
       setAppliedFilters((prev) => ({ ...prev, ...loadedFilters }));
@@ -517,8 +555,16 @@ export default function AccountsPage() {
       }
       if (appliedFilters.phone) params.set('phone', appliedFilters.phone);
       if (appliedFilters.email) params.set('email', appliedFilters.email);
-      if (appliedFilters.city) params.set('city', appliedFilters.city);
-      if (appliedFilters.state) params.set('state', appliedFilters.state);
+      if (appliedFilters.city && appliedFilters.city.length > 0) {
+        appliedFilters.city.forEach((o: Option) =>
+          params.append('city', o.value),
+        );
+      }
+      if (appliedFilters.state && appliedFilters.state.length > 0) {
+        appliedFilters.state.forEach((o: Option) =>
+          params.append('state', o.value),
+        );
+      }
       if (
         appliedFilters.accountOwnerId &&
         appliedFilters.accountOwnerId.length > 0
@@ -780,8 +826,12 @@ export default function AccountsPage() {
     if (searchFilters.accountName) params.set('account_name', searchFilters.accountName);
     if (searchFilters.phone) params.set('phone', searchFilters.phone);
     if (searchFilters.email) params.set('email', searchFilters.email);
-    if (searchFilters.city) params.set('city', searchFilters.city);
-    if (searchFilters.state) params.set('state', searchFilters.state);
+    if (searchFilters.city && searchFilters.city.length > 0) {
+      searchFilters.city.forEach((o: Option) => params.append('city', o.value));
+    }
+    if (searchFilters.state && searchFilters.state.length > 0) {
+      searchFilters.state.forEach((o: Option) => params.append('state', o.value));
+    }
 
     if (searchFilters.assignmentFromDate) params.set('assignment_from_date', searchFilters.assignmentFromDate);
     if (searchFilters.assignmentToDate) params.set('assignment_to_date', searchFilters.assignmentToDate);
@@ -844,8 +894,8 @@ export default function AccountsPage() {
       industry: [] as Option[],
       phone: '',
       email: '',
-      city: '',
-      state: '',
+      city: [] as Option[],
+      state: [] as Option[],
       accountOwnerId: [] as Option[],
       sourceType: [] as Option[],
       accountStage: [] as Option[],
@@ -2043,13 +2093,13 @@ export default function AccountsPage() {
             {/* Industry */}
             <div className='space-y-1.5'>
               <Label className='text-xs font-semibold text-foreground'>
-                Industry
+                Division
               </Label>
               <MultiSelect
                 options={INDUSTRY_OPTIONS}
                 value={filters.industry}
                 onChange={(val) => handleFilterChange('industry', val)}
-                placeholder='Select Industry...'
+                placeholder='Select Division...'
               />
             </div>
 
@@ -2058,11 +2108,11 @@ export default function AccountsPage() {
               <Label className='text-xs font-semibold text-foreground'>
                 City
               </Label>
-              <Input
-                placeholder='Select city...'
+              <MultiSelect
+                options={CITY_OPTIONS}
                 value={filters.city}
-                onChange={(e) => handleFilterChange('city', e.target.value)}
-                className='h-9 text-xs rounded-lg'
+                onChange={(val) => handleFilterChange('city', val)}
+                placeholder='Select City...'
               />
             </div>
 
@@ -2071,11 +2121,11 @@ export default function AccountsPage() {
               <Label className='text-xs font-semibold text-foreground'>
                 State
               </Label>
-              <Input
-                placeholder='Select state...'
+              <MultiSelect
+                options={STATE_OPTIONS}
                 value={filters.state}
-                onChange={(e) => handleFilterChange('state', e.target.value)}
-                className='h-9 text-xs rounded-lg'
+                onChange={(val) => handleFilterChange('state', val)}
+                placeholder='Select State...'
               />
             </div>
 

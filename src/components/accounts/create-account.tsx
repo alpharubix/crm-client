@@ -1,38 +1,38 @@
-import { useState } from 'react';
-import { useForm } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
-import { useNavigate } from 'react-router-dom';
-import { useMutation, useQuery } from '@tanstack/react-query';
-import { toast } from 'sonner';
-import { useAuth } from '@/context/auth-context';
+import { useState } from 'react'
+import { useForm } from 'react-hook-form'
+import { zodResolver } from '@hookform/resolvers/zod'
+import { useNavigate } from 'react-router-dom'
+import { useMutation, useQuery } from '@tanstack/react-query'
+import { toast } from 'sonner'
+import { useAuth } from '@/context/auth-context'
 
-import { Button } from '@/components/ui/button';
-import { Card, CardContent } from '@/components/ui/card';
-import { Input } from '@/components/ui/input';
-import SectionHeader from '@/components/shared/section-header';
-import FieldRow from '@/components/shared/field-row';
-import SelectField from '@/components/shared/select-field';
-import DateField from '@/components/shared/date-field';
-import { Spinner } from '@/components/ui/spinner';
-import { CitySelector } from '../shared/city-selector';
-import { StateSelector } from '../shared/state-selector';
-import { PincodeSelector } from '../shared/pincode-selector';
-import CITIES from '@/utils/cities.json';
-import STATES from '@/utils/states.json';
-import PINCODES from '@/utils/pincodes.json';
+import { Button } from '@/components/ui/button'
+import { Card, CardContent } from '@/components/ui/card'
+import { Input } from '@/components/ui/input'
+import SectionHeader from '@/components/shared/section-header'
+import FieldRow from '@/components/shared/field-row'
+import SelectField from '@/components/shared/select-field'
+import DateField from '@/components/shared/date-field'
+import { Spinner } from '@/components/ui/spinner'
+import { CitySelector } from '../shared/city-selector'
+import { StateSelector } from '../shared/state-selector'
+import { PincodeSelector } from '../shared/pincode-selector'
+import CITIES from '@/utils/cities.json'
+import STATES from '@/utils/states.json'
+import PINCODES from '@/utils/pincodes.json'
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from '@/components/ui/select';
+} from '@/components/ui/select'
 import {
   updateAccountSchema,
   type UpdateAccountFormValues,
-} from '@/validators/updateAccount.schema';
-import { ENV } from '@/conf';
-import { X } from 'lucide-react';
+} from '@/validators/updateAccount.schema'
+import { ENV } from '@/conf'
+import { X } from 'lucide-react'
 
 // Language options for multi-select
 const LANGUAGE_OPTIONS = [
@@ -46,12 +46,12 @@ const LANGUAGE_OPTIONS = [
   'Gujarati',
   'Bengali',
   'Punjabi',
-];
+]
 
 function display(v: any) {
-  if (v === null || v === undefined) return '—';
-  if (typeof v === 'string' && v.trim() === '') return '—';
-  return v;
+  if (v === null || v === undefined) return '—'
+  if (typeof v === 'string' && v.trim() === '') return '—'
+  return v
 }
 
 // Multi-Select Component
@@ -61,28 +61,28 @@ function MultiSelectField({
   onChange,
   placeholder,
 }: {
-  value: string[];
-  options: string[];
-  onChange: (val: string[]) => void;
-  placeholder?: string;
+  value: string[]
+  options: string[]
+  onChange: (val: string[]) => void
+  placeholder?: string
 }) {
-  const [isOpen, setIsOpen] = useState(false);
-  const [searchTerm, setSearchTerm] = useState('');
+  const [isOpen, setIsOpen] = useState(false)
+  const [searchTerm, setSearchTerm] = useState('')
 
   const filteredOptions = options.filter(
     (opt) =>
       opt.toLowerCase().includes(searchTerm.toLowerCase()) &&
       !value.includes(opt),
-  );
+  )
 
   const addLanguage = (lang: string) => {
-    onChange([...value, lang]);
-    setSearchTerm('');
-  };
+    onChange([...value, lang])
+    setSearchTerm('')
+  }
 
   const removeLanguage = (lang: string) => {
-    onChange(value.filter((l) => l !== lang));
-  };
+    onChange(value.filter((l) => l !== lang))
+  }
 
   return (
     <div className='relative'>
@@ -125,19 +125,19 @@ function MultiSelectField({
         )}
       </div>
     </div>
-  );
+  )
 }
 
 // Map form values to API payload for CREATE
 
 export default function CreateAccount() {
-  const navigate = useNavigate();
-  const [businessStateSearch, setBusinessStateSearch] = useState('');
-  const [businessStateOpen, setBusinessStateOpen] = useState(false);
-  const [businessCitySearch, setBusinessCitySearch] = useState('');
-  const [businessCityOpen, setBusinessCityOpen] = useState(false);
-  const [businessPincodeSearch, setBusinessPincodeSearch] = useState('');
-  const [businessPincodeOpen, setBusinessPincodeOpen] = useState(false);
+  const navigate = useNavigate()
+  const [businessStateSearch, setBusinessStateSearch] = useState('')
+  const [businessStateOpen, setBusinessStateOpen] = useState(false)
+  const [businessCitySearch, setBusinessCitySearch] = useState('')
+  const [businessCityOpen, setBusinessCityOpen] = useState(false)
+  const [businessPincodeSearch, setBusinessPincodeSearch] = useState('')
+  const [businessPincodeOpen, setBusinessPincodeOpen] = useState(false)
 
   const form = useForm<UpdateAccountFormValues>({
     resolver: zodResolver(updateAccountSchema),
@@ -155,7 +155,7 @@ export default function CreateAccount() {
       sourceDescription: '',
       phoneStatus: [],
     },
-  });
+  })
 
   const {
     register,
@@ -164,23 +164,23 @@ export default function CreateAccount() {
     trigger,
     watch,
     formState: { errors, isSubmitting, isValid },
-  } = form;
+  } = form
 
   const { data: usersData } = useQuery({
     queryKey: ['users'],
     queryFn: async () => {
       const res = await fetch(`${ENV.VITE_BACKEND_BASE_URL}/user/filter`, {
         credentials: 'include',
-      });
-      if (!res.ok) throw new Error('Failed to fetch users');
-      return res.json();
+      })
+      if (!res.ok) throw new Error('Failed to fetch users')
+      return res.json()
     },
-  });
+  })
 
-  const users = usersData?.data || [];
+  const users = usersData?.data || []
 
   function mapFormToCreatePayload(formData: UpdateAccountFormValues): any {
-    console.log('FormData accountOwnerId:', formData.accountOwnerId);
+    console.log('FormData accountOwnerId:', formData.accountOwnerId)
     return {
       first_name: formData.firstName,
       last_name: formData.lastName,
@@ -282,25 +282,25 @@ export default function CreateAccount() {
         employment_vintage: formData.employmentVintage,
         annual_income: formData.annualIncome,
       },
-    };
+    }
   }
 
-  const data = watch();
-  console.log({ data });
+  const data = watch()
+  console.log({ data })
 
   const filteredBusinessStates =
     businessStateSearch.length > 1
       ? STATES.filter((s: string) =>
           s.toLowerCase().includes(businessStateSearch.toLowerCase()),
         ).slice(0, 50)
-      : [];
+      : []
 
   const filteredBusinessCities =
     businessCitySearch.length > 1
       ? CITIES.filter((c: string) =>
           c.toLowerCase().includes(businessCitySearch.toLowerCase()),
         ).slice(0, 50)
-      : [];
+      : []
 
   const filteredBusinessPincodes =
     businessPincodeSearch.length > 1
@@ -308,41 +308,42 @@ export default function CreateAccount() {
           0,
           50,
         )
-      : [];
+      : []
 
   const createMutation = useMutation({
     mutationFn: async (values: UpdateAccountFormValues) => {
-      const payload = mapFormToCreatePayload(values);
-      console.log('Sending payload:', payload);
+      const payload = mapFormToCreatePayload(values)
+      console.log('Sending payload:', payload)
       const res = await fetch(`${ENV.VITE_BACKEND_BASE_URL}/accounts`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
         body: JSON.stringify(payload),
-      });
+      })
       if (!res.ok) {
-        const error = await res.json();
-        throw new Error(error.detail || 'Failed to create account');
+        const error = await res.json()
+        throw new Error(error.detail || 'Failed to create account')
       }
-      return res.json();
+      return res.json()
     },
     onSuccess: (response: any) => {
-      toast.success('Account created successfully!');
-      const accountId = response?.id || response?.data?.id || response?.account_id;
+      toast.success('Account created successfully!')
+      const accountId =
+        response?.id || response?.data?.id || response?.account_id
       if (accountId) {
-        navigate(`/accounts/${accountId}`);
+        navigate(`/accounts/${accountId}`)
       } else {
-        navigate('/accounts');
+        navigate('/accounts')
       }
     },
     onError: (err: any) => {
-      toast.error(err.message || 'Failed to create account');
+      toast.error(err.message || 'Failed to create account')
     },
-  });
+  })
 
   const onSubmit = (values: UpdateAccountFormValues) => {
-    createMutation.mutate(values);
-  };
+    createMutation.mutate(values)
+  }
 
   return (
     <div className='space-y-6 bg-background min-h-screen p-6'>
@@ -615,6 +616,12 @@ export default function CreateAccount() {
                       'phoneStatus',
                       v.map((opt: string) => {
                         const map: Record<string, string> = {
+                          Valid: 'valid_phone',
+                          Duplicate: 'duplicate_phone',
+                          Invalid: 'invalid_phone',
+                          Missing: 'missing_phone',
+                        }
+                        return map[opt] || opt
                           'Valid Phone': 'valid_phone',
                           'Duplicate Phone': 'duplicate_phone',
                           'Same Phone & Email': 'duplicate_phone_email',
@@ -626,7 +633,7 @@ export default function CreateAccount() {
                         };
                         return map[opt] || opt;
                       }),
-                      { shouldValidate: true }
+                      { shouldValidate: true },
                     )
                   }
                   placeholder='Select phone statuses...'
@@ -685,8 +692,8 @@ export default function CreateAccount() {
                   isEdit={true}
                   options={['Salaried', 'Self Employed']}
                   onChange={(v) => {
-                    setValue('profileType', v, { shouldValidate: true });
-                    trigger('employerName');
+                    setValue('profileType', v, { shouldValidate: true })
+                    trigger('employerName')
                   }}
                 />
               </FieldRow>
@@ -697,7 +704,7 @@ export default function CreateAccount() {
           <SectionHeader title='Customer Business Details' />
           <CardContent className='p-0 grid grid-cols-1 md:grid-cols-2'>
             <div className='md:border-r'>
-              <FieldRow label='Business Vintage (No of Years)'>
+              <FieldRow label='Business Vintage (with Anchor)'>
                 <Input
                   {...register('businessVintage')}
                   className='h-8'
@@ -726,12 +733,12 @@ export default function CreateAccount() {
                   className='w-full h-20 px-2 border rounded-md text-sm'
                 />
               </FieldRow>
-              <FieldRow label='GSTN'>
+              <FieldRow label='GSTN *' error={errors.gstn?.message}>
                 <Input {...register('gstn')} className='h-8' />
               </FieldRow>
             </div>
             <div>
-              <FieldRow label='Type of Business'>
+              <FieldRow label='Type of Business *' error={errors.typeOfBusiness?.message}>
                 <SelectField
                   value={data.typeOfBusiness}
                   isEdit={true}
@@ -747,10 +754,12 @@ export default function CreateAccount() {
                     'Govt Institutions',
                     'Co Operative Society',
                   ]}
-                  onChange={(v) => setValue('typeOfBusiness', v)}
+                  onChange={(v) =>
+                    setValue('typeOfBusiness', v, { shouldValidate: true })
+                  }
                 />
               </FieldRow>
-              <FieldRow label='Industry'>
+              <FieldRow label='Division *' error={errors.industry?.message} >
                 <SelectField
                   value={data.industry}
                   isEdit={true}
@@ -764,10 +773,10 @@ export default function CreateAccount() {
                     'Hardware',
                     'Others',
                   ]}
-                  onChange={(v) => setValue('industry', v)}
+                  onChange={(v) => setValue('industry', v ,{ shouldValidate: true })}
                 />
               </FieldRow>
-              <FieldRow label='PAN'>
+              <FieldRow label='PAN *' error={errors.pan?.message}>
                 <Input {...register('pan')} className='h-8' />
               </FieldRow>
             </div>
@@ -844,11 +853,11 @@ export default function CreateAccount() {
                   <Input
                     value={businessStateSearch}
                     onChange={(e) => {
-                      setBusinessStateSearch(e.target.value);
-                      setBusinessStateOpen(true);
+                      setBusinessStateSearch(e.target.value)
+                      setBusinessStateOpen(true)
                       setValue('businessState', e.target.value, {
                         shouldValidate: true,
-                      });
+                      })
                     }}
                     onFocus={() => setBusinessStateOpen(true)}
                     onBlur={() =>
@@ -866,9 +875,9 @@ export default function CreateAccount() {
                           onMouseDown={() => {
                             setValue('businessState', state, {
                               shouldValidate: true,
-                            });
-                            setBusinessStateSearch(state);
-                            setBusinessStateOpen(false);
+                            })
+                            setBusinessStateSearch(state)
+                            setBusinessStateOpen(false)
                           }}
                         >
                           {state}
@@ -886,11 +895,11 @@ export default function CreateAccount() {
                   <Input
                     value={businessPincodeSearch}
                     onChange={(e) => {
-                      setBusinessPincodeSearch(e.target.value);
-                      setBusinessPincodeOpen(true);
+                      setBusinessPincodeSearch(e.target.value)
+                      setBusinessPincodeOpen(true)
                       setValue('businessPincode', e.target.value, {
                         shouldValidate: true,
-                      });
+                      })
                     }}
                     onFocus={() => setBusinessPincodeOpen(true)}
                     onBlur={() =>
@@ -909,9 +918,9 @@ export default function CreateAccount() {
                             onMouseDown={() => {
                               setValue('businessPincode', pincode, {
                                 shouldValidate: true,
-                              });
-                              setBusinessPincodeSearch(pincode);
-                              setBusinessPincodeOpen(false);
+                              })
+                              setBusinessPincodeSearch(pincode)
+                              setBusinessPincodeOpen(false)
                             }}
                           >
                             {pincode}
@@ -931,11 +940,11 @@ export default function CreateAccount() {
                   <Input
                     value={businessCitySearch}
                     onChange={(e) => {
-                      setBusinessCitySearch(e.target.value);
-                      setBusinessCityOpen(true);
+                      setBusinessCitySearch(e.target.value)
+                      setBusinessCityOpen(true)
                       setValue('businessCity', e.target.value, {
                         shouldValidate: true,
-                      });
+                      })
                     }}
                     onFocus={() => setBusinessCityOpen(true)}
                     onBlur={() =>
@@ -953,9 +962,9 @@ export default function CreateAccount() {
                           onMouseDown={() => {
                             setValue('businessCity', city, {
                               shouldValidate: true,
-                            });
-                            setBusinessCitySearch(city);
-                            setBusinessCityOpen(false);
+                            })
+                            setBusinessCitySearch(city)
+                            setBusinessCityOpen(false)
                           }}
                         >
                           {city}
@@ -1219,5 +1228,5 @@ export default function CreateAccount() {
         </Card>
       </form>
     </div>
-  );
+  )
 }

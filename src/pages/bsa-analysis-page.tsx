@@ -1,26 +1,26 @@
-import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
-import { Button } from '@/components/ui/button';
-import { ArrowLeft } from 'lucide-react';
-import BankAccountsPage from '@/components/bsa/BankAccountsPage';
-import SummeryOfDebitAndCredit from '@/components/bsa/summary-of-debit-and-credit/SummeryOfDebitAndCredit';
-import CashFlow from '@/components/bsa/cashFlow/CashFlow';
-import OverviewMonthlyWise from '@/components/bsa/overview-monthly-wise/OverviewMonthlyWise';
-import IndividualOverview from '@/components/bsa/individual/Overview';
-import IndividualEodAnalysis from '@/components/bsa/individual/EodAnalysis';
-import IndividualLoanTransactions from '@/components/bsa/individual/LoanTransactions';
+import { useParams, useNavigate, useSearchParams } from 'react-router-dom'
+import { Button } from '@/components/ui/button'
+import { ArrowLeft } from 'lucide-react'
+import BankAccountsPage from '@/components/bsa/BankAccountsPage'
+import SummeryOfDebitAndCredit from '@/components/bsa/summary-of-debit-and-credit/SummeryOfDebitAndCredit'
+import CashFlow from '@/components/bsa/cashFlow/CashFlow'
+import OverviewMonthlyWise from '@/components/bsa/overview-monthly-wise/OverviewMonthlyWise'
+import IndividualOverview from '@/components/bsa/individual/Overview'
+import IndividualEodAnalysis from '@/components/bsa/individual/EodAnalysis'
+import IndividualLoanTransactions from '@/components/bsa/individual/LoanTransactions'
 
 export default function BsaAnalysisPage() {
-  const { id } = useParams();
-  const navigate = useNavigate();
-  const [searchParams, setSearchParams] = useSearchParams();
+  const { id } = useParams()
+  const navigate = useNavigate()
+  const [searchParams, setSearchParams] = useSearchParams()
 
-  const bsaView = searchParams.get('bsaView');
+  const bsaView = searchParams.get('bsaView')
   const accountNumber =
     searchParams.get('accountNumber') ||
     sessionStorage.getItem('selected_bsa_account_number') ||
-    '';
+    ''
 
-  if (!id) return null;
+  if (!id) return null
 
   return (
     <div className='max-w-[1400px] mx-auto w-full animate-in fade-in zoom-in duration-300 px-4 py-4'>
@@ -51,9 +51,9 @@ export default function BsaAnalysisPage() {
             <Button
               variant='outline'
               onClick={() => {
-                searchParams.delete('bsaView');
-                searchParams.delete('accountNumber');
-                setSearchParams(searchParams);
+                searchParams.delete('bsaView')
+                searchParams.delete('accountNumber')
+                setSearchParams(searchParams)
               }}
               className='flex items-center gap-2 border-[#002366] text-[#002366] hover:bg-[#002366]/5 font-semibold rounded-lg h-9 text-xs cursor-pointer'
             >
@@ -99,5 +99,5 @@ export default function BsaAnalysisPage() {
         </div>
       )}
     </div>
-  );
+  )
 }

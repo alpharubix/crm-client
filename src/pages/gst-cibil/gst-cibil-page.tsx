@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Button } from '@/components/ui/button'
 import {
@@ -11,7 +11,22 @@ import {
   AlertCircle,
   Clock,
   ExternalLink,
+  Building2,
+  Copy,
+  Check,
+  Filter,
+  X,
+  Search,
+  Download,
+  FileDown,
 } from 'lucide-react'
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu'
+import { exportToCSV, exportToExcel } from '@/utils/importExport'
 import {
   Table,
   TableBody,
@@ -27,6 +42,15 @@ import tabularjs from 'tabularjs'
 import { toast } from 'sonner'
 import { Input } from '@/components/ui/input'
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
+import { Slider } from '@/components/ui/slider'
+import Pagination from '@/components/shared/pagination'
 import { ENV } from '@/conf'
 import { formatCreationTimestamp } from '@/utils/date-formatter'
 
@@ -42,6 +66,8 @@ interface GstCibilListItem {
   entity_status?: string
   bureau_rating?: string
   last_updated: string
+  account_id?: number | string | null
+  account_name?: string | null
 }
 
 interface LifecycleEvent {
@@ -118,6 +144,467 @@ export default function GstCibilPage() {
   const [isUploading, setIsUploading] = useState(false)
   const inputRef = useRef<HTMLInputElement>(null)
   const [singleGstinput, setSingleGstInput] = useState('')
+  const [copiedId, setCopiedId] = useState<string | null>(null)
+
+  // Helper to extract numeric bureau rating score (e.g. "Experian: 734" -> 734)
+  const parseBureauScore = (rating?: string | null): number | null => {
+    if (!rating) return null
+    const match = rating.match(/\b(\d{3})\b/)
+    if (match) {
+      const num = parseInt(match[1], 10)
+      if (num >= 300 && num <= 900) return num
+    }
+    return null
+  }
+
+  // Filtering state - Generated Reports
+  const [showReportsFilters, setShowReportsFilters] = useState(false)
+  const [reportsFilter, setReportsFilter] = useState({
+    gstin: '',
+    name: '',
+    account: '',
+    contact: '',
+    gstStatus: 'ALL',
+    bureauRating: 'ALL',
+    accountMapping: 'ALL', // 'ALL' | 'MAPPED_ONLY' | 'UNMAPPED_ONLY'
+    duplicateFilter: 'ALL', // 'ALL' | 'DUPLICATES_ONLY' | 'UNIQUE_ONLY'
+    minBureauScore: 300,
+    includeNoScore: true,
+    fromDate: '',
+    toDate: '',
+  })
+
+  // Filtering state - GST Reference Tracker
+  const [showTrackerFilters, setShowTrackerFilters] = useState(false)
+  const [trackerFilter, setTrackerFilter] = useState({
+    gstin: '',
+    referenceId: '',
+    reportStatus: 'ALL',
+    duplicateFilter: 'ALL', // 'ALL' | 'DUPLICATES_ONLY' | 'UNIQUE_ONLY'
+    fromDate: '',
+    toDate: '',
+  })
+
+  const clearReportsFilters = () => {
+    setReportsFilter({
+      gstin: '',
+      name: '',
+      account: '',
+      contact: '',
+      gstStatus: 'ALL',
+      bureauRating: 'ALL',
+      accountMapping: 'ALL',
+      duplicateFilter: 'ALL',
+      minBureauScore: 300,
+      includeNoScore: true,
+      fromDate: '',
+      toDate: '',
+    })
+  }
+
+  const clearTrackerFilters = () => {
+    setTrackerFilter({
+      gstin: '',
+      referenceId: '',
+      reportStatus: 'ALL',
+      duplicateFilter: 'ALL',
+      fromDate: '',
+      toDate: '',
+    })
+  }
+
+  // Active filter counters
+  const activeReportsFilterCount = useMemo(() => {
+    let count = 0
+    if (reportsFilter.gstin.trim()) count++
+    if (reportsFilter.name.trim()) count++
+    if (reportsFilter.account.trim()) count++
+    if (reportsFilter.contact.trim()) count++
+    if (reportsFilter.gstStatus !== 'ALL') count++
+    if (reportsFilter.bureauRating !== 'ALL') count++
+    if (reportsFilter.accountMapping !== 'ALL') count++
+    if (reportsFilter.duplicateFilter !== 'ALL') count++
+    if (reportsFilter.minBureauScore > 300 || !reportsFilter.includeNoScore) count++
+    if (reportsFilter.fromDate) count++
+    if (reportsFilter.toDate) count++
+    return count
+  }, [reportsFilter])
+
+  const activeTrackerFilterCount = useMemo(() => {
+    let count = 0
+    if (trackerFilter.gstin.trim()) count++
+    if (trackerFilter.referenceId.trim()) count++
+    if (trackerFilter.reportStatus !== 'ALL') count++
+    if (trackerFilter.duplicateFilter !== 'ALL') count++
+    if (trackerFilter.fromDate) count++
+    if (trackerFilter.toDate) count++
+    return count
+  }, [trackerFilter])
+
+  const hasActiveFilters =
+    (activeTab === 'reports' && activeReportsFilterCount > 0) ||
+    (activeTab === 'tracker' && activeTrackerFilterCount > 0)
+
+  const clearAllActiveFilters = () => {
+    if (activeTab === 'reports') {
+      clearReportsFilters()
+    } else {
+      clearTrackerFilters()
+    }
+  }
+
+  // Frequency maps for duplicates detection (by normalized GSTIN)
+  const reportsGstinCounts = useMemo(() => {
+    const map = new Map<string, number>()
+    data.forEach((item) => {
+      const g = (item.gstin || '').trim().toUpperCase()
+      if (g && g !== 'N/A') {
+        map.set(g, (map.get(g) || 0) + 1)
+      }
+    })
+    return map
+  }, [data])
+
+  const trackerGstinCounts = useMemo(() => {
+    const map = new Map<string, number>()
+    trackerData.forEach((item) => {
+      const g = (item.gstin || '').trim().toUpperCase()
+      if (g && g !== 'N/A') {
+        map.set(g, (map.get(g) || 0) + 1)
+      }
+    })
+    return map
+  }, [trackerData])
+
+  // Summary statistics for accounts mapping and reports
+  const reportsStats = useMemo(() => {
+    const totalReports = data.length
+    const mappedToAccount = data.filter(
+      (item) => item.account_id && item.account_name && item.account_name !== 'No Account',
+    ).length
+    const unmapped = totalReports - mappedToAccount
+    const withBureauScore = data.filter((item) => parseBureauScore(item.bureau_rating) !== null).length
+
+    // Duplicate statistics
+    const duplicateReportsCount = data.filter((item) => {
+      const g = (item.gstin || '').trim().toUpperCase()
+      return g && (reportsGstinCounts.get(g) || 0) > 1
+    }).length
+
+    const uniqueReportsCount = totalReports - duplicateReportsCount
+
+    const duplicateTrackerCount = trackerData.filter((item) => {
+      const g = (item.gstin || '').trim().toUpperCase()
+      return g && (trackerGstinCounts.get(g) || 0) > 1
+    }).length
+
+    const uniqueTrackerCount = trackerData.length - duplicateTrackerCount
+    const failedTrackerCount = trackerData.filter((item) => {
+      const s = (item.report_status || '').toUpperCase()
+      const st = (item.request_stage || '').toUpperCase()
+      return s.includes('FAIL') || st.includes('ERROR') || st.includes('FAIL') || Boolean(item.error_message)
+    }).length
+
+    return {
+      totalReports,
+      mappedToAccount,
+      unmapped,
+      withBureauScore,
+      duplicateReportsCount,
+      uniqueReportsCount,
+      duplicateTrackerCount,
+      uniqueTrackerCount,
+      failedTrackerCount,
+    }
+  }, [data, trackerData, reportsGstinCounts, trackerGstinCounts])
+
+  // Distinct options extracted dynamically from data
+  const reportsStatusOptions = useMemo(() => {
+    const set = new Set<string>()
+    data.forEach((item) => {
+      if (item.entity_status && item.entity_status.trim()) {
+        set.add(item.entity_status.trim())
+      }
+    })
+    return Array.from(set).sort()
+  }, [data])
+
+  const reportsRatingOptions = useMemo(() => {
+    const set = new Set<string>()
+    data.forEach((item) => {
+      if (item.bureau_rating && item.bureau_rating.trim()) {
+        set.add(item.bureau_rating.trim())
+      }
+    })
+    return Array.from(set).sort()
+  }, [data])
+
+  const trackerStatusOptions = useMemo(() => {
+    const set = new Set<string>()
+    trackerData.forEach((item) => {
+      if (item.report_status && item.report_status.trim()) {
+        set.add(item.report_status.trim())
+      }
+    })
+    return Array.from(set).sort()
+  }, [trackerData])
+
+  // Filtered reports
+  const filteredReports = useMemo(() => {
+    return data.filter((item) => {
+      // GSTIN
+      if (
+        reportsFilter.gstin.trim() &&
+        !item.gstin?.toLowerCase().includes(reportsFilter.gstin.trim().toLowerCase())
+      ) {
+        return false
+      }
+
+      // Name
+      if (
+        reportsFilter.name.trim() &&
+        !item.name?.toLowerCase().includes(reportsFilter.name.trim().toLowerCase())
+      ) {
+        return false
+      }
+
+      // Account
+      if (reportsFilter.account.trim()) {
+        const query = reportsFilter.account.trim().toLowerCase()
+        const acctName = item.account_name || 'No Account'
+        if (!acctName.toLowerCase().includes(query)) {
+          return false
+        }
+      }
+
+      // Contact
+      if (reportsFilter.contact.trim()) {
+        const contactQuery = reportsFilter.contact.replace(/\D/g, '') || reportsFilter.contact.trim()
+        const itemContact = (item.contact_number || '').replace(/\D/g, '') || (item.contact_number || '')
+        if (!itemContact.includes(contactQuery)) {
+          return false
+        }
+      }
+
+      // GST Status
+      if (reportsFilter.gstStatus !== 'ALL') {
+        if ((item.entity_status || '').toLowerCase() !== reportsFilter.gstStatus.toLowerCase()) {
+          return false
+        }
+      }
+
+      // Bureau Rating (Dropdown exact option)
+      if (reportsFilter.bureauRating !== 'ALL') {
+        if ((item.bureau_rating || '').toLowerCase() !== reportsFilter.bureauRating.toLowerCase()) {
+          return false
+        }
+      }
+
+      // Account Mapping Status Filter
+      if (reportsFilter.accountMapping !== 'ALL') {
+        const isMapped = Boolean(item.account_id && item.account_name && item.account_name !== 'No Account')
+        if (reportsFilter.accountMapping === 'MAPPED_ONLY' && !isMapped) {
+          return false
+        }
+        if (reportsFilter.accountMapping === 'UNMAPPED_ONLY' && isMapped) {
+          return false
+        }
+      }
+
+      // Duplicate Filter (Reports)
+      if (reportsFilter.duplicateFilter !== 'ALL') {
+        const g = (item.gstin || '').trim().toUpperCase()
+        const count = g ? reportsGstinCounts.get(g) || 0 : 0
+        if (reportsFilter.duplicateFilter === 'DUPLICATES_ONLY' && count <= 1) {
+          return false
+        }
+        if (reportsFilter.duplicateFilter === 'UNIQUE_ONLY' && count > 1) {
+          return false
+        }
+      }
+
+      // Bureau Score Slider Filter (minBureauScore 300-900)
+      const score = parseBureauScore(item.bureau_rating)
+      if (score !== null) {
+        if (score < reportsFilter.minBureauScore) {
+          return false
+        }
+      } else {
+        // Record has no numeric bureau score (e.g. "Not Found" or "N/A")
+        if (!reportsFilter.includeNoScore) {
+          return false
+        }
+        if (reportsFilter.minBureauScore > 300 && !reportsFilter.includeNoScore) {
+          return false
+        }
+      }
+
+      // Last Updated Date Range
+      if (reportsFilter.fromDate) {
+        if (!item.last_updated) return false
+        const itemDate = new Date(item.last_updated)
+        const from = new Date(`${reportsFilter.fromDate}T00:00:00`)
+        if (itemDate < from) return false
+      }
+
+      if (reportsFilter.toDate) {
+        if (!item.last_updated) return false
+        const itemDate = new Date(item.last_updated)
+        const to = new Date(`${reportsFilter.toDate}T23:59:59.999`)
+        if (itemDate > to) return false
+      }
+
+      return true
+    })
+  }, [data, reportsFilter])
+
+  // Filtered tracker data
+  const filteredTracker = useMemo(() => {
+    return trackerData.filter((item) => {
+      // GSTIN
+      if (
+        trackerFilter.gstin.trim() &&
+        !item.gstin?.toLowerCase().includes(trackerFilter.gstin.trim().toLowerCase())
+      ) {
+        return false
+      }
+
+      // Reference ID
+      if (
+        trackerFilter.referenceId.trim() &&
+        !item.reference_id?.toLowerCase().includes(trackerFilter.referenceId.trim().toLowerCase())
+      ) {
+        return false
+      }
+
+      // Report Status
+      if (trackerFilter.reportStatus !== 'ALL') {
+        if ((item.report_status || '').toLowerCase() !== trackerFilter.reportStatus.toLowerCase()) {
+          return false
+        }
+      }
+
+      // Duplicate Filter (Tracker)
+      if (trackerFilter.duplicateFilter !== 'ALL') {
+        const g = (item.gstin || '').trim().toUpperCase()
+        const count = g ? trackerGstinCounts.get(g) || 0 : 0
+        if (trackerFilter.duplicateFilter === 'DUPLICATES_ONLY' && count <= 1) {
+          return false
+        }
+        if (trackerFilter.duplicateFilter === 'UNIQUE_ONLY' && count > 1) {
+          return false
+        }
+      }
+
+      // Created At Date Range
+      if (trackerFilter.fromDate) {
+        if (!item.created_at) return false
+        const itemDate = new Date(item.created_at)
+        const from = new Date(`${trackerFilter.fromDate}T00:00:00`)
+        if (itemDate < from) return false
+      }
+
+      if (trackerFilter.toDate) {
+        if (!item.created_at) return false
+        const itemDate = new Date(item.created_at)
+        const to = new Date(`${trackerFilter.toDate}T23:59:59.999`)
+        if (itemDate > to) return false
+      }
+
+      return true
+    })
+  }, [trackerData, trackerFilter])
+
+  // Pagination state (20 items per page)
+  const ITEMS_PER_PAGE = 20
+  const [reportsPage, setReportsPage] = useState(1)
+  const [trackerPage, setTrackerPage] = useState(1)
+
+  // Reset page when filters change
+  useEffect(() => {
+    setReportsPage(1)
+  }, [reportsFilter])
+
+  useEffect(() => {
+    setTrackerPage(1)
+  }, [trackerFilter])
+
+  // Paginated slices
+  const totalReportsPages = Math.max(1, Math.ceil(filteredReports.length / ITEMS_PER_PAGE))
+  const paginatedReports = useMemo(() => {
+    const start = (reportsPage - 1) * ITEMS_PER_PAGE
+    return filteredReports.slice(start, start + ITEMS_PER_PAGE)
+  }, [filteredReports, reportsPage])
+
+  const totalTrackerPages = Math.max(1, Math.ceil(filteredTracker.length / ITEMS_PER_PAGE))
+  const paginatedTracker = useMemo(() => {
+    const start = (trackerPage - 1) * ITEMS_PER_PAGE
+    return filteredTracker.slice(start, start + ITEMS_PER_PAGE)
+  }, [filteredTracker, trackerPage])
+
+  const handleCopy = (
+    text: string,
+    label: string,
+    key: string,
+    e: React.MouseEvent,
+  ) => {
+    e.stopPropagation()
+    if (!text || text === 'N/A' || text === '—') return
+    navigator.clipboard.writeText(text)
+    setCopiedId(key)
+    toast.success(`${label} copied to clipboard`)
+    setTimeout(() => {
+      setCopiedId((prev) => (prev === key ? null : prev))
+    }, 1800)
+  }
+
+  const isFailedTrackerItem = (item: GstTrackerItem) => {
+    const s = (item.report_status || '').toUpperCase()
+    const st = (item.request_stage || '').toUpperCase()
+    return s.includes('FAIL') || st.includes('ERROR') || st.includes('FAIL') || Boolean(item.error_message)
+  }
+
+  const exportFailedTrackerReports = (format: 'csv' | 'xlsx', onlyFiltered = false) => {
+    const sourceList = onlyFiltered ? filteredTracker : trackerData
+    const failedList = sourceList.filter(isFailedTrackerItem)
+
+    if (failedList.length === 0) {
+      toast.info(
+        onlyFiltered
+          ? 'No failed reports found in the current filtered results.'
+          : 'No failed reports found in the tracker.'
+      )
+      return
+    }
+
+    const rows = failedList.map((item, index) => ({
+      'S.No': index + 1,
+      'GSTIN': item.gstin || '',
+      'Reference ID': item.reference_id || '',
+      'Report Status': item.report_status || 'PENDING',
+      'Request Stage': item.request_stage || 'PENDING',
+      'Retry Count': item.retry_count ?? 0,
+      'Created At': item.created_at ? formatCreationTimestamp(item.created_at) : '',
+      'Updated At': item.updated_at ? formatCreationTimestamp(item.updated_at) : '',
+      'Completed At': item.completed_at ? formatCreationTimestamp(item.completed_at) : '',
+      'Failure Reason / Error': item.error_message || 'Upstream Error / Processing Failed',
+    }))
+
+    const dateStr = new Date().toISOString().slice(0, 10)
+    const baseFilename = `gst_failed_reports_${dateStr}`
+
+    try {
+      if (format === 'csv') {
+        exportToCSV(rows, baseFilename)
+      } else {
+        exportToExcel(rows, baseFilename, 'Failed Reports')
+      }
+      toast.success(`Exported ${failedList.length} failed report(s) as ${format.toUpperCase()}`)
+    } catch (err: any) {
+      console.error('Failed to export reports:', err)
+      toast.error('Failed to generate export file')
+    }
+  }
 
   const BaseURl =
     'https://gst-cibil-report-generator-backend-972437264901.asia-east1.run.app'
@@ -302,18 +789,213 @@ export default function GstCibilPage() {
 
   return (
     <div className='mx-auto w-full animate-in fade-in zoom-in duration-300 px-4 py-4 space-y-5'>
-      {/* Top Header */}
-      <div className='flex items-center justify-between gap-4 flex-wrap'>
-        <div>
-          <h1 className='text-2xl font-bold tracking-tight'>
-            GST & Cibil Reports
-          </h1>
-          <p className='text-sm text-slate-500'>
-            View generated reports and real-time upload reference tracking
-          </p>
+      {/* Compact Top Bar: Title, Small KPI Counters & Actions in One Single Row */}
+      <div className='flex items-center justify-between gap-3 flex-wrap bg-white p-3 rounded-lg border border-slate-200/80 shadow-xs'>
+        <div className='flex items-center gap-4 flex-wrap'>
+          <div>
+            <h1 className='text-lg font-bold tracking-tight text-slate-900'>
+              GST & Cibil Reports
+            </h1>
+            <p className='text-xs text-slate-500'>
+              Generated reports & tracker
+            </p>
+          </div>
+
+          {/* Compact Inline KPI Badges (Clickable Filters) */}
+          <div className='flex items-center gap-2 flex-wrap'>
+            {/* Total Reports */}
+            <div
+              className={`flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-medium border cursor-pointer transition-colors ${
+                activeTab === 'reports' &&
+                reportsFilter.accountMapping === 'ALL' &&
+                reportsFilter.duplicateFilter === 'ALL' &&
+                activeReportsFilterCount === 0
+                  ? 'bg-slate-900 text-white border-slate-900 shadow-xs'
+                  : 'bg-slate-100 text-slate-700 hover:bg-slate-200/80 border-slate-200/60'
+              }`}
+              onClick={() => {
+                setActiveTab('reports')
+                clearReportsFilters()
+              }}
+              title='Click to view all reports (clears reports filters)'
+            >
+              {activeTab === 'reports' &&
+              reportsFilter.accountMapping === 'ALL' &&
+              reportsFilter.duplicateFilter === 'ALL' &&
+              activeReportsFilterCount === 0 ? (
+                <Check className='h-3.5 w-3.5 text-white' />
+              ) : (
+                <FileSpreadsheet className='h-3.5 w-3.5 text-slate-500' />
+              )}
+              <span>Total Reports:</span>
+              <span className='font-bold'>{reportsStats.totalReports}</span>
+            </div>
+
+            {/* Mapped to Account */}
+            <div
+              className={`flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-medium border cursor-pointer transition-colors ${
+                reportsFilter.accountMapping === 'MAPPED_ONLY'
+                  ? 'bg-emerald-600 text-white border-emerald-600 shadow-xs ring-1 ring-emerald-600/30'
+                  : 'bg-emerald-50 text-emerald-800 hover:bg-emerald-100/80 border-emerald-200/70'
+              }`}
+              onClick={() => {
+                setActiveTab('reports')
+                setReportsFilter((prev) => ({
+                  ...prev,
+                  accountMapping:
+                    prev.accountMapping === 'MAPPED_ONLY' ? 'ALL' : 'MAPPED_ONLY',
+                }))
+              }}
+              title='Click to filter reports mapped to an Account'
+            >
+              {reportsFilter.accountMapping === 'MAPPED_ONLY' ? (
+                <Check className='h-3.5 w-3.5 text-white' />
+              ) : (
+                <Building2 className='h-3.5 w-3.5 text-emerald-600' />
+              )}
+              <span>Mapped to Account:</span>
+              <span className='font-bold'>{reportsStats.mappedToAccount}</span>
+            </div>
+
+            {/* No Account Linked */}
+            <div
+              className={`flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-medium border cursor-pointer transition-colors ${
+                reportsFilter.accountMapping === 'UNMAPPED_ONLY'
+                  ? 'bg-amber-600 text-white border-amber-600 shadow-xs ring-1 ring-amber-600/30'
+                  : 'bg-amber-50/70 text-amber-800 hover:bg-amber-100/80 border-amber-200/70'
+              }`}
+              onClick={() => {
+                setActiveTab('reports')
+                setReportsFilter((prev) => ({
+                  ...prev,
+                  accountMapping:
+                    prev.accountMapping === 'UNMAPPED_ONLY' ? 'ALL' : 'UNMAPPED_ONLY',
+                }))
+              }}
+              title='Click to filter reports with No Account Linked'
+            >
+              {reportsFilter.accountMapping === 'UNMAPPED_ONLY' ? (
+                <Check className='h-3.5 w-3.5 text-white' />
+              ) : (
+                <AlertCircle className='h-3.5 w-3.5 text-amber-600' />
+              )}
+              <span>No Account Linked:</span>
+              <span className='font-bold'>{reportsStats.unmapped}</span>
+            </div>
+
+            {/* Unique Reports KPI */}
+            <div
+              className={`flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-medium border cursor-pointer transition-colors ${
+                reportsFilter.duplicateFilter === 'UNIQUE_ONLY'
+                  ? 'bg-blue-600 text-white border-blue-600 shadow-xs ring-1 ring-blue-600/30'
+                  : 'bg-blue-50/70 text-blue-800 hover:bg-blue-100/70 border-blue-200/70'
+              }`}
+              onClick={() => {
+                setActiveTab('reports')
+                setReportsFilter((prev) => ({
+                  ...prev,
+                  duplicateFilter:
+                    prev.duplicateFilter === 'UNIQUE_ONLY'
+                      ? 'ALL'
+                      : 'UNIQUE_ONLY',
+                }))
+              }}
+              title='Click to filter unique reports (single instance GSTINs)'
+            >
+              <Check
+                className={`h-3.5 w-3.5 ${
+                  reportsFilter.duplicateFilter === 'UNIQUE_ONLY'
+                    ? 'text-white'
+                    : 'text-blue-600'
+                }`}
+              />
+              <span>Unique Reports:</span>
+              <span className='font-bold'>{reportsStats.uniqueReportsCount}</span>
+            </div>
+
+            {/* Duplicate Reports KPI */}
+            <div
+              className={`flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-medium border cursor-pointer transition-colors ${
+                reportsFilter.duplicateFilter === 'DUPLICATES_ONLY'
+                  ? 'bg-rose-600 text-white border-rose-600 shadow-xs ring-1 ring-rose-600/30'
+                  : reportsStats.duplicateReportsCount > 0
+                    ? 'bg-rose-50 text-rose-800 hover:bg-rose-100/70 border-rose-200/70'
+                    : 'bg-slate-50 text-slate-600 border-slate-200/60'
+              }`}
+              onClick={() => {
+                setActiveTab('reports')
+                setReportsFilter((prev) => ({
+                  ...prev,
+                  duplicateFilter:
+                    prev.duplicateFilter === 'DUPLICATES_ONLY'
+                      ? 'ALL'
+                      : 'DUPLICATES_ONLY',
+                }))
+              }}
+              title='Click to filter duplicate reports by GSTIN'
+            >
+              {reportsFilter.duplicateFilter === 'DUPLICATES_ONLY' ? (
+                <Check className='h-3.5 w-3.5 text-white' />
+              ) : (
+                <Copy className='h-3.5 w-3.5 text-rose-600' />
+              )}
+              <span>Duplicate Reports:</span>
+              <span className='font-bold'>{reportsStats.duplicateReportsCount}</span>
+            </div>
+
+            {/* Tracker Records */}
+            <div
+              className={`flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-medium border cursor-pointer transition-colors ${
+                activeTab === 'tracker'
+                  ? 'bg-slate-900 text-white border-slate-900 shadow-xs'
+                  : 'bg-slate-50 text-slate-600 hover:bg-slate-100 border-slate-200/60'
+              }`}
+              onClick={() => {
+                setActiveTab('tracker')
+                clearTrackerFilters()
+              }}
+              title='Click to switch to Reference Tracker tab'
+            >
+              {activeTab === 'tracker' ? (
+                <Check className='h-3.5 w-3.5 text-white' />
+              ) : (
+                <Activity className='h-3.5 w-3.5 text-slate-400' />
+              )}
+              <span>Tracker Records:</span>
+              <span className='font-bold'>{trackerData.length}</span>
+              {reportsStats.duplicateTrackerCount > 0 && (
+                <span
+                  className={`text-[10px] font-semibold ${
+                    activeTab === 'tracker' ? 'text-rose-200' : 'text-rose-600'
+                  }`}
+                >
+                  ({reportsStats.duplicateTrackerCount} dups)
+                </span>
+              )}
+            </div>
+          </div>
         </div>
 
-        <div className='flex items-center gap-3'>
+        <div className='flex items-center gap-2.5'>
+          {hasActiveFilters && (
+            <Button
+              variant='outline'
+              size='sm'
+              onClick={clearAllActiveFilters}
+              className='flex items-center gap-1.5 h-8 text-xs border-rose-200 text-rose-600 hover:text-rose-700 hover:bg-rose-50'
+              title='Clear all active filters'
+            >
+              <X className='h-3.5 w-3.5' />
+              <span>Clear Filters</span>
+              <Badge
+                variant='secondary'
+                className='ml-0.5 px-1 py-0 text-[10px] bg-rose-100 text-rose-700 font-semibold rounded-full'
+              >
+                {activeTab === 'reports' ? activeReportsFilterCount : activeTrackerFilterCount}
+              </Badge>
+            </Button>
+          )}
+
           <input
             ref={inputRef}
             type='file'
@@ -323,18 +1005,19 @@ export default function GstCibilPage() {
           />
 
           <Button
+            size='sm'
             onClick={() => inputRef.current?.click()}
             disabled={isUploading}
-            className='flex items-center gap-2'
+            className='flex items-center gap-1.5 h-8 text-xs'
           >
             {isUploading ? (
               <>
-                <Loader2 className='h-4 w-4 animate-spin' />
+                <Loader2 className='h-3.5 w-3.5 animate-spin' />
                 Processing...
               </>
             ) : (
               <>
-                <Upload className='h-4 w-4' />
+                <Upload className='h-3.5 w-3.5' />
                 Upload Spreadsheet
               </>
             )}
@@ -357,7 +1040,9 @@ export default function GstCibilPage() {
               <FileSpreadsheet className='h-4 w-4' />
               Generated Reports
               <Badge variant='secondary' className='ml-1 text-xs px-1.5 py-0'>
-                {data.length}
+                {activeReportsFilterCount > 0
+                  ? `${filteredReports.length} / ${data.length}`
+                  : data.length}
               </Badge>
             </TabsTrigger>
             <TabsTrigger
@@ -367,7 +1052,9 @@ export default function GstCibilPage() {
               <Activity className='h-4 w-4' />
               Reference Tracker
               <Badge variant='secondary' className='ml-1 text-xs px-1.5 py-0'>
-                {trackerData.length}
+                {activeTrackerFilterCount > 0
+                  ? `${filteredTracker.length} / ${trackerData.length}`
+                  : trackerData.length}
               </Badge>
             </TabsTrigger>
           </TabsList>
@@ -417,17 +1104,308 @@ export default function GstCibilPage() {
 
         {/* Tab 1: Generated Reports */}
         <TabsContent value='reports' className='mt-4 outline-none'>
-          <Card className='shadow-sm'>
-            <CardHeader className='border-b px-6 py-4'>
-              <CardTitle className='text-lg font-semibold flex items-center justify-between'>
-                <span>Generated Reports</span>
-                <span className='text-xs font-normal text-muted-foreground'>
-                  Source: leads_gst_cibil_report.reports
-                </span>
-              </CardTitle>
+          <Card className='shadow-sm flex flex-col h-[calc(100vh-210px)] min-h-[500px]'>
+            <CardHeader className='border-b px-6 py-3 shrink-0'>
+              <div className='flex items-center justify-between gap-4 flex-wrap'>
+                <div className='flex items-center gap-3'>
+                  <CardTitle className='text-base font-semibold'>
+                    Generated Reports
+                  </CardTitle>
+                  {activeReportsFilterCount > 0 && (
+                    <Badge variant='outline' className='text-xs bg-emerald-50 text-emerald-700 border-emerald-200'>
+                      Filtered ({filteredReports.length} of {data.length})
+                    </Badge>
+                  )}
+                </div>
+
+                <div className='flex items-center gap-2'>
+                  <Button
+                    variant={showReportsFilters ? 'secondary' : 'outline'}
+                    size='sm'
+                    className='h-8 text-xs gap-1.5'
+                    onClick={() => setShowReportsFilters((prev) => !prev)}
+                  >
+                    <Filter className='h-3.5 w-3.5' />
+                    <span>Filter</span>
+                    {activeReportsFilterCount > 0 && (
+                      <Badge
+                        variant='default'
+                        className='ml-1 px-1.5 py-0 h-4 text-[10px] bg-slate-900 text-white rounded-full'
+                      >
+                        {activeReportsFilterCount}
+                      </Badge>
+                    )}
+                  </Button>
+                  {activeReportsFilterCount > 0 && (
+                    <Button
+                      variant='ghost'
+                      size='sm'
+                      className='h-8 text-xs text-slate-500 hover:text-slate-800'
+                      onClick={clearReportsFilters}
+                    >
+                      <X className='h-3.5 w-3.5 mr-1' />
+                      Reset
+                    </Button>
+                  )}
+                </div>
+              </div>
+
+              {/* Reports Filter Panel */}
+              {showReportsFilters && (
+                <div className='mt-3 pt-3 border-t border-slate-100 bg-slate-50/60 p-3.5 rounded-lg space-y-3 max-h-72 overflow-y-auto'>
+                  <div className='grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3'>
+                    {/* GSTIN */}
+                    <div className='space-y-1'>
+                      <label className='text-xs font-medium text-slate-600'>
+                        GSTIN
+                      </label>
+                      <Input
+                        placeholder='Filter GSTIN...'
+                        className='h-8 text-xs bg-white'
+                        value={reportsFilter.gstin}
+                        onChange={(e) =>
+                          setReportsFilter((prev) => ({
+                            ...prev,
+                            gstin: e.target.value,
+                          }))
+                        }
+                      />
+                    </div>
+
+                    {/* Name */}
+                    <div className='space-y-1'>
+                      <label className='text-xs font-medium text-slate-600'>
+                        Name
+                      </label>
+                      <Input
+                        placeholder='Filter Name...'
+                        className='h-8 text-xs bg-white'
+                        value={reportsFilter.name}
+                        onChange={(e) =>
+                          setReportsFilter((prev) => ({
+                            ...prev,
+                            name: e.target.value,
+                          }))
+                        }
+                      />
+                    </div>
+
+                    {/* Account */}
+                    <div className='space-y-1'>
+                      <label className='text-xs font-medium text-slate-600'>
+                        Account
+                      </label>
+                      <Input
+                        placeholder='Filter Account...'
+                        className='h-8 text-xs bg-white'
+                        value={reportsFilter.account}
+                        onChange={(e) =>
+                          setReportsFilter((prev) => ({
+                            ...prev,
+                            account: e.target.value,
+                          }))
+                        }
+                      />
+                    </div>
+
+                    {/* Contact */}
+                    <div className='space-y-1'>
+                      <label className='text-xs font-medium text-slate-600'>
+                        Contact
+                      </label>
+                      <Input
+                        placeholder='Filter Contact...'
+                        className='h-8 text-xs bg-white'
+                        value={reportsFilter.contact}
+                        onChange={(e) =>
+                          setReportsFilter((prev) => ({
+                            ...prev,
+                            contact: e.target.value,
+                          }))
+                        }
+                      />
+                    </div>
+
+                    {/* GST Status */}
+                    <div className='space-y-1'>
+                      <label className='text-xs font-medium text-slate-600'>
+                        GST Status
+                      </label>
+                      <Select
+                        value={reportsFilter.gstStatus}
+                        onValueChange={(val) =>
+                          setReportsFilter((prev) => ({
+                            ...prev,
+                            gstStatus: val,
+                          }))
+                        }
+                      >
+                        <SelectTrigger className='h-8 text-xs bg-white w-full'>
+                          <SelectValue placeholder='All Statuses' />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value='ALL'>All Statuses</SelectItem>
+                          {reportsStatusOptions.map((status) => (
+                            <SelectItem key={status} value={status}>
+                              {status}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+
+                    {/* Account Mapping Filter */}
+                    <div className='space-y-1'>
+                      <label className='text-xs font-medium text-slate-600'>
+                        Account Link Status
+                      </label>
+                      <Select
+                        value={reportsFilter.accountMapping}
+                        onValueChange={(val) =>
+                          setReportsFilter((prev) => ({
+                            ...prev,
+                            accountMapping: val,
+                          }))
+                        }
+                      >
+                        <SelectTrigger className='h-8 text-xs bg-white w-full'>
+                          <SelectValue placeholder='All Link Status' />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value='ALL'>All Reports</SelectItem>
+                          <SelectItem value='MAPPED_ONLY'>
+                            Mapped to Account ({reportsStats.mappedToAccount})
+                          </SelectItem>
+                          <SelectItem value='UNMAPPED_ONLY'>
+                            No Account Linked ({reportsStats.unmapped})
+                          </SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    {/* Duplicate Reports Filter */}
+                    <div className='space-y-1'>
+                      <label className='text-xs font-medium text-slate-600'>
+                        Duplicate Status
+                      </label>
+                      <Select
+                        value={reportsFilter.duplicateFilter}
+                        onValueChange={(val) =>
+                          setReportsFilter((prev) => ({
+                            ...prev,
+                            duplicateFilter: val,
+                          }))
+                        }
+                      >
+                        <SelectTrigger className='h-8 text-xs bg-white w-full'>
+                          <SelectValue placeholder='All Records' />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value='ALL'>All Reports</SelectItem>
+                          <SelectItem value='DUPLICATES_ONLY'>
+                            Duplicates Only ({reportsStats.duplicateReportsCount})
+                          </SelectItem>
+                          <SelectItem value='UNIQUE_ONLY'>
+                            Unique Only ({data.length - reportsStats.duplicateReportsCount})
+                          </SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    {/* Last Updated From Date */}
+                    <div className='space-y-1'>
+                      <label className='text-xs font-medium text-slate-600'>
+                        Updated From
+                      </label>
+                      <Input
+                        type='date'
+                        className='h-8 text-xs bg-white'
+                        value={reportsFilter.fromDate}
+                        onChange={(e) =>
+                          setReportsFilter((prev) => ({
+                            ...prev,
+                            fromDate: e.target.value,
+                          }))
+                        }
+                      />
+                    </div>
+
+                    {/* Last Updated To Date */}
+                    <div className='space-y-1'>
+                      <label className='text-xs font-medium text-slate-600'>
+                        Updated To
+                      </label>
+                      <Input
+                        type='date'
+                        className='h-8 text-xs bg-white'
+                        value={reportsFilter.toDate}
+                        onChange={(e) =>
+                          setReportsFilter((prev) => ({
+                            ...prev,
+                            toDate: e.target.value,
+                          }))
+                        }
+                      />
+                    </div>
+                  </div>
+
+                  {/* Bureau Rating Score Slider Filter */}
+                  <div className='pt-2.5 mt-1 border-t border-slate-200/60 bg-white p-2.5 rounded-md border space-y-1.5'>
+                    <div className='flex items-center justify-between text-xs'>
+                      <div className='flex items-center gap-2'>
+                        <span className='font-semibold text-slate-700'>
+                          Bureau Rating Minimum Score:
+                        </span>
+                        <span className='px-2 py-0.5 rounded-md font-mono font-bold text-xs bg-slate-900 text-white'>
+                          {reportsFilter.minBureauScore === 300
+                            ? 'All (≥ 300)'
+                            : `≥ ${reportsFilter.minBureauScore}`}
+                        </span>
+                      </div>
+                      <label className='inline-flex items-center gap-1.5 cursor-pointer text-slate-600 select-none text-xs'>
+                        <input
+                          type='checkbox'
+                          className='rounded border-slate-300 text-slate-900 focus:ring-slate-950 h-3.5 w-3.5'
+                          checked={reportsFilter.includeNoScore}
+                          onChange={(e) =>
+                            setReportsFilter((prev) => ({
+                              ...prev,
+                              includeNoScore: e.target.checked,
+                            }))
+                          }
+                        />
+                        <span>Include records without score</span>
+                      </label>
+                    </div>
+
+                    <div className='px-1'>
+                      <Slider
+                        min={300}
+                        max={900}
+                        step={10}
+                        value={[reportsFilter.minBureauScore]}
+                        onValueChange={(val) =>
+                          setReportsFilter((prev) => ({
+                            ...prev,
+                            minBureauScore: val[0] ?? 300,
+                          }))
+                        }
+                      />
+                      <div className='flex justify-between text-[10px] text-slate-400 font-mono mt-0.5'>
+                        <span>300 (Poor)</span>
+                        <span>550 (Average)</span>
+                        <span>700 (Good)</span>
+                        <span>750+ (Excellent)</span>
+                        <span>900</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
             </CardHeader>
 
-            <CardContent className='p-0'>
+            <CardContent className='p-0 flex-1 overflow-auto relative'>
               {isLoadingReports ? (
                 <div className='flex items-center justify-center py-20'>
                   <Spinner className='h-8 w-8' />
@@ -440,13 +1418,26 @@ export default function GstCibilPage() {
                     Retry
                   </Button>
                 </div>
-              ) : data.length === 0 ? (
-                <div className='p-12 text-center text-slate-500'>
-                  <p>No GST/Cibil reports found</p>
+              ) : filteredReports.length === 0 ? (
+                <div className='p-12 text-center text-slate-500 space-y-2'>
+                  <p className='font-medium'>
+                    {data.length === 0
+                      ? 'No GST/Cibil reports found'
+                      : 'No reports match the current filters'}
+                  </p>
+                  {activeReportsFilterCount > 0 && (
+                    <Button
+                      variant='outline'
+                      size='sm'
+                      onClick={clearReportsFilters}
+                    >
+                      Clear Filters
+                    </Button>
+                  )}
                 </div>
               ) : (
                 <Table>
-                  <TableHeader className='border-b border-slate-200'>
+                  <TableHeader className='border-b border-slate-200 sticky top-0 bg-white z-10 shadow-xs'>
                     <TableRow>
                       <TableHead className='w-32 px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider'>
                         GSTIN
@@ -455,13 +1446,10 @@ export default function GstCibilPage() {
                         Name
                       </TableHead>
                       <TableHead className='px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider'>
+                        Account
+                      </TableHead>
+                      <TableHead className='px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider'>
                         Contact
-                      </TableHead>
-                      <TableHead className='px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider'>
-                        Report Status
-                      </TableHead>
-                      <TableHead className='px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider'>
-                        Request Stage
                       </TableHead>
                       <TableHead className='px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider'>
                         GST Status
@@ -479,38 +1467,96 @@ export default function GstCibilPage() {
                   </TableHeader>
 
                   <TableBody className='divide-y divide-slate-200'>
-                    {data.map((item) => (
+                    {paginatedReports.map((item) => (
                       <TableRow
                         key={item.id}
                         className='cursor-pointer transition-colors hover:bg-slate-50/70'
                         onClick={() => handleRowClick(item.reference_id)}
                       >
                         <TableCell className='px-6 py-4 font-medium font-mono text-sm'>
-                          {item.gstin}
+                          <div className='flex items-center gap-1.5 flex-wrap'>
+                            <span>{item.gstin}</span>
+                            {item.gstin &&
+                              item.gstin !== 'N/A' &&
+                              (reportsGstinCounts.get(item.gstin.trim().toUpperCase()) || 0) > 1 && (
+                                <Badge
+                                  variant='outline'
+                                  className='text-[10px] px-1.5 py-0 h-4 bg-rose-50 text-rose-700 border-rose-200 font-sans'
+                                  title={`Duplicate GSTIN (${reportsGstinCounts.get(item.gstin.trim().toUpperCase())} reports)`}
+                                >
+                                  dup ({reportsGstinCounts.get(item.gstin.trim().toUpperCase())})
+                                </Badge>
+                              )}
+                            {item.gstin && item.gstin !== 'N/A' && (
+                              <button
+                                type='button'
+                                className='inline-flex items-center justify-center p-1 rounded-md text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors cursor-pointer'
+                                onClick={(e) =>
+                                   handleCopy(
+                                     item.gstin,
+                                     'GSTIN',
+                                     `${item.id}-gstin`,
+                                     e,
+                                   )
+                                }
+                                title='Copy GSTIN'
+                              >
+                                {copiedId === `${item.id}-gstin` ? (
+                                  <Check className='h-3.5 w-3.5 text-emerald-600' />
+                                ) : (
+                                  <Copy className='h-3.5 w-3.5' />
+                                )}
+                              </button>
+                            )}
+                          </div>
                         </TableCell>
                         <TableCell className='px-6 py-4 text-sm font-medium text-slate-800'>
                           {item.name}
                         </TableCell>
                         <TableCell className='px-6 py-4 text-sm'>
-                          {item.contact_number}
+                          {item.account_name && item.account_name !== 'No Account' && item.account_id ? (
+                            <div
+                              className='inline-flex items-center gap-1.5 font-medium text-blue-700 hover:text-blue-800 hover:underline cursor-pointer'
+                              onClick={(e) => {
+                                e.stopPropagation()
+                                if (item.account_id) navigate(`/accounts/${item.account_id}`)
+                              }}
+                              title='Click to view account'
+                            >
+                              <Building2 className='h-3.5 w-3.5 text-blue-600 shrink-0' />
+                              <span className='truncate max-w-[180px]'>{item.account_name}</span>
+                            </div>
+                          ) : (
+                            <Badge variant='outline' className='text-slate-500 font-normal bg-slate-50 text-xs border-slate-200'>
+                              No Account
+                            </Badge>
+                          )}
                         </TableCell>
-                        <TableCell className='px-6 py-4'>
-                          <Badge
-                            className={`${getStatusBadgeStyle(
-                              item.report_status,
-                            )} border rounded-full px-3 py-0.5 text-xs font-medium`}
-                          >
-                            {item.report_status || 'N/A'}
-                          </Badge>
-                        </TableCell>
-                        <TableCell className='px-6 py-4'>
-                          <Badge
-                            className={`${getStatusBadgeStyle(
-                              item.request_stage,
-                            )} border rounded-full px-3 py-0.5 text-xs font-medium`}
-                          >
-                            {item.request_stage || 'N/A'}
-                          </Badge>
+                        <TableCell className='px-6 py-4 text-sm'>
+                          <div className='flex items-center gap-1.5'>
+                            <span>{item.contact_number}</span>
+                            {item.contact_number && item.contact_number !== 'N/A' && (
+                              <button
+                                type='button'
+                                className='inline-flex items-center justify-center p-1 rounded-md text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors cursor-pointer'
+                                onClick={(e) =>
+                                   handleCopy(
+                                     item.contact_number,
+                                     'Phone number',
+                                     `${item.id}-phone`,
+                                     e,
+                                   )
+                                }
+                                title='Copy Phone Number'
+                              >
+                                {copiedId === `${item.id}-phone` ? (
+                                  <Check className='h-3.5 w-3.5 text-emerald-600' />
+                                ) : (
+                                  <Copy className='h-3.5 w-3.5' />
+                                )}
+                              </button>
+                            )}
+                          </div>
                         </TableCell>
                         <TableCell className='px-6 py-4'>
                           <Badge
@@ -527,18 +1573,35 @@ export default function GstCibilPage() {
                         <TableCell className='px-6 py-4 text-sm text-slate-500'>
                           {formatCreationTimestamp(item.last_updated)}
                         </TableCell>
-                        <TableCell className='px-6 py-4 text-right text-emerald-700 font-medium'>
-                          <Button
-                            variant='ghost'
-                            size='sm'
-                            className='text-emerald-700 hover:text-emerald-800 hover:bg-emerald-50'
-                            onClick={(e) => {
-                              e.stopPropagation()
-                              handleRowClick(item.reference_id)
-                            }}
-                          >
-                            View Details
-                          </Button>
+                        <TableCell className='px-6 py-4 text-right'>
+                          <div className='flex items-center justify-end gap-2'>
+                            {item.account_id && item.account_name && item.account_name !== 'No Account' && (
+                              <Button
+                                variant='outline'
+                                size='sm'
+                                className='h-8 text-xs border-blue-200 text-blue-600 hover:text-blue-700 hover:bg-blue-50'
+                                onClick={(e) => {
+                                  e.stopPropagation()
+                                  navigate(`/accounts/${item.account_id}`)
+                                }}
+                                title='View Account'
+                              >
+                                <Building2 className='h-3.5 w-3.5 mr-1' />
+                                View Account
+                              </Button>
+                            )}
+                            <Button
+                              variant='ghost'
+                              size='sm'
+                              className='h-8 text-xs text-emerald-700 hover:text-emerald-800 hover:bg-emerald-50'
+                              onClick={(e) => {
+                                e.stopPropagation()
+                                handleRowClick(item.reference_id)
+                              }}
+                            >
+                              View Details
+                            </Button>
+                          </div>
                         </TableCell>
                       </TableRow>
                     ))}
@@ -546,22 +1609,277 @@ export default function GstCibilPage() {
                 </Table>
               )}
             </CardContent>
+
+            {/* Pagination Footer */}
+            {filteredReports.length > 0 && (
+              <div className='border-t border-slate-200 px-6 py-3 bg-slate-50/50 shrink-0'>
+                <Pagination
+                  currentPage={reportsPage}
+                  totalPages={totalReportsPages}
+                  onPageChange={setReportsPage}
+                />
+              </div>
+            )}
           </Card>
         </TabsContent>
 
         {/* Tab 2: GST Reference Tracker */}
         <TabsContent value='tracker' className='mt-4 outline-none'>
-          <Card className='shadow-sm'>
-            <CardHeader className='border-b px-6 py-4'>
-              <CardTitle className='text-lg font-semibold flex items-center justify-between'>
-                <span>GST Reference Tracker</span>
-                <span className='text-xs font-normal text-muted-foreground'>
-                  Source: leads_gst_cibil_report.gst_reference_tracker
-                </span>
-              </CardTitle>
+          <Card className='shadow-sm flex flex-col h-[calc(100vh-210px)] min-h-[500px]'>
+            <CardHeader className='border-b px-6 py-3 shrink-0'>
+              <div className='flex items-center justify-between gap-4 flex-wrap'>
+                <div className='flex items-center gap-3'>
+                  <CardTitle className='text-base font-semibold'>
+                    GST Reference Tracker
+                  </CardTitle>
+                  {activeTrackerFilterCount > 0 && (
+                    <Badge variant='outline' className='text-xs bg-emerald-50 text-emerald-700 border-emerald-200'>
+                      Filtered ({filteredTracker.length} of {trackerData.length})
+                    </Badge>
+                  )}
+                </div>
+
+                <div className='flex items-center gap-2'>
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button
+                        variant='outline'
+                        size='sm'
+                        className='h-8 text-xs gap-1.5 border-rose-200 text-rose-700 hover:bg-rose-50 hover:text-rose-800'
+                        disabled={isLoadingTracker || trackerData.length === 0}
+                      >
+                        <FileDown className='h-3.5 w-3.5' />
+                        <span>Export Failed</span>
+                        {reportsStats.failedTrackerCount > 0 && (
+                          <Badge
+                            variant='outline'
+                            className='ml-0.5 px-1.5 py-0 h-4 text-[10px] bg-rose-100 text-rose-700 border-rose-300 rounded-full font-medium'
+                          >
+                            {reportsStats.failedTrackerCount}
+                          </Badge>
+                        )}
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align='end' className='w-56 text-xs'>
+                      <DropdownMenuItem
+                        className='cursor-pointer flex items-center justify-between text-xs py-2'
+                        onClick={() => exportFailedTrackerReports('csv', false)}
+                      >
+                        <span className='flex items-center gap-2'>
+                          <Download className='h-3.5 w-3.5 text-slate-500' />
+                          Export All Failed (CSV)
+                        </span>
+                        <span className='text-[10px] text-slate-400 font-mono'>
+                          {reportsStats.failedTrackerCount}
+                        </span>
+                      </DropdownMenuItem>
+                      <DropdownMenuItem
+                        className='cursor-pointer flex items-center justify-between text-xs py-2'
+                        onClick={() => exportFailedTrackerReports('xlsx', false)}
+                      >
+                        <span className='flex items-center gap-2'>
+                          <Download className='h-3.5 w-3.5 text-slate-500' />
+                          Export All Failed (Excel)
+                        </span>
+                        <span className='text-[10px] text-slate-400 font-mono'>
+                          {reportsStats.failedTrackerCount}
+                        </span>
+                      </DropdownMenuItem>
+                      {activeTrackerFilterCount > 0 && (
+                        <>
+                          <div className='my-1 border-t border-slate-100' />
+                          <DropdownMenuItem
+                            className='cursor-pointer flex items-center justify-between text-xs py-2 text-rose-600 focus:text-rose-700'
+                            onClick={() => exportFailedTrackerReports('csv', true)}
+                          >
+                            <span className='flex items-center gap-2'>
+                              <Filter className='h-3.5 w-3.5' />
+                              Export Filtered Failed (CSV)
+                            </span>
+                          </DropdownMenuItem>
+                          <DropdownMenuItem
+                            className='cursor-pointer flex items-center justify-between text-xs py-2 text-rose-600 focus:text-rose-700'
+                            onClick={() => exportFailedTrackerReports('xlsx', true)}
+                          >
+                            <span className='flex items-center gap-2'>
+                              <Filter className='h-3.5 w-3.5' />
+                              Export Filtered Failed (Excel)
+                            </span>
+                          </DropdownMenuItem>
+                        </>
+                      )}
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+
+                  <Button
+                    variant={showTrackerFilters ? 'secondary' : 'outline'}
+                    size='sm'
+                    className='h-8 text-xs gap-1.5'
+                    onClick={() => setShowTrackerFilters((prev) => !prev)}
+                  >
+                    <Filter className='h-3.5 w-3.5' />
+                    <span>Filter</span>
+                    {activeTrackerFilterCount > 0 && (
+                      <Badge
+                        variant='default'
+                        className='ml-1 px-1.5 py-0 h-4 text-[10px] bg-slate-900 text-white rounded-full'
+                      >
+                        {activeTrackerFilterCount}
+                      </Badge>
+                    )}
+                  </Button>
+                  {activeTrackerFilterCount > 0 && (
+                    <Button
+                      variant='ghost'
+                      size='sm'
+                      className='h-8 text-xs text-slate-500 hover:text-slate-800'
+                      onClick={clearTrackerFilters}
+                    >
+                      <X className='h-3.5 w-3.5 mr-1' />
+                      Reset
+                    </Button>
+                  )}
+                </div>
+              </div>
+
+              {/* Tracker Filter Panel */}
+              {showTrackerFilters && (
+                <div className='mt-3 pt-3 border-t border-slate-100 bg-slate-50/60 p-3.5 rounded-lg space-y-3 max-h-72 overflow-y-auto'>
+                  <div className='grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-3'>
+                    {/* GSTIN */}
+                    <div className='space-y-1'>
+                      <label className='text-xs font-medium text-slate-600'>
+                        GSTIN
+                      </label>
+                      <Input
+                        placeholder='Filter GSTIN...'
+                        className='h-8 text-xs bg-white'
+                        value={trackerFilter.gstin}
+                        onChange={(e) =>
+                          setTrackerFilter((prev) => ({
+                            ...prev,
+                            gstin: e.target.value,
+                          }))
+                        }
+                      />
+                    </div>
+
+                    {/* Reference ID */}
+                    <div className='space-y-1'>
+                      <label className='text-xs font-medium text-slate-600'>
+                        Reference ID
+                      </label>
+                      <Input
+                        placeholder='Filter Reference ID...'
+                        className='h-8 text-xs bg-white'
+                        value={trackerFilter.referenceId}
+                        onChange={(e) =>
+                          setTrackerFilter((prev) => ({
+                            ...prev,
+                            referenceId: e.target.value,
+                          }))
+                        }
+                      />
+                    </div>
+
+                    {/* Report Status */}
+                    <div className='space-y-1'>
+                      <label className='text-xs font-medium text-slate-600'>
+                        Report Status
+                      </label>
+                      <Select
+                        value={trackerFilter.reportStatus}
+                        onValueChange={(val) =>
+                          setTrackerFilter((prev) => ({
+                            ...prev,
+                            reportStatus: val,
+                          }))
+                        }
+                      >
+                        <SelectTrigger className='h-8 text-xs bg-white w-full'>
+                          <SelectValue placeholder='All Statuses' />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value='ALL'>All Statuses</SelectItem>
+                          {trackerStatusOptions.map((status) => (
+                            <SelectItem key={status} value={status}>
+                              {status}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    {/* Duplicate Tracker Filter */}
+                    <div className='space-y-1'>
+                      <label className='text-xs font-medium text-slate-600'>
+                        Duplicate Status
+                      </label>
+                      <Select
+                        value={trackerFilter.duplicateFilter}
+                        onValueChange={(val) =>
+                          setTrackerFilter((prev) => ({
+                            ...prev,
+                            duplicateFilter: val,
+                          }))
+                        }
+                      >
+                        <SelectTrigger className='h-8 text-xs bg-white w-full'>
+                          <SelectValue placeholder='All Records' />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value='ALL'>All Submissions</SelectItem>
+                          <SelectItem value='DUPLICATES_ONLY'>
+                            Duplicates Only ({reportsStats.duplicateTrackerCount})
+                          </SelectItem>
+                          <SelectItem value='UNIQUE_ONLY'>
+                            Unique Only ({trackerData.length - reportsStats.duplicateTrackerCount})
+                          </SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    {/* Created At From Date */}
+                    <div className='space-y-1'>
+                      <label className='text-xs font-medium text-slate-600'>
+                        Created From
+                      </label>
+                      <Input
+                        type='date'
+                        className='h-8 text-xs bg-white'
+                        value={trackerFilter.fromDate}
+                        onChange={(e) =>
+                          setTrackerFilter((prev) => ({
+                            ...prev,
+                            fromDate: e.target.value,
+                          }))
+                        }
+                      />
+                    </div>
+
+                    {/* Created At To Date */}
+                    <div className='space-y-1'>
+                      <label className='text-xs font-medium text-slate-600'>
+                        Created To
+                      </label>
+                      <Input
+                        type='date'
+                        className='h-8 text-xs bg-white'
+                        value={trackerFilter.toDate}
+                        onChange={(e) =>
+                          setTrackerFilter((prev) => ({
+                            ...prev,
+                            toDate: e.target.value,
+                          }))
+                        }
+                      />
+                    </div>
+                  </div>
+                </div>
+              )}
             </CardHeader>
 
-            <CardContent className='p-0'>
+            <CardContent className='p-0 flex-1 overflow-auto relative'>
               {isLoadingTracker ? (
                 <div className='flex items-center justify-center py-20'>
                   <Spinner className='h-8 w-8' />
@@ -574,13 +1892,26 @@ export default function GstCibilPage() {
                     Retry
                   </Button>
                 </div>
-              ) : trackerData.length === 0 ? (
-                <div className='p-12 text-center text-slate-500'>
-                  <p>No GST reference tracking records found</p>
+              ) : filteredTracker.length === 0 ? (
+                <div className='p-12 text-center text-slate-500 space-y-2'>
+                  <p className='font-medium'>
+                    {trackerData.length === 0
+                      ? 'No GST reference tracking records found'
+                      : 'No records match the current filters'}
+                  </p>
+                  {activeTrackerFilterCount > 0 && (
+                    <Button
+                      variant='outline'
+                      size='sm'
+                      onClick={clearTrackerFilters}
+                    >
+                      Clear Filters
+                    </Button>
+                  )}
                 </div>
               ) : (
                 <Table>
-                  <TableHeader className='border-b border-slate-200'>
+                  <TableHeader className='border-b border-slate-200 sticky top-0 bg-white z-10 shadow-xs'>
                     <TableRow>
                       <TableHead className='px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider'>
                         GSTIN
@@ -592,29 +1923,35 @@ export default function GstCibilPage() {
                         Report Status
                       </TableHead>
                       <TableHead className='px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider'>
-                        Request Stage
-                      </TableHead>
-                      <TableHead className='px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider'>
                         Created At
                       </TableHead>
                       <TableHead className='px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider'>
                         Last Error / Note
                       </TableHead>
-                      <TableHead className='px-6 py-3 text-right text-xs font-medium text-slate-500 uppercase tracking-wider'>
-                        Actions
-                      </TableHead>
                     </TableRow>
                   </TableHeader>
 
                   <TableBody className='divide-y divide-slate-200'>
-                    {trackerData.map((item) => (
+                    {paginatedTracker.map((item) => (
                       <TableRow
                         key={item.id}
-                        className='cursor-pointer transition-colors hover:bg-slate-50/70'
-                        onClick={() => handleRowClick(item.reference_id)}
+                        className=' transition-colors hover:bg-slate-50/70'
                       >
                         <TableCell className='px-6 py-4 font-mono font-medium text-sm'>
-                          {item.gstin}
+                          <div className='flex items-center gap-1.5 flex-wrap'>
+                            <span>{item.gstin}</span>
+                            {item.gstin &&
+                              item.gstin !== 'N/A' &&
+                              (trackerGstinCounts.get(item.gstin.trim().toUpperCase()) || 0) > 1 && (
+                                <Badge
+                                  variant='outline'
+                                  className='text-[10px] px-1.5 py-0 h-4 bg-rose-50 text-rose-700 border-rose-200 font-sans'
+                                  title={`Duplicate GSTIN (${trackerGstinCounts.get(item.gstin.trim().toUpperCase())} entries)`}
+                                >
+                                  dup ({trackerGstinCounts.get(item.gstin.trim().toUpperCase())})
+                                </Badge>
+                              )}
+                          </div>
                         </TableCell>
                         <TableCell className='px-6 py-4 font-mono text-xs text-slate-600'>
                           {item.reference_id}
@@ -626,15 +1963,6 @@ export default function GstCibilPage() {
                             )} border rounded-full px-3 py-0.5 text-xs font-medium`}
                           >
                             {item.report_status || 'PENDING'}
-                          </Badge>
-                        </TableCell>
-                        <TableCell className='px-6 py-4'>
-                          <Badge
-                            className={`${getStatusBadgeStyle(
-                              item.request_stage,
-                            )} border rounded-full px-3 py-0.5 text-xs font-medium`}
-                          >
-                            {item.request_stage || 'PENDING'}
                           </Badge>
                         </TableCell>
                         <TableCell className='px-6 py-4 text-xs text-slate-500'>
@@ -651,31 +1979,23 @@ export default function GstCibilPage() {
                             <span className='text-slate-400'>—</span>
                           )}
                         </TableCell>
-                        <TableCell className='px-6 py-4 text-right'>
-                          <div
-                            className='flex items-center justify-end gap-1.5'
-                            onClick={(e) => e.stopPropagation()}
-                          >
-                            {item.source_url?.pdf_url && (
-                              <Button
-                                variant='ghost'
-                                size='sm'
-                                className='h-8 px-2 text-xs text-blue-600 hover:text-blue-700'
-                                onClick={() => window.open(item.source_url?.pdf_url, '_blank')}
-                                title='View PDF Report'
-                              >
-                                <ExternalLink className='h-3.5 w-3.5 mr-1' />
-                                PDF
-                              </Button>
-                            )}
-                          </div>
-                        </TableCell>
                       </TableRow>
                     ))}
                   </TableBody>
                 </Table>
               )}
             </CardContent>
+
+            {/* Pagination Footer */}
+            {filteredTracker.length > 0 && (
+              <div className='border-t border-slate-200 px-6 py-3 bg-slate-50/50 shrink-0'>
+                <Pagination
+                  currentPage={trackerPage}
+                  totalPages={totalTrackerPages}
+                  onPageChange={setTrackerPage}
+                />
+              </div>
+            )}
           </Card>
         </TabsContent>
       </Tabs>
