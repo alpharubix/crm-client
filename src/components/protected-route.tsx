@@ -12,8 +12,7 @@ export default function ProtectedRoute({ children }: any) {
   }
 
   const isHrRestrict =
-    user.user_id === '3899927000000221552' ||
-    user.user_id === '3899927000000527649';
+    user.user_id === '3899927000000221552'
   if (
     isHrRestrict &&
     !location.pathname.startsWith('/hiring') &&

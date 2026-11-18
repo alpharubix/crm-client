@@ -130,7 +130,15 @@ export type UpdateAccountFormValues = {
   phoneStatus?: string[]
 }
 
-export type PhoneStatus = 'valid_phone' | 'duplicate_phone' | 'invalid_phone' | 'missing_phone'
+export type PhoneStatus =
+  | 'valid_phone'
+  | 'duplicate_phone'
+  | 'duplicate_phone_email'
+  | 'duplicate_phone_different_email'
+  | 'duplicate_email_different_phone'
+  | 'invalid_phone'
+  | 'missing_phone'
+  | 'missing_phone_email'
 
 export type Contact = {
   id: string

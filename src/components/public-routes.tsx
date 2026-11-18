@@ -7,7 +7,7 @@ export default function PublicRoute() {
   if (isLoading) return null
 
   if (user) {
-    const isHrRestrict = user.user_id === '3899927000000221552' || user.user_id === '3899927000000527649'
+    const isHrRestrict = user.user_id === '3899927000000221552'
     return <Navigate to={isHrRestrict ? '/hiring' : '/accounts'} replace />
   }
 

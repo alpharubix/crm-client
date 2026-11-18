@@ -59,6 +59,10 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { formatAmount } from '@/utils/number-formatter';
 import UpdateDeals from '@/components/deals/update-deals';
 import UpdateContacts from '@/components/contacts/update-contacts';
+import {
+  DuplicateAccountsBadge,
+  PHONE_STATUS_OPTIONS,
+} from '@/components/accounts/duplicate-accounts-badge';
 import UpdateKanbanTicket from '@/components/tickets/update-kanban-tickets';
 import AccountTasksTab from '@/components/accounts/account-tasks-tab';
 import AccountGstCibilTab from '@/components/accounts/account-gst-cibil-tab';
@@ -1947,6 +1951,29 @@ export default function UpdateAccounts() {
                           />
                         )}
                       />
+                    </FieldRow>
+
+                    <FieldRow label='Phone / Email Status'>
+                      {accountData.phone_status && accountData.phone_status.length > 0 ? (
+                        <div className='flex flex-wrap gap-1.5 py-1'>
+                          {accountData.phone_status.map((status: string) => {
+                            const opt = PHONE_STATUS_OPTIONS.find((o) => o.value === status);
+                            return (
+                              <DuplicateAccountsBadge
+                                key={status}
+                                accountId={accountData.id}
+                                status={status}
+                                label={opt?.label || status}
+                                onNavigateAccount={(targetId) => {
+                                  navigate(`/accounts/${targetId}`);
+                                }}
+                              />
+                            );
+                          })}
+                        </div>
+                      ) : (
+                        <span className='text-xs text-muted-foreground'>—</span>
+                      )}
                     </FieldRow>
                   </div>
                 </CardContent>

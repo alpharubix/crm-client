@@ -598,10 +598,19 @@ export default function CreateAccount() {
                 />
               </FieldRow>
 
-              <FieldRow label='Phone Status'>
+              <FieldRow label='Phone/Email Status'>
                 <MultiSelectField
                   value={data.phoneStatus || []}
-                  options={['Valid', 'Duplicate', 'Invalid', 'Missing']}
+                  options={[
+                    'Valid Phone',
+                    'Duplicate Phone',
+                    'Same Phone & Email',
+                    'Same Phone, Diff Email',
+                    'Same Email, Diff Phone',
+                    'Invalid Phone',
+                    'Missing Phone',
+                    'Missing Phone & Email',
+                  ]}
                   onChange={(v) =>
                     setValue(
                       'phoneStatus',
@@ -613,6 +622,16 @@ export default function CreateAccount() {
                           Missing: 'missing_phone',
                         }
                         return map[opt] || opt
+                          'Valid Phone': 'valid_phone',
+                          'Duplicate Phone': 'duplicate_phone',
+                          'Same Phone & Email': 'duplicate_phone_email',
+                          'Same Phone, Diff Email': 'duplicate_phone_different_email',
+                          'Same Email, Diff Phone': 'duplicate_email_different_phone',
+                          'Invalid Phone': 'invalid_phone',
+                          'Missing Phone': 'missing_phone',
+                          'Missing Phone & Email': 'missing_phone_email',
+                        };
+                        return map[opt] || opt;
                       }),
                       { shouldValidate: true },
                     )
