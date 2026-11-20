@@ -101,6 +101,7 @@ export const CANDIDATE_STATUSES = [
   'Selected',
   'On Hold',
   'Rejected',
+  'Fully Rejected',
   'Offer Sent',
   'Offer Accepted',
   'Offer Declined',
@@ -131,4 +132,6 @@ export const POSITION_TYPE = ['New', 'Replacement']
 export const JR_KANBAN_COLUMNS = DEPARTMENTS
 
 // Kanban columns for Candidate board - group by status
-export const CANDIDATE_KANBAN_COLUMNS = CANDIDATE_STATUSES
+export const CANDIDATE_KANBAN_COLUMNS = CANDIDATE_STATUSES.filter(
+  (status) => status !== 'Fully Rejected',
+)
