@@ -73,6 +73,8 @@ function DraggableCandidateCard({
     id: String(c.id),
   })
 
+  const isFullyRejected = c.candidate_status === 'Fully Rejected'
+
   return (
     <div
       ref={setNodeRef}
@@ -81,21 +83,38 @@ function DraggableCandidateCard({
       className={isDragging ? 'opacity-40' : ''}
     >
       <Card
-        className='cursor-grab bg-white border hover:border-teal-500 hover:shadow-md transition-all group relative'
+        className={`cursor-grab bg-white border transition-all group relative ${
+          isFullyRejected
+            ? 'border-red-500 hover:border-red-600 ring-1 ring-red-500 shadow-sm'
+            : 'hover:border-teal-500 hover:shadow-md'
+        }`}
         onClick={() => navigate(`/candidate/${c.id}/edit?jr_id=${jrId}`)}
       >
         <CardContent className='p-4'>
           <div className='flex justify-between items-start gap-2'>
-            <p className='font-bold text-zinc-800 group-hover:text-teal-700 transition-colors uppercase tracking-tight line-clamp-1'>
-              {c.candidate_name}
-            </p>
+            <div className='flex items-center gap-1.5 min-w-0'>
+              <p
+                className={`font-bold uppercase tracking-tight line-clamp-1 transition-colors ${
+                  isFullyRejected
+                    ? 'text-red-700 group-hover:text-red-800'
+                    : 'text-zinc-800 group-hover:text-teal-700'
+                }`}
+              >
+                {c.candidate_name}
+              </p>
+              {isFullyRejected && (
+                <span className='text-[9px] font-bold uppercase px-1.5 py-0.5 rounded bg-red-100 text-red-700 whitespace-nowrap shrink-0'>
+                  Fully Rejected
+                </span>
+              )}
+            </div>
             <button
               onPointerDown={(e) => e.stopPropagation()} // Stop drag capture on button click
               onClick={(e) => {
                 e.stopPropagation()
                 navigate(`/candidate/${c.id}/edit?jr_id=${jrId}`)
               }}
-              className='opacity-0 group-hover:opacity-100 p-1 rounded hover:bg-zinc-100 text-zinc-400 hover:text-teal-600 transition-all'
+              className='opacity-0 group-hover:opacity-100 p-1 rounded hover:bg-zinc-100 text-zinc-400 hover:text-teal-600 transition-all shrink-0'
             >
               <Pencil size={15} />
             </button>
@@ -194,6 +213,7 @@ export default function CandidateKanban() {
   const [filters, setFilters] = useState({
     candidate_status: '',
     candidate_name: '',
+    phone_no: '',
     tentative_joining_date: '',
     department: '',
     hiring_position: '',
@@ -216,6 +236,8 @@ export default function CandidateKanban() {
         p.set('candidate_status', filters.candidate_status)
       if (filters.candidate_name)
         p.set('candidate_name', filters.candidate_name)
+      if (filters.phone_no)
+        p.set('phone_no', filters.phone_no)
       if (filters.tentative_joining_date)
         p.set('tentative_joining_date', filters.tentative_joining_date)
       if (filters.department) p.set('department', filters.department)
@@ -277,12 +299,17 @@ export default function CandidateKanban() {
   const jrInfo = jrData?.data?.[0]
 
   // Compute column distribution maps from tracking state data
+  // 'Fully Rejected' candidates stay in the 'Rejected' column
   const grouped = CANDIDATE_KANBAN_COLUMNS.reduce(
     (acc, colName) => ({
       ...acc,
-      [colName]: candidateList.filter(
-        (c) => (c.candidate_status || 'New Application') === colName,
-      ),
+      [colName]: candidateList.filter((c) => {
+        const status = c.candidate_status || 'New Application'
+        if (colName === 'Rejected') {
+          return status === 'Rejected' || status === 'Fully Rejected'
+        }
+        return status === colName
+      }),
     }),
     {} as Record<string, Candidate[]>,
   )
@@ -350,10 +377,18 @@ export default function CandidateKanban() {
       <div className='flex flex-wrap gap-3 mb-6 p-4 border rounded-2xl bg-white shadow-sm items-center'>
         <Input
           placeholder='Search candidates...'
-          className='w-72 h-9 text-xs rounded-xl'
+          className='w-64 h-9 text-xs rounded-xl'
           value={filters.candidate_name}
           onChange={(e) =>
             setFilters((f) => ({ ...f, candidate_name: e.target.value }))
+          }
+        />
+        <Input
+          placeholder='Phone number...'
+          className='w-44 h-9 text-xs rounded-xl'
+          value={filters.phone_no}
+          onChange={(e) =>
+            setFilters((f) => ({ ...f, phone_no: e.target.value }))
           }
         />
         <Select
@@ -397,24 +432,6 @@ export default function CandidateKanban() {
           </SelectContent>
         </Select>
 
-        {/* <Select
-          value={filters.location_city || 'all'}
-          onValueChange={(v) =>
-            setFilters((f) => ({ ...f, location_city: v === 'all' ? '' : v }))
-          }
-        >
-          <SelectTrigger className='w-32 h-9 text-xs rounded-xl'>
-            <SelectValue placeholder='Location' />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value='all'>All Locs</SelectItem>
-            {LOCATIONS.map((l) => (
-              <SelectItem key={l} value={l}>
-                {l}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select> */}
         <div className='space-y-2'>
           {/* <Label>City</Label> */}
           <Input
@@ -429,21 +446,10 @@ export default function CandidateKanban() {
             }
           />
         </div>
-        {/* <Label>Tentative Joining Date</Label>
-        <Input
-          type='date'
-          className='w-40 h-9 text-xs rounded-xl'
-          value={filters.tentative_joining_date}
-          onChange={(e) =>
-            setFilters((f) => ({
-              ...f,
-              tentative_joining_date: e.target.value,
-            }))
-          }
-        /> */}
 
         {(filters.candidate_status ||
           filters.candidate_name ||
+          filters.phone_no ||
           filters.tentative_joining_date ||
           filters.department ||
           filters.hiring_position ||
@@ -456,6 +462,7 @@ export default function CandidateKanban() {
               setFilters({
                 candidate_status: '',
                 candidate_name: '',
+                phone_no: '',
                 tentative_joining_date: '',
                 department: '',
                 hiring_position: '',
