@@ -77,6 +77,34 @@ export const SendTemplateDialog: React.FC<SendTemplateDialogProps> = ({
             type: 'header',
             parameters: headerParameters,
           });
+        } else if (headerFormat === 'IMAGE') {
+          const customHeaderUrl = paramValues['header_image_url']?.trim();
+          if (customHeaderUrl) {
+            components.push({
+              type: 'header',
+              parameters: [
+                {
+                  type: 'image',
+                  image: {
+                    link: customHeaderUrl,
+                  },
+                },
+              ],
+            });
+          } else {
+            // Use Option 1: persistent uploaded Meta media ID for full official R1X logo
+            components.push({
+              type: 'header',
+              parameters: [
+                {
+                  type: 'image',
+                  image: {
+                    id: '1522132473058807',
+                  },
+                },
+              ],
+            });
+          }
         }
       }
 

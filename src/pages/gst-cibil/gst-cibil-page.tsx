@@ -60,6 +60,8 @@ interface GstCibilListItem {
   gstin: string
   contact_number: string
   name: string
+  trade_name?: string
+  legal_name?: string
   reference_id: string
   report_status?: string
   request_stage?: string
@@ -68,6 +70,12 @@ interface GstCibilListItem {
   last_updated: string
   account_id?: number | string | null
   account_name?: string | null
+  distributor_code?: string
+  business_status?: string
+  facilities_count?: number
+  has_cibil_data?: boolean
+  facilities_count?: number
+  has_cibil_data?: boolean
 }
 
 interface LifecycleEvent {
@@ -167,6 +175,7 @@ export default function GstCibilPage() {
     gstStatus: 'ALL',
     bureauRating: 'ALL',
     accountMapping: 'ALL', // 'ALL' | 'MAPPED_ONLY' | 'UNMAPPED_ONLY'
+    cibilDataStatus: 'ALL', // 'ALL' | 'WITH_CIBIL' | 'WITHOUT_CIBIL'
     duplicateFilter: 'ALL', // 'ALL' | 'DUPLICATES_ONLY' | 'UNIQUE_ONLY'
     minBureauScore: 300,
     includeNoScore: true,
@@ -194,6 +203,7 @@ export default function GstCibilPage() {
       gstStatus: 'ALL',
       bureauRating: 'ALL',
       accountMapping: 'ALL',
+      cibilDataStatus: 'ALL',
       duplicateFilter: 'ALL',
       minBureauScore: 300,
       includeNoScore: true,
@@ -223,6 +233,7 @@ export default function GstCibilPage() {
     if (reportsFilter.gstStatus !== 'ALL') count++
     if (reportsFilter.bureauRating !== 'ALL') count++
     if (reportsFilter.accountMapping !== 'ALL') count++
+    if (reportsFilter.cibilDataStatus !== 'ALL') count++
     if (reportsFilter.duplicateFilter !== 'ALL') count++
     if (reportsFilter.minBureauScore > 300 || !reportsFilter.includeNoScore) count++
     if (reportsFilter.fromDate) count++
@@ -284,6 +295,8 @@ export default function GstCibilPage() {
     ).length
     const unmapped = totalReports - mappedToAccount
     const withBureauScore = data.filter((item) => parseBureauScore(item.bureau_rating) !== null).length
+    const withCibilDataCount = data.filter((item) => Boolean(item.has_cibil_data)).length
+    const withoutCibilDataCount = totalReports - withCibilDataCount
 
     // Duplicate statistics
     const duplicateReportsCount = data.filter((item) => {
@@ -310,6 +323,8 @@ export default function GstCibilPage() {
       mappedToAccount,
       unmapped,
       withBureauScore,
+      withCibilDataCount,
+      withoutCibilDataCount,
       duplicateReportsCount,
       uniqueReportsCount,
       duplicateTrackerCount,
@@ -407,6 +422,17 @@ export default function GstCibilPage() {
           return false
         }
         if (reportsFilter.accountMapping === 'UNMAPPED_ONLY' && isMapped) {
+          return false
+        }
+      }
+
+      // CIBIL Data Filter (facilities present / non-empty)
+      if (reportsFilter.cibilDataStatus !== 'ALL') {
+        const hasCibil = Boolean(item.has_cibil_data)
+        if (reportsFilter.cibilDataStatus === 'WITH_CIBIL' && !hasCibil) {
+          return false
+        }
+        if (reportsFilter.cibilDataStatus === 'WITHOUT_CIBIL' && hasCibil) {
           return false
         }
       }
@@ -603,6 +629,86 @@ export default function GstCibilPage() {
     } catch (err: any) {
       console.error('Failed to export reports:', err)
       toast.error('Failed to generate export file')
+    }
+  }
+
+  const [isExportingGenerated, setIsExportingGenerated] = useState(false)
+
+  const exportGeneratedReportsFacilities = async (format: 'xlsx' | 'csv', onlyFiltered = false) => {
+    const sourceList = onlyFiltered ? filteredReports : data
+    if (!sourceList || sourceList.length === 0) {
+      toast.info('No reports available to export.')
+      return
+    }
+
+    const referenceIds = sourceList
+      .map((item) => item.reference_id)
+      .filter((ref): ref is string => Boolean(ref && ref.trim()))
+
+    if (referenceIds.length === 0) {
+      toast.error('No valid reference IDs found in the selected reports.')
+      return
+    }
+
+    try {
+      setIsExportingGenerated(true)
+      const backendUrl = ENV.VITE_BACKEND_BASE_URL || ''
+      const res = await fetch(`${backendUrl}/gst-cibil-reports/export-facilities`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ reference_ids: referenceIds }),
+      })
+
+      if (!res.ok) {
+        throw new Error(`Failed to generate export (Status: ${res.status})`)
+      }
+
+      const result = await res.json()
+      const rawRows: any[] = result.data || []
+
+      if (rawRows.length === 0) {
+        toast.info('No facilities data found for the selected reports.')
+        return
+      }
+
+      // Map to exact column headers requested by user:
+      // gstin, reference_id, trade_name, generated_at, lender, account_type, sanctioned, outstanding, emi, roi, next_emi_date, dpd_status, Dist code, Business Status, Leagal name
+      const rows = rawRows.map((item) => ({
+        'gstin': item.gstin ?? '',
+        'reference_id': item.reference_id ?? '',
+        'trade_name': item.trade_name ?? '',
+        'generated_at': item.generated_at ?? '',
+        'lender': item.lender ?? 'No Data',
+        'account_type': item.account_type ?? 'No Data',
+        'sanctioned': item.sanctioned ?? 'No Data',
+        'outstanding': item.outstanding ?? 'No Data',
+        'emi': item.emi ?? 'No Data',
+        'roi': item.roi ?? 'No Data',
+        'next_emi_date': item.next_emi_date ?? 'No Data',
+        'dpd_status': item.dpd_status ?? 'No Data',
+        'Dist code': item.distributor_code ?? 'No Data',
+        'Business Status': item.business_status ?? 'No Data',
+        'Leagal name': item.legal_name ?? '',
+      }))
+
+      const dateStr = new Date().toISOString().slice(0, 10)
+      const baseFilename = `generated_reports_facilities_${dateStr}`
+
+      if (format === 'csv') {
+        exportToCSV(rows, baseFilename)
+      } else {
+        exportToExcel(rows, baseFilename, 'Generated Reports')
+      }
+
+      toast.success(
+        `Exported ${rows.length} record(s) across ${referenceIds.length} report(s) as ${format.toUpperCase()}`
+      )
+    } catch (err: any) {
+      console.error('Error exporting facilities:', err)
+      toast.error(err?.message || 'Failed to export generated reports facilities')
+    } finally {
+      setIsExportingGenerated(false)
     }
   }
 
@@ -1119,6 +1225,77 @@ export default function GstCibilPage() {
                 </div>
 
                 <div className='flex items-center gap-2'>
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button
+                        variant='outline'
+                        size='sm'
+                        className='h-8 text-xs gap-1.5 border-emerald-200 text-emerald-700 hover:bg-emerald-50 hover:text-emerald-800'
+                        disabled={isLoadingReports || data.length === 0 || isExportingGenerated}
+                      >
+                        {isExportingGenerated ? (
+                          <Loader2 className='h-3.5 w-3.5 animate-spin' />
+                        ) : (
+                          <FileDown className='h-3.5 w-3.5' />
+                        )}
+                        <span>{isExportingGenerated ? 'Exporting...' : 'Export Facilities'}</span>
+                        <Badge
+                          variant='outline'
+                          className='ml-0.5 px-1.5 py-0 h-4 text-[10px] bg-emerald-100 text-emerald-800 border-emerald-300 rounded-full font-medium'
+                        >
+                          {activeReportsFilterCount > 0 ? filteredReports.length : data.length}
+                        </Badge>
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align='end' className='w-64 text-xs'>
+                      <DropdownMenuItem
+                        className='cursor-pointer flex items-center justify-between text-xs py-2'
+                        disabled={isExportingGenerated}
+                        onClick={() => exportGeneratedReportsFacilities('xlsx', activeReportsFilterCount > 0)}
+                      >
+                        <span className='flex items-center gap-2'>
+                          <Download className='h-3.5 w-3.5 text-emerald-600' />
+                          {activeReportsFilterCount > 0 ? 'Export Filtered (Excel)' : 'Export All Reports (Excel)'}
+                        </span>
+                        <span className='text-[10px] text-slate-400 font-mono'>
+                          {activeReportsFilterCount > 0 ? filteredReports.length : data.length}
+                        </span>
+                      </DropdownMenuItem>
+                      <DropdownMenuItem
+                        className='cursor-pointer flex items-center justify-between text-xs py-2'
+                        disabled={isExportingGenerated}
+                        onClick={() => exportGeneratedReportsFacilities('csv', activeReportsFilterCount > 0)}
+                      >
+                        <span className='flex items-center gap-2'>
+                          <Download className='h-3.5 w-3.5 text-slate-500' />
+                          {activeReportsFilterCount > 0 ? 'Export Filtered (CSV)' : 'Export All Reports (CSV)'}
+                        </span>
+                        <span className='text-[10px] text-slate-400 font-mono'>
+                          {activeReportsFilterCount > 0 ? filteredReports.length : data.length}
+                        </span>
+                      </DropdownMenuItem>
+
+                      {activeReportsFilterCount > 0 && (
+                        <>
+                          <div className='my-1 border-t border-slate-100' />
+                          <DropdownMenuItem
+                            className='cursor-pointer flex items-center justify-between text-xs py-2 text-slate-600 focus:text-slate-900'
+                            disabled={isExportingGenerated}
+                            onClick={() => exportGeneratedReportsFacilities('xlsx', false)}
+                          >
+                            <span className='flex items-center gap-2'>
+                              <Download className='h-3.5 w-3.5 text-slate-400' />
+                              Export All Reports (Excel)
+                            </span>
+                            <span className='text-[10px] text-slate-400 font-mono'>
+                              {data.length}
+                            </span>
+                          </DropdownMenuItem>
+                        </>
+                      )}
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+
                   <Button
                     variant={showReportsFilters ? 'secondary' : 'outline'}
                     size='sm'
@@ -1279,6 +1456,35 @@ export default function GstCibilPage() {
                           </SelectItem>
                           <SelectItem value='UNMAPPED_ONLY'>
                             No Account Linked ({reportsStats.unmapped})
+                          </SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    {/* CIBIL Data Filter */}
+                    <div className='space-y-1'>
+                      <label className='text-xs font-medium text-slate-600'>
+                        CIBIL Data Status
+                      </label>
+                      <Select
+                        value={reportsFilter.cibilDataStatus}
+                        onValueChange={(val) =>
+                          setReportsFilter((prev) => ({
+                            ...prev,
+                            cibilDataStatus: val,
+                          }))
+                        }
+                      >
+                        <SelectTrigger className='h-8 text-xs bg-white w-full'>
+                          <SelectValue placeholder='All CIBIL Status' />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value='ALL'>All Reports ({data.length})</SelectItem>
+                          <SelectItem value='WITH_CIBIL'>
+                            Has CIBIL Data ({reportsStats.withCibilDataCount})
+                          </SelectItem>
+                          <SelectItem value='WITHOUT_CIBIL'>
+                            No CIBIL Data ({reportsStats.withoutCibilDataCount})
                           </SelectItem>
                         </SelectContent>
                       </Select>
@@ -1568,7 +1774,26 @@ export default function GstCibilPage() {
                           </Badge>
                         </TableCell>
                         <TableCell className='px-6 py-4 text-sm font-medium text-slate-700'>
-                          {item.bureau_rating || 'Not Available'}
+                          <div className='flex items-center gap-1.5 flex-wrap'>
+                            <span>{item.bureau_rating || 'Not Available'}</span>
+                            {item.has_cibil_data ? (
+                              <Badge
+                                variant='outline'
+                                className='text-[10px] px-1.5 py-0 h-4 bg-emerald-50 text-emerald-700 border-emerald-200'
+                                title={`${item.facilities_count ?? 0} credit facilities found`}
+                              >
+                                {item.facilities_count ?? 0} facilities
+                              </Badge>
+                            ) : (
+                              <Badge
+                                variant='outline'
+                                className='text-[10px] px-1.5 py-0 h-4 bg-slate-50 text-slate-500 border-slate-200'
+                                title='No credit facilities found'
+                              >
+                                No CIBIL
+                              </Badge>
+                            )}
+                          </div>
                         </TableCell>
                         <TableCell className='px-6 py-4 text-sm text-slate-500'>
                           {formatCreationTimestamp(item.last_updated)}
