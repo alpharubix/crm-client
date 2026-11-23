@@ -91,20 +91,9 @@ export const SendTemplateDialog: React.FC<SendTemplateDialogProps> = ({
                 },
               ],
             });
-          } else {
-            // Use Option 1: persistent uploaded Meta media ID for full official R1X logo
-            components.push({
-              type: 'header',
-              parameters: [
-                {
-                  type: 'image',
-                  image: {
-                    id: '1522132473058807',
-                  },
-                },
-              ],
-            });
           }
+          // No custom URL: the server attaches the template's configured header image
+          // (falls back to the R1Xchange logo for templates without one).
         }
       }
 
