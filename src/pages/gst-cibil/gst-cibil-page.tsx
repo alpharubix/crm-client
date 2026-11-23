@@ -678,6 +678,7 @@ export default function GstCibilPage() {
         'gstin': item.gstin ?? '',
         'reference_id': item.reference_id ?? '',
         'trade_name': item.trade_name ?? '',
+        'Phone Number': item.phone_number ?? 'No Data',
         'generated_at': item.generated_at ?? '',
         'lender': item.lender ?? 'No Data',
         'account_type': item.account_type ?? 'No Data',
