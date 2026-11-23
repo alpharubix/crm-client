@@ -77,6 +77,23 @@ export const SendTemplateDialog: React.FC<SendTemplateDialogProps> = ({
             type: 'header',
             parameters: headerParameters,
           });
+        } else if (headerFormat === 'IMAGE') {
+          const customHeaderUrl = paramValues['header_image_url']?.trim();
+          if (customHeaderUrl) {
+            components.push({
+              type: 'header',
+              parameters: [
+                {
+                  type: 'image',
+                  image: {
+                    link: customHeaderUrl,
+                  },
+                },
+              ],
+            });
+          }
+          // No custom URL: the server attaches the template's configured header image
+          // (falls back to the R1Xchange logo for templates without one).
         }
       }
 
