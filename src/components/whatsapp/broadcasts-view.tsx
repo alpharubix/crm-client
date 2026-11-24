@@ -57,9 +57,13 @@ export const BroadcastsView: React.FC<BroadcastsViewProps> = ({
     total: number;
     sent: number;
     failed: number;
+    skipped?: number;
+    details?: any[];
   } | null>(null);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
+  // Synchronous guard so a second click can never start a second send
+  const sendingRef = useRef(false);
 
   // Template variables extraction
   const headerComp = selectedTemplate?.components.find((c) => c.type === 'HEADER');
@@ -131,6 +135,8 @@ export const BroadcastsView: React.FC<BroadcastsViewProps> = ({
       return;
     }
 
+    if (sendingRef.current) return;
+    sendingRef.current = true;
     setSending(true);
     try {
       // Build recipients payload
@@ -181,6 +187,7 @@ export const BroadcastsView: React.FC<BroadcastsViewProps> = ({
 
       const res = await sendBroadcastCampaign({
         campaign_name: campaignName,
+        campaign_id: crypto.randomUUID(),
         send_mode: sendMode,
         template_name: selectedTemplate?.name,
         language_code: selectedTemplate?.language || 'en',
@@ -191,6 +198,7 @@ export const BroadcastsView: React.FC<BroadcastsViewProps> = ({
         total: res.total,
         sent: res.sent,
         failed: res.failed,
+        skipped: res.skipped,
         details: res.details,
       });
 
@@ -212,6 +220,7 @@ export const BroadcastsView: React.FC<BroadcastsViewProps> = ({
       console.error(err);
       alert(err.message || 'Broadcast failed to execute');
     } finally {
+      sendingRef.current = false;
       setSending(false);
     }
   };
@@ -639,6 +648,13 @@ export const BroadcastsView: React.FC<BroadcastsViewProps> = ({
                     <div className="text-[11px] text-red-700 font-medium">Failed</div>
                   </div>
                 </div>
+
+                {!!sendResult.skipped && (
+                  <p className="text-xs text-amber-700">
+                    {sendResult.skipped} number(s) skipped — duplicate in the sheet or already sent
+                    this message recently.
+                  </p>
+                )}
 
                 {/* Display Failed Reasons If Any */}
                 {sendResult.failed > 0 && sendResult.details && (

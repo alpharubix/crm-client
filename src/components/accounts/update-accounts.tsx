@@ -1975,6 +1975,28 @@ export default function UpdateAccounts() {
                         <span className='text-xs text-muted-foreground'>—</span>
                       )}
                     </FieldRow>
+
+                    {/* Read-only: auto-derived from this account's deals (loan type) */}
+                    <FieldRow label='Debt Funding'>
+                      {accountData.debt_funding ? (
+                        <div className='flex flex-wrap gap-1.5 py-1'>
+                          {String(accountData.debt_funding)
+                            .split(',')
+                            .map((t: string) => t.trim())
+                            .filter(Boolean)
+                            .map((loanType: string) => (
+                              <span
+                                key={loanType}
+                                className='inline-flex items-center rounded-md border bg-muted px-2 py-0.5 text-xs font-medium'
+                              >
+                                {loanType}
+                              </span>
+                            ))}
+                        </div>
+                      ) : (
+                        <span className='text-xs text-muted-foreground'>—</span>
+                      )}
+                    </FieldRow>
                   </div>
                 </CardContent>
 
