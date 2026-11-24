@@ -119,6 +119,7 @@ export async function syncTemplates(): Promise<WhatsAppTemplate[]> {
 
 export async function sendBroadcastCampaign(payload: {
   campaign_name: string;
+  campaign_id?: string;
   send_mode: 'template' | 'text';
   template_name?: string;
   language_code?: string;
@@ -131,6 +132,7 @@ export async function sendBroadcastCampaign(payload: {
   total: number;
   sent: number;
   failed: number;
+  skipped?: number;
   details: any[];
 }> {
   const res = await fetch(`${BASE_URL}/broadcasts/send`, {

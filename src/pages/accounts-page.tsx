@@ -212,6 +212,26 @@ const STATE_OPTIONS: Option[] = (STATES as string[]).map((s) => ({
   label: s,
 }));
 
+// Loan types (same list as deals module) — used by the Debt Funding filter
+const LOAN_TYPE_OPTIONS: Option[] = [
+  'SCF',
+  'SCF Renewal',
+  'SCF Enhancement',
+  'SCF (Renewal and Enhancement)',
+  'Open SCF',
+  'Open SCF Renewal',
+  'Open SCF Enhancement',
+  'Open SCF (Renewal and Enhancement)',
+  'BT-SCF',
+  'BT-Open SCF',
+  'Unsecured OD',
+  'Unsecured Term Loan',
+  'Secured Loan',
+  'Secured BT',
+  'Vehicle Loan',
+  'CGTMSE',
+].map((v) => ({ value: v, label: v }));
+
 const DEFAULT_COLUMNS = [
   { id: 'account_name', label: 'Account Name', selected: true },
   { id: 'account_owner', label: 'Account Owner', selected: true },
@@ -221,6 +241,7 @@ const DEFAULT_COLUMNS = [
   { id: 'industry', label: 'Industry', selected: true },
   { id: 'phone', label: 'Phone', selected: true },
   { id: 'phone_status', label: 'Phone Status', selected: false },
+  { id: 'debt_funding', label: 'Debt Funding', selected: false },
   { id: 'city', label: 'City', selected: true },
   { id: 'state', label: 'State', selected: true },
   { id: 'modified_time', label: 'Modified At', selected: true },
@@ -313,6 +334,8 @@ export default function AccountsPage() {
     businessStatus: [] as Option[],
     typeOfBusiness: [] as Option[],
     phoneStatus: [] as Option[],
+    debtFunding: [] as Option[],
+    hasDeals: 'all',
     wabaInterested: 'all',
     isPriorityAccount: 'all',
     createdFromDate:
@@ -467,6 +490,19 @@ export default function AccountsPage() {
       });
     }
 
+    const debtFundingParams = searchParams.getAll('debt_funding');
+    if (debtFundingParams.length > 0) {
+      loadedFilters.debtFunding = debtFundingParams.map((val) => ({
+        value: val,
+        label: val,
+      }));
+    }
+
+    const hasDealsParam = searchParams.get('has_deals');
+    if (hasDealsParam === 'yes' || hasDealsParam === 'no') {
+      loadedFilters.hasDeals = hasDealsParam;
+    }
+
     const cityParams = searchParams.getAll('city');
     if (cityParams.length > 0) {
       loadedFilters.city = cityParams.map((val) => ({ value: val, label: val }));
@@ -601,6 +637,17 @@ export default function AccountsPage() {
         appliedFilters.phoneStatus.forEach((o: Option) =>
           params.append('phone_status', o.value),
         );
+      }
+      if (
+        appliedFilters.debtFunding &&
+        appliedFilters.debtFunding.length > 0
+      ) {
+        appliedFilters.debtFunding.forEach((o: Option) =>
+          params.append('debt_funding', o.value),
+        );
+      }
+      if (appliedFilters.hasDeals && appliedFilters.hasDeals !== 'all') {
+        params.set('has_deals', appliedFilters.hasDeals);
       }
       if (
         appliedFilters.wabaInterested &&
@@ -817,6 +864,12 @@ export default function AccountsPage() {
     if (searchFilters.phoneStatus && searchFilters.phoneStatus.length > 0) {
       searchFilters.phoneStatus.forEach((o: Option) => params.append('phone_status', o.value));
     }
+    if (searchFilters.debtFunding && searchFilters.debtFunding.length > 0) {
+      searchFilters.debtFunding.forEach((o: Option) => params.append('debt_funding', o.value));
+    }
+    if (searchFilters.hasDeals && searchFilters.hasDeals !== 'all') {
+      params.set('has_deals', searchFilters.hasDeals);
+    }
     if (searchFilters.cbUsers && searchFilters.cbUsers.length > 0) {
       searchFilters.cbUsers.forEach((o: Option) => params.append('cb_users', o.value));
     }
@@ -901,6 +954,8 @@ export default function AccountsPage() {
       accountStage: [] as Option[],
       businessStatus: [] as Option[],
       typeOfBusiness: [] as Option[],
+      debtFunding: [] as Option[],
+      hasDeals: 'all',
       wabaInterested: 'all',
       isPriorityAccount: 'all',
       createdFromDate: '',
@@ -1592,6 +1647,34 @@ export default function AccountsPage() {
                                   </TableCell>
                                 );
 
+                              case 'debt_funding':
+                                return (
+                                  <TableCell
+                                    key={col.id}
+                                    className='text-xs py-3.5'
+                                  >
+                                    {acc.debt_funding ? (
+                                      <div className='flex flex-wrap gap-1'>
+                                        {String(acc.debt_funding)
+                                          .split(',')
+                                          .map((t: string) => t.trim())
+                                          .filter(Boolean)
+                                          .map((loanType: string) => (
+                                            <Badge
+                                              key={loanType}
+                                              variant='outline'
+                                              className='text-[10px] font-medium'
+                                            >
+                                              {loanType}
+                                            </Badge>
+                                          ))}
+                                      </div>
+                                    ) : (
+                                      '—'
+                                    )}
+                                  </TableCell>
+                                );
+
                               case 'assignment_date':
                                 return (
                                   <TableCell
@@ -2179,6 +2262,39 @@ export default function AccountsPage() {
                 value={filters.phoneStatus}
                 onChange={(val) => handleFilterChange('phoneStatus', val)}
                 placeholder='Select Phone / Email Status...'
+              />
+            </div>
+
+            {/* Has Deals */}
+            <div className='space-y-1.5'>
+              <Label className='text-xs font-semibold text-foreground'>
+                Has Deals
+              </Label>
+              <Select
+                value={filters.hasDeals || 'all'}
+                onValueChange={(val) => handleFilterChange('hasDeals', val)}
+              >
+                <SelectTrigger className='h-9 text-xs rounded-lg'>
+                  <SelectValue placeholder='All Accounts' />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value='all'>All Accounts</SelectItem>
+                  <SelectItem value='yes'>With Deals</SelectItem>
+                  <SelectItem value='no'>Without Deals</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* Debt Funding (loan types from the account's deals) */}
+            <div className='space-y-1.5'>
+              <Label className='text-xs font-semibold text-foreground'>
+                Debt Funding
+              </Label>
+              <MultiSelect
+                options={LOAN_TYPE_OPTIONS}
+                value={filters.debtFunding}
+                onChange={(val) => handleFilterChange('debtFunding', val)}
+                placeholder='Select Loan Type...'
               />
             </div>
 
