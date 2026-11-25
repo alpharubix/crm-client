@@ -74,8 +74,7 @@ interface GstCibilListItem {
   business_status?: string
   facilities_count?: number
   has_cibil_data?: boolean
-  facilities_count?: number
-  has_cibil_data?: boolean
+  has_monthly_purchase?: boolean
 }
 
 interface LifecycleEvent {
@@ -176,6 +175,7 @@ export default function GstCibilPage() {
     bureauRating: 'ALL',
     accountMapping: 'ALL', // 'ALL' | 'MAPPED_ONLY' | 'UNMAPPED_ONLY'
     cibilDataStatus: 'ALL', // 'ALL' | 'WITH_CIBIL' | 'WITHOUT_CIBIL'
+    monthlyPurchase: 'ALL', // 'ALL' | 'WITH_MONTHLY_PURCHASE' | 'WITHOUT_MONTHLY_PURCHASE'
     duplicateFilter: 'ALL', // 'ALL' | 'DUPLICATES_ONLY' | 'UNIQUE_ONLY'
     minBureauScore: 300,
     includeNoScore: true,
@@ -204,6 +204,7 @@ export default function GstCibilPage() {
       bureauRating: 'ALL',
       accountMapping: 'ALL',
       cibilDataStatus: 'ALL',
+      monthlyPurchase: 'ALL',
       duplicateFilter: 'ALL',
       minBureauScore: 300,
       includeNoScore: true,
@@ -234,6 +235,7 @@ export default function GstCibilPage() {
     if (reportsFilter.bureauRating !== 'ALL') count++
     if (reportsFilter.accountMapping !== 'ALL') count++
     if (reportsFilter.cibilDataStatus !== 'ALL') count++
+    if (reportsFilter.monthlyPurchase !== 'ALL') count++
     if (reportsFilter.duplicateFilter !== 'ALL') count++
     if (reportsFilter.minBureauScore > 300 || !reportsFilter.includeNoScore) count++
     if (reportsFilter.fromDate) count++
@@ -297,6 +299,8 @@ export default function GstCibilPage() {
     const withBureauScore = data.filter((item) => parseBureauScore(item.bureau_rating) !== null).length
     const withCibilDataCount = data.filter((item) => Boolean(item.has_cibil_data)).length
     const withoutCibilDataCount = totalReports - withCibilDataCount
+    const withMonthlyPurchaseCount = data.filter((item) => Boolean(item.has_monthly_purchase)).length
+    const withoutMonthlyPurchaseCount = totalReports - withMonthlyPurchaseCount
 
     // Duplicate statistics
     const duplicateReportsCount = data.filter((item) => {
@@ -325,6 +329,8 @@ export default function GstCibilPage() {
       withBureauScore,
       withCibilDataCount,
       withoutCibilDataCount,
+      withMonthlyPurchaseCount,
+      withoutMonthlyPurchaseCount,
       duplicateReportsCount,
       uniqueReportsCount,
       duplicateTrackerCount,
@@ -433,6 +439,17 @@ export default function GstCibilPage() {
           return false
         }
         if (reportsFilter.cibilDataStatus === 'WITHOUT_CIBIL' && hasCibil) {
+          return false
+        }
+      }
+
+      // Monthly Purchase Filter (linked account's business_details has monthly_purchase key)
+      if (reportsFilter.monthlyPurchase !== 'ALL') {
+        const hasMonthlyPurchase = Boolean(item.has_monthly_purchase)
+        if (reportsFilter.monthlyPurchase === 'WITH_MONTHLY_PURCHASE' && !hasMonthlyPurchase) {
+          return false
+        }
+        if (reportsFilter.monthlyPurchase === 'WITHOUT_MONTHLY_PURCHASE' && hasMonthlyPurchase) {
           return false
         }
       }
@@ -691,6 +708,8 @@ export default function GstCibilPage() {
         'Dist code': item.distributor_code ?? 'No Data',
         'Business Status': item.business_status ?? 'No Data',
         'Leagal name': item.legal_name ?? '',
+        'Monthly Purchase': item.monthly_purchase ?? 'No Data',
+        'Report Address': item.address ?? 'No Data',
       }))
 
       const dateStr = new Date().toISOString().slice(0, 10)
@@ -1486,6 +1505,35 @@ export default function GstCibilPage() {
                           </SelectItem>
                           <SelectItem value='WITHOUT_CIBIL'>
                             No CIBIL Data ({reportsStats.withoutCibilDataCount})
+                          </SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    {/* Monthly Purchase Filter */}
+                    <div className='space-y-1'>
+                      <label className='text-xs font-medium text-slate-600'>
+                        Monthly Purchase
+                      </label>
+                      <Select
+                        value={reportsFilter.monthlyPurchase}
+                        onValueChange={(val) =>
+                          setReportsFilter((prev) => ({
+                            ...prev,
+                            monthlyPurchase: val,
+                          }))
+                        }
+                      >
+                        <SelectTrigger className='h-8 text-xs bg-white w-full'>
+                          <SelectValue placeholder='All Reports' />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value='ALL'>All Reports ({data.length})</SelectItem>
+                          <SelectItem value='WITH_MONTHLY_PURCHASE'>
+                            Has Monthly Purchase ({reportsStats.withMonthlyPurchaseCount})
+                          </SelectItem>
+                          <SelectItem value='WITHOUT_MONTHLY_PURCHASE'>
+                            No Monthly Purchase ({reportsStats.withoutMonthlyPurchaseCount})
                           </SelectItem>
                         </SelectContent>
                       </Select>
