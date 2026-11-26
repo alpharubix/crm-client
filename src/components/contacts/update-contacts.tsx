@@ -310,7 +310,7 @@ export default function UpdateContacts({
           )}
           <Button
             className='cursor-pointer'
-            onClick={() => navigate(`/accounts/${accountId}`)}
+            onClick={() => window.open(`/accounts/${accountId}`, '_blank')}
           >
             Go To Account Information
           </Button>

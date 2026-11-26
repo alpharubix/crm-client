@@ -477,8 +477,8 @@ export default function HiringKanban() {
               title={columnName}
               jrs={grouped[columnName] ?? []}
               isPendingCol={columnName === 'Pending Approval'}
-              onNavigate={(id) => navigate(`/jr/${id}`)}
-              onEdit={(jr) => navigate(`/hiring/${jr.id}/edit`)}
+              onNavigate={(id) => window.open(`/jr/${id}`, '_blank')}
+              onEdit={(jr) => window.open(`/hiring/${jr.id}/edit`, '_blank')}
               onStatusChange={handleQuickStatusChange}
             />
           ))}

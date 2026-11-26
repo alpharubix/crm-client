@@ -301,7 +301,7 @@ export default function GstReportTab({
                 variant='outline'
                 size='sm'
                 className='h-8 text-xs gap-1.5 border-blue-200 text-blue-700 bg-blue-50/70 hover:bg-blue-100 hover:text-blue-800'
-                onClick={() => navigate(`/accounts/${linkedAccountId}`)}
+                onClick={() => window.open(`/accounts/${linkedAccountId}`, '_blank')}
                 title='View linked Account'
               >
                 <Building2 className='h-3.5 w-3.5 text-blue-600' />
@@ -356,7 +356,7 @@ export default function GstReportTab({
                 <button
                   type='button'
                   className='font-semibold text-blue-600 hover:text-blue-700 hover:underline cursor-pointer'
-                  onClick={() => navigate(`/accounts/${linkedAccountId}`)}
+                  onClick={() => window.open(`/accounts/${linkedAccountId}`, '_blank')}
                 >
                   {linkedAccountName}
                 </button>

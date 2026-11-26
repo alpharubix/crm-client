@@ -136,7 +136,7 @@ export default function AccountGstCibilTab({
       toast.error('No reference ID found for this report');
       return;
     }
-    navigate(`/gst-cibil-report/${referenceId}`);
+    window.open(`/gst-cibil-report/${referenceId}`, '_blank');
   };
 
   const filteredData = data.filter((item) => {

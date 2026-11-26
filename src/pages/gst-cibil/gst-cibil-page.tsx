@@ -894,7 +894,7 @@ export default function GstCibilPage() {
       toast.error('No reference ID found for this report')
       return
     }
-    navigate(`/gst-cibil-report/${referenceId}`)
+    window.open(`/gst-cibil-report/${referenceId}`, '_blank')
   }
 
   const getStatusBadgeStyle = (status?: string) => {
@@ -1774,7 +1774,7 @@ export default function GstCibilPage() {
                               className='inline-flex items-center gap-1.5 font-medium text-blue-700 hover:text-blue-800 hover:underline cursor-pointer'
                               onClick={(e) => {
                                 e.stopPropagation()
-                                if (item.account_id) navigate(`/accounts/${item.account_id}`)
+                                if (item.account_id) window.open(`/accounts/${item.account_id}`, '_blank')
                               }}
                               title='Click to view account'
                             >
@@ -1856,7 +1856,7 @@ export default function GstCibilPage() {
                                 className='h-8 text-xs border-blue-200 text-blue-600 hover:text-blue-700 hover:bg-blue-50'
                                 onClick={(e) => {
                                   e.stopPropagation()
-                                  navigate(`/accounts/${item.account_id}`)
+                                  window.open(`/accounts/${item.account_id}`, '_blank')
                                 }}
                                 title='View Account'
                               >
