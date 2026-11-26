@@ -479,9 +479,9 @@ export const BroadcastsView: React.FC<BroadcastsViewProps> = ({
                     <div className="space-y-1">
                       <label className="text-xs font-semibold text-slate-700">Select Template</label>
                       <select
-                        value={selectedTemplate?.name || ''}
+                        value={selectedTemplate ? `${selectedTemplate.name}::${selectedTemplate.language}` : ''}
                         onChange={(e) => {
-                          const t = templates.find((item) => item.name === e.target.value);
+                          const t = templates.find((item) => `${item.name}::${item.language}` === e.target.value);
                           setSelectedTemplate(t || null);
                           setVariableMappings({});
                         }}
@@ -489,8 +489,8 @@ export const BroadcastsView: React.FC<BroadcastsViewProps> = ({
                       >
                         <option value="">-- Choose an approved template --</option>
                         {templates.map((t) => (
-                          <option key={t.name} value={t.name}>
-                            {t.name} ({t.category})
+                          <option key={`${t.name}::${t.language}`} value={`${t.name}::${t.language}`}>
+                            {t.name} [{t.language}] ({t.category})
                           </option>
                         ))}
                       </select>
@@ -499,7 +499,7 @@ export const BroadcastsView: React.FC<BroadcastsViewProps> = ({
                     {selectedTemplate && (
                       <div className="border border-slate-200 rounded-xl p-4 bg-slate-50 space-y-3">
                         <div className="text-xs font-bold text-slate-800">
-                          Template: {selectedTemplate.name}
+                          Template: {selectedTemplate.name} [{selectedTemplate.language}]
                         </div>
                         <div className="text-xs text-slate-600 whitespace-pre-wrap font-normal">
                           {selectedTemplate.components.find((c) => c.type === 'BODY')?.text}
