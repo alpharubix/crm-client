@@ -576,7 +576,7 @@ export default function UpdateKanbanTicket({
 
           <Button
             variant='default'
-            onClick={() => navigate(`/deals/${dealData.deal_id}`)}
+            onClick={() => window.open(`/deals/${dealData.deal_id}`, '_blank')}
             className='ml-2'
           >
             Go to Deal

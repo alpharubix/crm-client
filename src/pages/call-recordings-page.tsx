@@ -1140,7 +1140,7 @@ export default function CallRecordingsPage({
                               <button
                                 type='button'
                                 onClick={() =>
-                                  navigate(`/accounts/${item.account_id}`)
+                                  window.open(`/accounts/${item.account_id}`, '_blank')
                                 }
                                 className='inline-flex items-center gap-1.5 text-left font-medium text-sm text-foreground hover:text-blue-600 dark:hover:text-blue-400 group-hover:underline cursor-pointer transition-colors max-w-[240px] truncate'
                                 title={`View CRM Account: ${item.account_name}`}
