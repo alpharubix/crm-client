@@ -19,6 +19,7 @@ import {
 import { Input } from '@/components/ui/input'
 import {
   useQuery,
+  useQueryClient,
   keepPreviousData,
 } from '@tanstack/react-query'
 import { Skeleton } from '@/components/ui/skeleton'
@@ -77,6 +78,7 @@ const getInitialAvatarColor = (name: string) => {
 
 export default function RevenuePage() {
   const navigate = useNavigate()
+  const queryClient = useQueryClient()
   const [searchParams, setSearchParams] = useSearchParams()
 
   const [isFilterSheetOpen, setIsFilterSheetOpen] = useState(false)
@@ -184,10 +186,27 @@ export default function RevenuePage() {
     setSearchParams(params)
   }
 
-  // Opens in a new tab. The revenue detail page loads its own data (including
-  // lender name), so no prefetch or router state is needed.
-  const handleRowClick = (id: string, _lenderName?: string) => {
-    window.open(`/revenue/${id}`, '_blank')
+  const handleRowClick = async (id: string, lenderName?: string) => {
+    try {
+      await queryClient.ensureQueryData({
+        queryKey: ['revenue', id],
+        queryFn: async () => {
+          const res = await fetch(
+            `${ENV.VITE_BACKEND_BASE_URL}/revenue?revenue_id=${id}`,
+            { credentials: 'include' },
+          )
+          if (!res.ok) throw new Error('Failed to fetch revenue')
+          return res.json()
+        },
+      })
+      navigate(`/revenue/${id}`, {
+        state: {
+          lenderName: lenderName || '',
+        },
+      })
+    } catch {
+      navigate(`/revenue/${id}`)
+    }
   }
 
   return (

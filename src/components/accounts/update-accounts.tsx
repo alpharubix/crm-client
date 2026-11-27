@@ -1965,7 +1965,7 @@ export default function UpdateAccounts() {
                                 status={status}
                                 label={opt?.label || status}
                                 onNavigateAccount={(targetId) => {
-                                  window.open(`/accounts/${targetId}`, '_blank');
+                                  navigate(`/accounts/${targetId}`);
                                 }}
                               />
                             );

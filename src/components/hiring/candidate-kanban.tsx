@@ -88,7 +88,7 @@ function DraggableCandidateCard({
             ? 'border-red-500 hover:border-red-600 ring-1 ring-red-500 shadow-sm'
             : 'hover:border-teal-500 hover:shadow-md'
         }`}
-        onClick={() => window.open(`/candidate/${c.id}/edit?jr_id=${jrId}`, '_blank')}
+        onClick={() => navigate(`/candidate/${c.id}/edit?jr_id=${jrId}`)}
       >
         <CardContent className='p-4'>
           <div className='flex justify-between items-start gap-2'>
@@ -112,7 +112,7 @@ function DraggableCandidateCard({
               onPointerDown={(e) => e.stopPropagation()} // Stop drag capture on button click
               onClick={(e) => {
                 e.stopPropagation()
-                window.open(`/candidate/${c.id}/edit?jr_id=${jrId}`, '_blank')
+                navigate(`/candidate/${c.id}/edit?jr_id=${jrId}`)
               }}
               className='opacity-0 group-hover:opacity-100 p-1 rounded hover:bg-zinc-100 text-zinc-400 hover:text-teal-600 transition-all shrink-0'
             >
