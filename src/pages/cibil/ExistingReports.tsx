@@ -32,7 +32,7 @@ const navigate = useNavigate();
 
   const handleViewReport = (reference_id: string) => {
     console.log(reference_id);
-    window.open(`/accounts/${id}/cibil/${reference_id}/reports`, '_blank');
+    navigate(`/accounts/${id}/cibil/${reference_id}/reports`);
   };
 
   if (loading) {

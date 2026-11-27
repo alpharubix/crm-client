@@ -236,7 +236,7 @@ function DraggableProjectCard({
         }`}
         onClick={() => {
           if (isOwner || isApprover || isAssigneeOnly)
-            window.open(`/projects/${project.id}`, '_blank')
+            navigate(`/projects/${project.id}`)
         }}
       >
         <CardContent className='p-3.5 flex flex-col gap-3'>

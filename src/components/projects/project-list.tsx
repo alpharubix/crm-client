@@ -43,7 +43,7 @@ export default function ProjectList() {
         {projects?.data?.map((p: any, i: number) => (
           <div
             key={p.id}
-            onClick={() => window.open(`/projects/${p.id}`, '_blank')}
+            onClick={() => navigate(`/projects/${p.id}`)}
             className={`grid grid-cols-[1fr_2fr_1fr_1fr_1fr_1fr] px-4 py-3 cursor-pointer  transition-colors items-center ${i !== projects.length - 1 ? 'border-b ' : ''}`}
           >
             <div>

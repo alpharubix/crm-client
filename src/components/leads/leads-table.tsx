@@ -57,7 +57,7 @@ export default function LeadsTable({ leads, loading }: Props) {
               <TableRow
                 key={lead.id}
                 className='cursor-pointer hover:bg-accent'
-                onClick={() => window.open(`/accounts/${lead.id}`, '_blank')}
+                onClick={() => navigate(`/accounts/${lead.id}`)}
               >
                 {/* <TableCell>{lead.id}</TableCell> */}
                 <TableCell>{lead.full_name}</TableCell>

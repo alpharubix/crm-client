@@ -524,7 +524,7 @@ export default function UpdateDeals({
           )}
           <Button
             variant='default'
-            onClick={() => window.open(`/accounts/${dealData.account_id}`, '_blank')}
+            onClick={() => navigate(`/accounts/${dealData.account_id}`)}
             className='ml-2'
           >
             Go to Accounts
@@ -879,7 +879,7 @@ export default function UpdateDeals({
               {(dealData as any).tickets.map((ticket: any) => (
                 <div
                   key={ticket.id}
-                  onClick={() => window.open(`/tickets/${ticket.id}`, '_blank')}
+                  onClick={() => navigate(`/tickets/${ticket.id}`)}
                   className='bg-muted/30 p-3 rounded-lg border hover:border-primary hover:bg-muted/50 transition-all cursor-pointer group'
                 >
                   <div className='flex justify-between items-start mb-2'>
@@ -943,7 +943,7 @@ export default function UpdateDeals({
               {revenues.map((revenue: any) => (
                 <div
                   key={revenue.id}
-                  onClick={() => window.open(`/revenue/${revenue.id}`, '_blank')}
+                  onClick={() => navigate(`/revenue/${revenue.id}`)}
                   className='bg-muted/30 p-3 rounded-lg border hover:border-primary hover:bg-muted/50 transition-all cursor-pointer group'
                 >
                   <div className='flex justify-between items-start mb-2'>

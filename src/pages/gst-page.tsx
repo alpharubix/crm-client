@@ -143,10 +143,9 @@ export default function GstHistoryPage() {
                       {item.gst_reference_id_status === 'COMPLETED' ? (
                         <button
                           onClick={() =>
-                            window.open(
-                              `/accounts/${id}/gst/${item.reference_id}/reports`,
-                              '_blank',
-                            )
+                            navigate(`${item.reference_id}/reports`, {
+                              state: { gst_reference_id: item.reference_id },
+                            })
                           }
                           className='text-[#000080] hover:text-[#000060] cursor-pointer border p-1 px-4 rounded-md'
                         >
